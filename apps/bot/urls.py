@@ -5,4 +5,5 @@ from .handler import bot_webhook
 urlpatterns = [
     # Webhook endpoint
     path('webhook/', bot_webhook, name='bot_webhook'),
+
 ]
