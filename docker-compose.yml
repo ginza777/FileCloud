@@ -51,7 +51,9 @@ services:
   celery-beat:
     build: .
     container_name: filefinder_celery_beat
-    command: celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/app
     env_file:
