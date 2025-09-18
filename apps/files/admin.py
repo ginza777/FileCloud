@@ -13,8 +13,6 @@ class ProductInline(admin.StackedInline):
 class ParseProgressAdmin(admin.ModelAdmin):
     list_display = ('id', 'last_page', 'total_pages_parsed', 'last_run_at', 'created_at')
     ordering = ('-last_run_at',)
-    search_fields = ('id', 'last_page', 'total_pages_parsed')
-    list_filter = ('last_run_at', 'created_at')
 
 
 @admin.register(Document)
@@ -26,9 +24,7 @@ class DocumentAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     inlines = [ProductInline]
     search_fields = (
-        'id', 'parse_file_url', 'file_path', 'telegram_file_id',
-        'download_status', 'parse_status', 'index_status', 'telegram_status', 'delete_status',
-        'json_data'
+        'id', 'parse_file_url', 'telegram_file_id',
     )
     list_filter = (
         'download_status', 'parse_status', 'index_status', 'telegram_status', 'delete_status',
@@ -41,7 +37,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'slug', 'document', 'created_at', 'updated_at')
     ordering = ('-created_at',)
     search_fields = ('id', 'title', 'slug', 'parsed_content', 'document__id')
-    list_filter = ('created_at', 'updated_at', 'document')
+    list_filter = ('created_at', 'updated_at', 'document','document__completed')
 
 
 @admin.register(SiteToken)

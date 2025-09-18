@@ -48,7 +48,7 @@ class Document(models.Model):
         ('skipped', 'O`tkazib yuborildi'),
     ]
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,db_index=True)
 
     parse_file_url = models.TextField(blank=True, null=True, verbose_name="File URL",
                                 help_text="Direct link to the document file")
@@ -66,7 +66,7 @@ class Document(models.Model):
     delete_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
                                      verbose_name="O'chirish holati")
 
-    completed = models.BooleanField(default=False, verbose_name="Barchasi tugatildimi?")
+    completed = models.BooleanField(default=False, verbose_name="Barchasi tugatildimi?",db_index=True)
 
     telegram_file_id = models.CharField(blank=True, null=True, verbose_name="Telegram File ID",
                                         help_text="File ID after sending to Telegram channel",db_index=True,max_length=500)
