@@ -62,6 +62,7 @@ services:
       - redis
       - postgres
       - celery
+      - web
     networks:
       - filefinder_net
     restart: unless-stopped
