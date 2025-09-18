@@ -10,7 +10,7 @@ services:
              python manage.py migrate &&
              python manage.py collectstatic --no-input &&
              python manage.py elasticsearch_index --rebuild --force &&
-             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
+             uvicorn core.asgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
