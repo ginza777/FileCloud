@@ -1,0 +1,6 @@
+-r base.txt
+
+# Development packages
+django-debug-toolbar
+ipython
+uvicorn[standard]

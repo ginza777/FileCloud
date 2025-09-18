@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project_name }}</title>
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js for reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+
+        .search-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+
+        .file-card {
+            transition: all 0.3s ease;
+        }
+
+        .file-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .loading-skeleton {
+            animation: skeleton-loading 1s linear infinite alternate;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-color: hsl(200, 20%, 80%);
+            }
+            100% {
+                background-color: hsl(200, 20%, 95%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen" x-data="searchApp()">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl font-bold text-center mb-4">{{ project_name }}</h1>
+            <p class="text-xl text-center mb-8">{{ description }}</p>
+
+            <!-- Search Box -->
+            <div class="max-w-3xl mx-auto">
+                <div class="relative">
+                    <input
+                        type="text"
+                        x-model="searchQuery"
+                        @input.debounce.300ms="search()"
+                        class="w-full px-6 py-4 rounded-lg text-gray-800 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-lg"
+                        placeholder="Hujjatlarni qidirish...">
+                    <div x-show="isLoading" class="absolute right-4 top-4">
+                        <div class="search-animation">
+                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Search Results -->
+        <div x-show="searchResults.length > 0" x-cloak>
+            <h2 class="text-2xl font-bold mb-6">Qidiruv Natijalari</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="result in searchResults" :key="result.id">
+                    <div class="bg-white rounded-lg shadow-md p-6 file-card">
+                        <h3 class="text-xl font-semibold mb-2" x-text="result.title"></h3>
+                        <p class="text-gray-600 text-sm mb-4" x-text="truncateText(result.parsed_content, 150)"></p>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-blue-600" x-text="'ID: ' + result.id"></span>
+                            <span class="text-gray-500" x-text="result.slug"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Recent Files -->
+        <div x-show="!searchQuery">
+            <h2 class="text-2xl font-bold mb-6">So'ngi Qo'shilgan Fayllar</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="doc in recentDocuments" :key="doc.id">
+                    <div class="bg-white rounded-lg shadow-md p-6 file-card">
+                        <h3 class="text-xl font-semibold mb-2" x-text="doc.product.title"></h3>
+                        <p class="text-gray-600 text-sm mb-4" x-text="truncateText(doc.product.parsed_content, 150)"></p>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-blue-600" x-text="'ID: ' + doc.id"></span>
+                            <span class="text-gray-500" x-text="doc.product.slug"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- No Results Message -->
+        <div x-show="searchQuery && !isLoading && searchResults.length === 0" class="text-center py-12">
+            <p class="text-gray-600 text-lg">Hech qanday natija topilmadi. Boshqa kalit so'z bilan urinib ko'ring.</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2025 FileFinder. Barcha huquqlar himoyalangan.</p>
+        </div>
+    </footer>
+
+    <script>
+        function searchApp() {
+            return {
+                searchQuery: '',
+                searchResults: [],
+                recentDocuments: [],
+                isLoading: false,
+
+                async init() {
+                    await this.loadRecentDocuments();
+                },
+
+                async search() {
+                    if (!this.searchQuery) {
+                        this.searchResults = [];
+                        return;
+                    }
+
+                    this.isLoading = true;
+                    try {
+                        const response = await fetch(`/api/search/?q=${encodeURIComponent(this.searchQuery)}`);
+                        const data = await response.json();
+                        this.searchResults = data.results;
+                    } catch (error) {
+                        console.error('Search error:', error);
+                        this.searchResults = [];
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                async loadRecentDocuments() {
+                    try {
+                        const response = await fetch('/api/recent/');
+                        const data = await response.json();
+                        this.recentDocuments = data;
+                    } catch (error) {
+                        console.error('Error loading recent documents:', error);
+                        this.recentDocuments = [];
+                    }
+                },
+
+                truncateText(text, length) {
+                    if (!text) return '';
+                    return text.length > length ? text.substring(0, length) + '...' : text;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
