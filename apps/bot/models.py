@@ -120,6 +120,11 @@ class User(models.Model):
         """Returns the user's full name."""
         return f"{self.first_name or ''} {self.last_name or ''}".strip()
 
+    def get_absolute_url(self):
+        """Returns the URL to access a particular user instance."""
+        from django.urls import reverse
+        return reverse('admin:bot_user_change', args=[str(self.id)])
+
 
 class Location(models.Model):
     """

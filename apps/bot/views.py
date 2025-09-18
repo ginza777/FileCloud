@@ -208,6 +208,21 @@ async def location_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, u
 
 # --- Asosiy Foydalanuvchi Funksiyalari ---
 
+@get_user
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+    """Help handler for bot commands."""
+    await update.message.reply_text(translation.help_message[language])
+
+@get_user
+async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+    """About handler for bot information."""
+    await update.message.reply_text(translation.about_message[language])
+
+@get_user
+async def share_bot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+    """Share bot handler."""
+    await update.message.reply_text(translation.share_bot_text[language])
+
 @update_or_create_user
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
     """
@@ -291,22 +306,24 @@ async def main_text_handler(update, context, user, language):
         is_deep_search=(search_mode == 'deep')
     )
 
-    # Build ES query using correct fields from DocumentIndex (title, slug, parsed_content)
+    # Build ES query using correct fields from DocumentIndex
     s = DocumentIndex.search()
     if search_mode == 'deep':
+        # Deep search: slug, title, parsed_content va completed=true
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['parsed_content^1'],
+            fields=['slug^3', 'title^2', 'parsed_content^1'],
             fuzziness='AUTO',
             type='best_fields'
         )
         s = s.highlight('parsed_content', fragment_size=100)
     else:
+        # Normal search: slug, title va completed=true
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['title^3', 'slug^2'],
+            fields=['slug^3', 'title^2'],
             fuzziness='AUTO',
             type='best_fields'
         )
@@ -366,11 +383,13 @@ async def handle_search_pagination(update, context, user, language):
 
     # Build ES query using correct fields
     if search_mode == 'deep':
-        exact_fields = ["title^10", "slug^8", "parsed_content^6"]
-        fuzzy_fields = ["title^5", "slug^4", "parsed_content^3"]
+        # Deep search: slug, title, parsed_content va completed=true
+        exact_fields = ["slug^10", "title^8", "parsed_content^6"]
+        fuzzy_fields = ["slug^5", "title^4", "parsed_content^3"]
     else:
-        exact_fields = ["title^10", "slug^8"]
-        fuzzy_fields = ["title^5", "slug^4"]
+        # Normal search: slug, title va completed=true
+        exact_fields = ["slug^10", "title^8"]
+        fuzzy_fields = ["slug^5", "title^4"]
 
     exact_clause = Q("multi_match", query=query_text, fields=exact_fields, type="phrase", boost=5)
     fuzzy_clause = Q("multi_match", query=query_text, fields=fuzzy_fields, fuzziness="AUTO", boost=1)

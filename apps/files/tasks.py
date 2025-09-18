@@ -90,7 +90,7 @@ def process_document_pipeline(self, document_id):
 
             doc.file_path = file_full_path_str
             doc.download_status = 'completed'
-            doc.save(update_fields=['file_path', 'download_status'])
+            doc.save()
             logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
         except Exception as e:
             doc.download_status = 'failed'
@@ -113,7 +113,7 @@ def process_document_pipeline(self, document_id):
                 product.parsed_content = content
                 product.save(update_fields=['parsed_content'])
                 doc.parse_status = 'completed'
-                doc.save(update_fields=['parse_status'])
+                doc.save()
             logger.info(f"[2. Parse] Muvaffaqiyatli: {document_id}")
         except Exception as e:
             doc.parse_status = 'failed'
@@ -141,7 +141,7 @@ def process_document_pipeline(self, document_id):
             }
             es_client.index(index=es_index, id=str(doc.id), document=body)
             doc.index_status = 'completed'
-            doc.save(update_fields=['index_status'])
+            doc.save()
             logger.info(f"[3. Indekslash] Muvaffaqiyatli: {document_id}")
         except Exception as e:
             doc.index_status = 'failed'
@@ -209,7 +209,7 @@ def process_document_pipeline(self, document_id):
                     if resp_data.get("ok"):
                         doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
                         doc.telegram_status = 'completed'
-                        doc.save(update_fields=['telegram_file_id', 'telegram_status'])
+                        doc.save()
                         logger.info(f"[4. Telegram] Muvaffaqiyatli yuborildi: {document_id}")
                         break
                     elif resp_data.get("error_code") == 429 and "retry_after" in resp_data:
@@ -243,11 +243,11 @@ def process_document_pipeline(self, document_id):
                 os.remove(doc.file_path)
                 doc.file_path = None
                 doc.delete_status = 'completed'
-                doc.save(update_fields=['file_path', 'delete_status'])
+                doc.save()
                 logger.info(f"[5. O'chirish] Fayl muvaffaqiyatli o'chirildi: {document_id}")
             else:
                 doc.delete_status = 'completed'  # Fayl yo'q bo'lsa ham tugatildi deb hisoblaymiz
-                doc.save(update_fields=['delete_status'])
+                doc.save()
         except Exception as e:
             doc.delete_status = 'failed'
             doc.save(update_fields=['delete_status'])
