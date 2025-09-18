@@ -3,7 +3,7 @@ import logging
 import os
 from asgiref.sync import sync_to_async
 from django.core.paginator import Paginator, Page
-from elasticsearch_dsl.query import QueryString, Q
+from elasticsearch_dsl import Q
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler
@@ -15,7 +15,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 from . import translation
-from files.elasticsearch.documents import DocumentIndex
+from apps.files.elasticsearch.documents import DocumentIndex
 from .keyboard import (
     build_search_results_keyboard,
     default_keyboard,
@@ -33,10 +33,13 @@ from .utils import (
     update_or_create_user,
     admin_only
 )
-from files.models import Document, Product, SearchQuery
+from apps.files.models import Document, Product, SearchQuery
 from .tasks import start_broadcast_task
 
+# --- Constants ---
 AWAIT_BROADCAST_MESSAGE = 0
+FIFTY_MB_IN_BYTES = 50 * 1024 * 1024
+PAGE_SIZE = 10
 
 # --- Dashboard Functions ---
 
@@ -56,7 +59,7 @@ def admin_dashboard_demo(request):
 def admin_dashboard_live(request):
     """Render the live dashboard"""
     try:
-        from bot.admin_dashboard import AdminDashboardView
+        from .admin import AdminDashboardView
         dashboard_view = AdminDashboardView()
         context = dashboard_view.get_dashboard_context()
         from django.shortcuts import render
@@ -101,8 +104,8 @@ async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DE
         return
 
     await query.edit_message_text("⏳ Yuborilmoqda...")
+    # Remove unsupported 'bot' field
     broadcast = await Broadcast.objects.acreate(
-        bot=context.bot_data.get("bot_instance"),
         from_chat_id=from_chat_id,
         message_id=message_id,
     )
@@ -253,22 +256,15 @@ async def language_choice_handle(update: Update, context: ContextTypes.DEFAULT_T
 # --- Tugmalar uchun alohida, kichik funksiyalar ---
 
 @update_or_create_user
-async def toggle_search_mode(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def toggle_search_mode(update, context, user, language):
     user_text = update.message.text.strip()
-    print("user_text: ", user_text)
-
     if user_text == translation.deep_search[language]:
-        print("Deep search")
         new_mode = 'deep'
     elif user_text == translation.search[language]:
-        print("Normal search")
         new_mode = 'normal'
     else:
-        new_mode = context.user_data.get('default_search_mode', 'normal')
-
-    # faqat sessionga yozamiz
-    context.user_data['default_search_mode'] = new_mode
-
+        new_mode = context.user_data.get('search_mode', 'normal')
+    context.user_data['search_mode'] = new_mode
     response_text = (
         translation.deep_search_mode_on[language]
         if new_mode == 'deep'
@@ -276,137 +272,89 @@ async def toggle_search_mode(update: Update, context: ContextTypes.DEFAULT_TYPE,
     )
     await update.message.reply_text(response_text)
 
-
-
-
-@get_user
-async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
-    """
-    'Help' tugmasi uchun ishlaydi.
-    """
-    await update.message.reply_text(translation.help_message[language])
-
-
-@get_user
-async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
-    """
-    'About Us' tugmasi uchun ishlaydi.
-    """
-    await update.message.reply_text(translation.about_message[language])
-
-
-@get_user
-async def share_bot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
-    """
-    'Share Bot' tugmasi uchun ishlaydi.
-    """
-    await update.message.reply_text(translation.share_bot_text[language])
-
-
 # --- Qidiruv va Fayllar Bilan Ishlash ---
-
-# apps/bot/views.py fayliga o'zgartirishlar
-
-# ... (faylning yuqori qismi o'zgarishsiz)
-
-# apps/bot/views.py fayliga o'zgartirishlar
-
-# ... (faylning yuqori qismi o'zgarishsiz)
-
-# apps/bot/views.py
-
-# ...importlar...
-from elasticsearch_dsl import Q  # <-- Q obyektini import qilamiz
-
-FIFTY_MB_IN_BYTES = 50 * 1024 * 1024
-
-# apps/bot/views.py fayliga qo'shiladigan importlar
-from elasticsearch_dsl import Q  # <--- MUHIM: Q obyektini import qilamiz
-
-
-# ... boshqa importlar ...
-
-# Quyidagi funksiyani to'liq yangilang
 @get_user
 @channel_subscribe
-async def main_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def main_text_handler(update, context, user, language):
     """
     Asosiy matnli xabarlarni qabul qiladi va Elasticsearch orqali qidiradi.
-    'search' va 'deep_search' rejimlarini qo'llab-quvvatlaydi.
+    'normal' va 'deep' rejimlarini qo'llab-quvvatlaydi.
     """
     query_text = update.message.text
-    search_mode = context.user_data.get('search_mode', 'search')
-    page = 1  # Har doim birinchi sahifadan boshlaymiz
+    search_mode = context.user_data.get('search_mode', 'normal')
+    context.user_data['last_search_query'] = query_text
+    context.user_data['search_mode'] = search_mode
 
-    # --- 1. Qidiruv so'rovini bazaga saqlash ---
     await SearchQuery.objects.acreate(
         user=user,
         query_text=query_text,
-        is_deep_search=(search_mode == 'deep_search')
+        is_deep_search=(search_mode == 'deep')
     )
 
-    # --- 2. Elasticsearch uchun aqlli so'rovni qurish ---
-    s = DocumentDocument.search()
-
-    if search_mode == 'deep_search':
-        # DEEP SEARCH: Faqat document ning parsed content bo'yicha qidiruv
+    # Build ES query using correct fields from DocumentIndex (title, slug, parsed_content)
+    s = DocumentIndex.search()
+    if search_mode == 'deep':
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=[
-                'content^1'  # Faqat fayl ichidagi matn
-            ],
-            fuzziness='AUTO',  # Avtomatik ravishda imlo xatolarini tuzatish
-            type='best_fields'  # Eng yaxshi moslikni topish
+            fields=['parsed_content^1'],
+            fuzziness='AUTO',
+            type='best_fields'
         )
-        # Fayl ichidan topilgan joyni ko'rsatish uchun highlighting yoqamiz
-        s = s.highlight('content', fragment_size=100)
-
+        s = s.highlight('parsed_content', fragment_size=100)
     else:
-        # REGULAR SEARCH: Faqat product title va slug bo'yicha qidiruv
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=[
-                'product_title^3',  # Sarlavha 3 barobar muhimroq
-                'product_slug^2'   # Slug 2 barobar muhimroq
-            ],
-            fuzziness='AUTO',  # Avtomatik ravishda imlo xatolarini tuzatish
-            type='best_fields'  # Eng yaxshi moslikni topish
+            fields=['title^3', 'slug^2'],
+            fuzziness='AUTO',
+            type='best_fields'
         )
-
-    # Qurilgan so'rovni search obyektiga qo'llaymiz
     s = s.query(final_query)
 
-    # --- Filtrlash: Faqat faol dokumentlar ---
-    filter_query = Q(
-        'bool',
-        must=[
-            Q('term', is_active=True),           # Document must be active
-        ]
-    )
-    s = s.filter(filter_query)
+    # Filter only completed docs (field exists in index)
+    s = s.filter(Q('term', completed=True))
 
-    # --- 3. Natijalarni sahifalash (Paginatsiya) ---
-    paginator = Paginator(s, 10)  # Har sahifada 10 ta natija
+    # Manual pagination for ES
+    page_size = PAGE_SIZE
+    page_number = 1
+    total_results = await sync_to_async(s.count)()
+    start_index = (page_number - 1) * page_size
+    end_index = start_index + page_size
+    search_results = await sync_to_async(lambda: s[start_index:end_index].execute())()
+    all_doc_ids = [hit.meta.id for hit in search_results]
 
-    if paginator.count > 0:
-        page_obj = paginator.page(page)
-        products_on_page = await sync_to_async(list)(page_obj)
+    if total_results > 0 and all_doc_ids:
+        # Fetch products from DB and ensure telegram_file_id present
+        files_from_db = await sync_to_async(
+            lambda: list(
+                Product.objects.select_related('document')
+                .filter(
+                    document_id__in=all_doc_ids,
+                    document__completed=True,
+                    document__telegram_file_id__isnull=False
+                )
+            )
+        )()
+        files_map = {str(prod.document_id): prod for prod in files_from_db}
+        products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
+
+        paginator = Paginator(range(total_results), page_size)
+        page_obj = paginator.page(page_number)
+
         keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language)
         await update.message.reply_text(
-            translation.search_results_found[language].format(count=paginator.count, query=query_text),
+            translation.search_results_found[language].format(count=total_results, query=query_text),
             reply_markup=keyboard
         )
     else:
         await update.message.reply_text(translation.search_no_results[language].format(query=query_text))
 
-
 @get_user
-async def handle_search_pagination(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def handle_search_pagination(update, context, user, language):
     query = update.callback_query
     await query.answer()
-    page_size = 10
+    page_size = PAGE_SIZE
 
     query_text = context.user_data.get('last_search_query')
     if not query_text:
@@ -416,86 +364,61 @@ async def handle_search_pagination(update: Update, context: ContextTypes.DEFAULT
     _, search_mode, page_number_str = query.data.split('_')
     page_number = int(page_number_str)
 
-    # 🔎 Deep yoki normal qidiruv
+    # Build ES query using correct fields
     if search_mode == 'deep':
-        exact_fields = ["product_title^10", "product_slug^8", "content^6"]
-        fuzzy_fields = ["product_title^5", "product_slug^4", "content^3"]
+        exact_fields = ["title^10", "slug^8", "parsed_content^6"]
+        fuzzy_fields = ["title^5", "slug^4", "parsed_content^3"]
     else:
-        exact_fields = ["product_title^10", "product_slug^8"]
-        fuzzy_fields = ["product_title^5", "product_slug^4"]
+        exact_fields = ["title^10", "slug^8"]
+        fuzzy_fields = ["title^5", "slug^4"]
 
     exact_clause = Q("multi_match", query=query_text, fields=exact_fields, type="phrase", boost=5)
     fuzzy_clause = Q("multi_match", query=query_text, fields=fuzzy_fields, fuzziness="AUTO", boost=1)
-
-    # Combine: at least one should match; exact matches get higher score due to boost
     q = Q('bool', should=[exact_clause, fuzzy_clause], minimum_should_match=1)
 
-    s = DocumentDocument.search().query(q)
-
-    # --- Filtrlash mantiqi ---
-    # Only show completed documents with Telegram File ID and reasonable file size
-    filter_query = Q(
-        'bool',
-        must=[
-            Q('term', is_active=True),           # Document must be active
-            Q('term', completed=True),           # Document must be fully processed
-            Q('exists', field='telegram_file_id'), # Must have Telegram File ID
-            Q('range', file_size_bytes={'lte': FIFTY_MB_IN_BYTES}), # File size limit for Telegram
-        ]
-    )
-    s = s.filter(filter_query)
+    s = DocumentIndex.search().query(q)
+    s = s.filter(Q('term', completed=True))
 
     total_results = await sync_to_async(s.count)()
-
-    # Paginatsiya
     start_index = (page_number - 1) * page_size
     end_index = start_index + page_size
     search_results = await sync_to_async(lambda: s[start_index:end_index].execute())()
-
-    all_files_ids = [hit.meta.id for hit in search_results]
+    all_doc_ids = [hit.meta.id for hit in search_results]
 
     paginator = Paginator(range(total_results), page_size)
-    page_obj = Page(all_files_ids, page_number, paginator)
+    page_obj = Page(all_doc_ids, page_number, paginator)
 
     files_from_db = await sync_to_async(list)(
-        Product.objects.filter(document_id__in=page_obj.object_list).select_related('document')
+        Product.objects.filter(document_id__in=page_obj.object_list)
+        .select_related('document')
+        .filter(document__completed=True, document__telegram_file_id__isnull=False)
     )
-    files_map = {str(product.document.id): product for product in files_from_db}
-    products_on_page = [files_map[doc_id] for doc_id in all_files_ids if doc_id in files_map]
+    files_map = {str(p.document_id): p for p in files_from_db}
+    products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
 
     response_text = translation.search_results_found[language].format(query=query_text, count=total_results)
-    reply_markup = build_search_results_keyboard(page_obj, products_on_page, search_mode, language)
+    reply_markup = build_search_results_keyboard(products_on_page, page_obj, search_mode, language)
     await query.edit_message_text(text=response_text, reply_markup=reply_markup)
 
-
-
 @get_user
-async def send_file_by_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def send_file_by_callback(update, context, user, language):
     """
     Callback orqali faylni Telegramning o'zidagi file_id yordamida yuboradi.
     Bu usul ancha tez va faylning serverda mavjud bo'lishini talab qilmaydi.
     """
     query = update.callback_query
-
-    # --- 1. ID ni int() ga o'girish olib tashlandi, chunki u UUID ---
     document_uuid = query.data.split('_')[1]
     await query.answer(text=translation.file_is_being_sent[language])
-
     try:
-        # Hujjatni bazadan olamiz
         document = await Document.objects.select_related('product').aget(id=document_uuid)
-
-        # --- 2. Faylni Telegram file_id orqali yuborish ---
-        if document.file_id:
-            # Agar file_id mavjud bo'lsa (ya'ni, fayl kanalga yuborilgan bo'lsa)
+        if document.telegram_file_id:
             await context.bot.send_document(
                 chat_id=user.telegram_id,
-                document=document.file_id,  # Eng asosiy o'zgarish!
+                document=document.telegram_file_id,
                 caption=f"<b>{document.product.title}</b>",
                 parse_mode=ParseMode.HTML
             )
         else:
-            # Agar file_id mavjud bo'lmasa (fayl >50MB yoki kanalga yuborishda xatolik bo'lgan)
             await context.bot.send_message(
                 chat_id=user.telegram_id,
                 text=translation.file_not_available_for_sending[language]

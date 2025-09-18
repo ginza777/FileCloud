@@ -156,6 +156,12 @@ def process_document_pipeline(self, document_id):
         doc.telegram_status = 'processing'
         doc.save(update_fields=['telegram_status'])
         try:
+            # Check if file_path is valid and file exists
+            if not doc.file_path or not os.path.exists(doc.file_path):
+                doc.telegram_status = "skipped"
+                doc.save(update_fields=['telegram_status'])
+                logger.warning(f"[4. Telegram] Fayl yo'q yoki file_path None, o'tkazib yuborildi: {doc.file_path}")
+                return
             file_size = os.path.getsize(doc.file_path)
             if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
                 doc.telegram_status = "skipped"

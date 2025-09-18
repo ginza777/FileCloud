@@ -12,13 +12,12 @@ from typing import Callable
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.timezone import now
-from telegram import Update, Bot
-from telegram.ext import ContextTypes
+from telegram import Bot
 from telegram.error import TelegramError
 import requests
 
 from . import translation
-from .models import User, SubscribeChannel, InvitedUser
+from .models import User, SubscribeChannel
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -88,7 +87,7 @@ def update_or_create_user(func: Callable):
     """
 
     @wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+    async def wrapper(update, context, *args, **kwargs):
         user_data = update.effective_user
         if not user_data:
             return
@@ -118,7 +117,7 @@ def get_user(func: Callable):
     """
 
     @wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+    async def wrapper(update, context, *args, **kwargs):
         user_data = update.effective_user
         if not user_data:
             return
@@ -128,7 +127,9 @@ def get_user(func: Callable):
         
         user = await User.objects.filter(telegram_id=user_data.id).afirst()
         if not user:
-            await update.message.reply_text(translation.start_first)
+            # Show proper start-required message in user's language if available
+            lang = getattr(user_data, 'language_code', 'en') or 'en'
+            await update.message.reply_text(translation.start_required.get(lang, translation.start_required['en']))
             return
 
         user_language = user.selected_language or user.stock_language
@@ -142,7 +143,7 @@ def admin_only(func: Callable):
     Decorator to check if user is admin before allowing access to admin functions
     """
     @wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+    async def wrapper(update, context, *args, **kwargs):
         user_data = update.effective_user
         if not user_data:
             return
@@ -152,7 +153,8 @@ def admin_only(func: Callable):
         
         user = await User.objects.filter(telegram_id=user_data.id).afirst()
         if not user or not user.is_admin:
-            await update.message.reply_text("❌ Bu buyruq faqat adminlar uchun!")
+            if update.message:
+                await update.message.reply_text("❌ Bu buyruq faqat adminlar uchun!")
             return
 
         return await func(update, context, *args, **kwargs)
@@ -167,7 +169,7 @@ def channel_subscribe(func: Callable):
     """
 
     @wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+    async def wrapper(update, context, *args, **kwargs):
         user = kwargs.get('user')
         user_language = kwargs.get('language')
         if not user or not user_language:
@@ -195,15 +197,11 @@ def channel_subscribe(func: Callable):
 
 async def get_user_statistics(bot_username: str) -> dict:
     """
-    Foydalanuvchilarning umumiy va oxirgi 24 soatdagi faol soni
-    haqida statistika qaytaradi.
+    Foydalanuvchilarning umumiy va oxirgi 24 soatdagi faol soni haqida statistika qaytaradi.
     """
-    user_count = await User.objects.filter(bot__username=bot_username).acount()
-    active_24_count = await User.objects.filter(
-        bot__username=bot_username,
-        last_active__gte=now() - timedelta(hours=24)
-    ).acount()
-    return {"total": user_count, "active_24h": active_24_count}
+    total = await User.objects.acount()
+    active_24 = await User.objects.filter(last_active__gte=now() - timedelta(hours=24)).acount()
+    return {"total": total, "active_24h": active_24}
 
 
 async def perform_database_backup():
@@ -399,53 +397,6 @@ Parser ishlashi yakunlandi.
 
 # --- Invite User Functions ---
 
-async def track_group_joins(update, context):
-    """
-    Track when users join groups/channels and create invite relationships
-    """
-    chat = update.effective_chat
-    new_members = update.message.new_chat_members
-
-    # Kanalni yoki guruhni bazadan topish / yaratish
-    channel, _ = await SubscribeChannel.objects.aget_or_create(
-        channel_id=str(chat.id),
-        defaults={
-            "channel_username": chat.username,
-            "channel_link": f"https://t.me/{chat.username}" if chat.username else None,
-            "bot": context.bot_data["bot_instance"],  # Bot model instance
-        }
-    )
-
-    for member in new_members:
-        # Foydalanuvchini bazaga qo'shish
-        invited_user, _ = await User.objects.aupdate_or_create(
-            telegram_id=member.id,
-            bot=context.bot_data["bot_instance"],
-            defaults={
-                "first_name": member.first_name,
-                "last_name": getattr(member, "last_name", ""),
-                "username": getattr(member, "username", ""),
-            }
-        )
-
-        # Kim taklif qilganini aniqlash
-        inviter = update.message.from_user
-        invited_by, _ = await User.objects.aupdate_or_create(
-            telegram_id=inviter.id,
-            bot=context.bot_data["bot_instance"],
-            defaults={
-                "first_name": inviter.first_name,
-                "last_name": getattr(inviter, "last_name", ""),
-                "username": getattr(inviter, "username", ""),
-            }
-        )
-
-        # Endi InvitedUser yozuvini yaratish
-        await InvitedUser.objects.aupdate_or_create(
-            channel=channel,
-            invited_by=invited_by,
-            invited_user=invited_user,
-            defaults={
-                "invited_at": timezone.now()
-            }
-        )
+# Removed broken invite tracking to avoid references to non-existent models
+# def track_group_joins(update, context):
+#     pass

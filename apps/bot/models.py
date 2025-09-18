@@ -9,10 +9,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from telegram.error import TelegramError
 
-from .utils import (
-    check_bot_is_admin_in_channel
-)
-
 
 class GetOrNoneManager(models.Manager):
     """Custom manager that returns None instead of raising DoesNotExist"""
@@ -66,7 +62,7 @@ class SubscribeChannel(models.Model):
             try:
                 # Synchronous check using asyncio.run
                 is_admin = asyncio.run(
-                    check_bot_is_admin_in_channel(self.channel_id, bot_token)
+                    self.some_method_that_uses_check_bot_is_admin(bot_token)
                 )
                 print(f"Admin status for {self.channel_id}: {is_admin}")
 
@@ -83,6 +79,10 @@ class SubscribeChannel(models.Model):
         """Override save to ensure clean validation runs"""
         self.clean()
         super().save(*args, **kwargs)
+
+    def some_method_that_uses_check_bot_is_admin(self, bot_token):
+        from .utils import check_bot_is_admin_in_channel  # Local import to avoid circular import
+        return check_bot_is_admin_in_channel(self.channel_id, bot_token)
 
 
 class User(models.Model):
@@ -172,4 +172,3 @@ class BroadcastRecipient(models.Model):
 
     class Meta:
         unique_together = ('broadcast', 'user')
-

@@ -1,6 +1,9 @@
-from telegram import ReplyKeyboardMarkup, KeyboardButton
-from telegram import InlineKeyboardMarkup
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.error import BadRequest
+from asgiref.sync import sync_to_async
+
+from .models import SubscribeChannel
+from . import translation
 
 
 def language_list_keyboard():
@@ -45,7 +48,7 @@ def share_post_inline_button(post_id, lang) -> InlineKeyboardMarkup:
         "uz": f"Ushbu postni ulashing 📤",
         "ru": f"Поделиться этим постом 📤",
         "en": f"Share this post 📤",
-        "tr": f"Bu Gönderi Paylaş ��",
+        "tr": f"Bu Gönderi Paylaş 📤",
     }
     buttons = [[
         InlineKeyboardButton(share_text[lang], switch_inline_query=f"share_post_{post_id}")
@@ -71,7 +74,7 @@ def make_movie_share_keyboard(lang) -> InlineKeyboardMarkup:
         "uz": f"Ushbu kinoni ulashing  📤 ",
         "ru": f"Поделиться этим фильмом  📤",
         "en": f"Share this Movie 📤",
-        "tr": f"Bu Filmi Paylaş ��",
+        "tr": f"Bu Filmi Paylaş 📤",
     }
     text = """🍀Bot"""
     buttons = [[
@@ -115,35 +118,20 @@ def make_keyboard_for_help_command() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest
-from asgiref.sync import sync_to_async
-from .models import SubscribeChannel
-from . import translation
-
-
 async def keyboard_checked_subscription_channel(user_id, bot):
-    # --- O'ZGARTIRILGAN QISM ---
-    # .select_related('bot') qo'shildi. Bu SubscribeChannel obyektlari bilan birga
-    # ularga bog'liq bo'lgan Bot obyektlarini ham bitta so'rovda yuklab oladi.
-    channels_query = SubscribeChannel.objects.select_related('bot').filter(active=True)
-    channels = await sync_to_async(list)(channels_query)
-    # --- O'ZGARTIRISH TUGADI ---
+    """
+    Active kanallar bo'yicha obuna holatini tekshiradi va inline keyboard qaytaradi.
+    """
+    channels_query = SubscribeChannel.objects.filter(active=True)
+    channels = await sync_to_async(lambda: list(channels_query))()
 
     buttons = []
     is_subscribed = True
 
     for idx, channel in enumerate(channels):
         try:
-            # Endi channel.bot.token murojaati yangi DB so'rovini yubormaydi,
-            # chunki 'bot' obyekti oldindan yuklab olingan.
-            token = channel.bot.token
-            bot_instance = Bot(token=token)
-
-            # Foydalanuvchining obunachiligini tekshirish
-            chat_member = await bot_instance.get_chat_member(chat_id=channel.channel_id, user_id=user_id)
+            chat_member = await bot.get_chat_member(chat_id=channel.channel_id, user_id=user_id)
             subscribed = chat_member.status != 'left'
-
         except BadRequest as e:
             print(f"Error checking subscription: {e}")
             subscribed = False
@@ -152,10 +140,18 @@ async def keyboard_checked_subscription_channel(user_id, bot):
             subscribed = False
 
         subscription_status = "✅" if subscribed else "❌"
+        # URL tayyorlash
+        if channel.channel_link:
+            url = channel.channel_link
+        elif channel.channel_username:
+            url = f"https://t.me/{channel.channel_username}"
+        else:
+            url = "https://t.me"  # fallback
+
         buttons.append([
             InlineKeyboardButton(
                 text=f"Channel {idx + 1} {subscription_status}",
-                url=channel.get_channel_link  # Model property ishlatilgani yaxshiroq
+                url=url
             )
         ])
         if not subscribed:
@@ -183,7 +179,7 @@ def keyboard_check_subscription_channel() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(
                 text="🔔 Obuna bo‘lish",
-                url="https://t.me/YOUR_CHANNEL_USERNAME"  # Kanal username yoki link
+                url="https://t.me/YOUR_CHANNEL_USERNAME"
             )
         ],
         [
@@ -207,8 +203,8 @@ def default_keyboard(lang, admin=False) -> ReplyKeyboardMarkup:
         buttons.append([KeyboardButton(translation.admin_button_text)])
     return ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
 
-from elasticsearch_dsl.response import Hit
-def build_search_results_keyboard(page_obj, products_on_page, search_mode, language):
+
+def build_search_results_keyboard(products_on_page, page_obj, search_mode, language):
     """
     Qidiruv natijalari va sahifalash tugmalarini yaratadi.
     callback_data uchun to'g'ri Document ID (UUID) ishlatiladi.
@@ -216,11 +212,9 @@ def build_search_results_keyboard(page_obj, products_on_page, search_mode, langu
     buttons = []
 
     # Fayllar ro'yxati uchun tugmalarni yaratamiz
-    for product in products_on_page:  # O'zgaruvchi nomi aniqlashtirildi
-        # --- ASOSIY O'ZGARISH: product.meta.id ishlatilmoqda (Elasticsearch Hit obyekti) ---
-        callback_data = f"getfile_{product.meta.id}"
-
-        button_text = f"📄 {product.product_title}"
+    for product in products_on_page:
+        callback_data = f"getfile_{product.document_id}"
+        button_text = f"📄 {product.title}"
         buttons.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
     # Sahifalash (pagination) tugmalari
@@ -228,23 +222,21 @@ def build_search_results_keyboard(page_obj, products_on_page, search_mode, langu
     if page_obj.has_previous():
         prev_page = page_obj.previous_page_number()
         pagination_buttons.append(
-            InlineKeyboardButton(translation.pagination_prev[language],  # translation.py dan olingan
+            InlineKeyboardButton(translation.pagination_prev[language],
                                  callback_data=f"search_{search_mode}_{prev_page}")
         )
 
-    # Joriy sahifa raqamini ko'rsatuvchi (bosilmaydigan) tugma
     current_page_text = f"{page_obj.number}/{page_obj.paginator.num_pages}"
     pagination_buttons.append(InlineKeyboardButton(current_page_text, callback_data="ignore"))
 
     if page_obj.has_next():
         next_page = page_obj.next_page_number()
         pagination_buttons.append(
-            InlineKeyboardButton(translation.pagination_next[language],  # translation.py dan olingan
+            InlineKeyboardButton(translation.pagination_next[language],
                                  callback_data=f"search_{search_mode}_{next_page}")
         )
 
-    if pagination_buttons:  # Agar sahifalash tugmalari mavjud bo'lsa
+    if pagination_buttons:
         buttons.append(pagination_buttons)
 
     return InlineKeyboardMarkup(buttons)
-

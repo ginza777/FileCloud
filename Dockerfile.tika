@@ -1,9 +1,0 @@
-FROM arm64v8/openjdk:17-slim
-
-WORKDIR /tika
-
-COPY tika-server-standard-2.6.0.jar /tika/tika-server.jar
-
-EXPOSE 9998
-
-CMD ["java", "-jar", "tika-server.jar", "--host=0.0.0.0", "--port=9998"]

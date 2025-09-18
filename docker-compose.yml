@@ -17,7 +17,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "${WEB_EXTERNAL_PORT}:${WEB_PORT}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,7 +74,7 @@ services:
     ports:
       - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -107,7 +107,7 @@ services:
     ports:
       - "${ES_EXTERNAL_PORT}:${ES_PORT}"
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" ]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -117,9 +117,7 @@ services:
 
   # 7. Apache Tika (Fayllardan matn ajratib olish uchun)
   tika:
-    build:
-      context: .
-      dockerfile: Dockerfile.tika
+    image: apache/tika:latest
     container_name: filefinder_tika
     ports:
       - "${TIKA_EXTERNAL_PORT}:${TIKA_PORT}"

@@ -3,10 +3,8 @@
 import json
 import logging
 
-from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from telegram import Update
 from telegram.ext import (
@@ -14,6 +12,10 @@ from telegram.ext import (
     filters, ConversationHandler,
 )
 
+from .translation import (
+    search, deep_search, help_text, about_us,
+    share_bot_button, change_language, admin_button_text, text as restart_text
+)
 from .views import (
     start, ask_language, language_choice_handle,
     toggle_search_mode, help_handler, about_handler, share_bot_handler,
@@ -23,10 +25,6 @@ from .views import (
     start_broadcast_conversation, receive_broadcast_message,
     cancel_broadcast_conversation, handle_broadcast_confirmation,
     AWAIT_BROADCAST_MESSAGE
-)
-from .translation import (
-    search, deep_search, help_text, about_us,
-    share_bot_button, change_language, admin_button_text, text as restart_text
 )
 
 logger = logging.getLogger(__name__)
