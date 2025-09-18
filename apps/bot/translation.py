@@ -61,6 +61,7 @@ help_message = {
     "tr": "\n🆘Yardım!\nEğer botun yaratma hakkında sorularınız veya önerileriniz varsa, aşağıdaki düğmeye basarak bot yaratıcısına başvurabilirsiniz",
 }
 
+
 secret_level_button_text = {
     "uz": "Sirli daraja🗝",
     "ru": "Секретный уровень🗝",
