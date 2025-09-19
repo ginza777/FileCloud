@@ -1,8 +1,8 @@
 from django.apps import AppConfig
 
 
-class BotConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
+
+class FilesConfig(AppConfig):
     name = 'apps.files'
 
     def ready(self):
@@ -11,3 +11,4 @@ class BotConfig(AppConfig):
         """
         from .backup_tasks import create_backup_schedule
         create_backup_schedule()
+

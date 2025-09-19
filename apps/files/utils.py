@@ -34,7 +34,7 @@ def refresh_soff_token():
 
         # Update or create token in database
         site_token, created = SiteToken.objects.update_or_create(
-            site_name='soff.uz',
+            name='soff',  # Changed from site_name to name
             defaults={'token': build_id}
         )
 
@@ -55,7 +55,7 @@ def get_valid_soff_token():
     """
     try:
         # Try to get existing token
-        site_token = SiteToken.objects.filter(site_name='soff.uz').first()
+        site_token = SiteToken.objects.filter(name='soff').first()  # Changed from site_name to name
 
         if site_token:
             # Verify token is still valid

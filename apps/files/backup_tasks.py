@@ -5,6 +5,8 @@ from django.conf import settings
 import logging
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime, timedelta
+from asgiref.sync import sync_to_async
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -67,24 +69,33 @@ def create_database_backup():
         raise
 
 # Create the schedule
-def create_backup_schedule():
+async def create_backup_schedule():
+    """
+    Creates the backup schedule asynchronously
+    """
     try:
         # Get or create an interval schedule for every 3 hours
-        schedule, created = IntervalSchedule.objects.get_or_create(
-            every=3,
-            period=IntervalSchedule.HOURS,
-        )
+        @sync_to_async
+        def get_or_create_schedule():
+            return IntervalSchedule.objects.get_or_create(
+                every=3,
+                period=IntervalSchedule.HOURS,
+            )
 
-        # Create or update the periodic task
-        PeriodicTask.objects.get_or_create(
-            name='Database Backup Every 3 Hours',
-            task='create_database_backup',
-            interval=schedule,
-            defaults={
-                'enabled': True,
-                'description': 'Creates a backup of the PostgreSQL database every 3 hours'
-            }
-        )
+        @sync_to_async
+        def get_or_create_task(schedule):
+            return PeriodicTask.objects.get_or_create(
+                name='Database Backup Every 3 Hours',
+                task='create_database_backup',
+                interval=schedule,
+                defaults={
+                    'enabled': True,
+                    'description': 'Creates a backup of the PostgreSQL database every 3 hours'
+                }
+            )
+
+        schedule, created = await get_or_create_schedule()
+        task, created = await get_or_create_task(schedule)
 
         logger.info("Database backup schedule created successfully")
     except Exception as e:
