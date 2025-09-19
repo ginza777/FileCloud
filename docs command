@@ -1,0 +1,34 @@
+Sekin, xavfsiz rejim (har daqiqada 15 ta):
+
+python manage.py dparse --limit=500 --rate=15 --max-active=300
+
+
+
+Birdan 200 ta, lekin jitter bilan:
+
+python manage.py dparse --limit=200 --rate=0 --burst-limit=250 --jitter=0.8
+
+Katta hajmni bo‘lib yuborish:
+
+python manage.py dparse --limit=1000 --rate=40 --batch-size=40 --batch-sleep=1.5
+
+
+Sinov (hech narsa yubormaydi):
+
+python manage.py dparse --limit=120 --dry-run
+
+
+# Asosiy ishlatish (faol tasklarni bekor qilish)
+python manage.py cancel_tasks
+
+# Barcha funksiyalar bilan
+python manage.py cancel_tasks --force --clear-results --reset-documents
+
+# Faqat task natijalarini tozalash
+python manage.py cancel_tasks --clear-results
+
+# Faqat document flaglarini qayta tiklash
+python manage.py cancel_tasks --reset-documents
+
+# Majburiy bekor qilish
+python manage.py cancel_tasks --force
