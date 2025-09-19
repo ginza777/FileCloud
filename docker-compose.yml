@@ -38,6 +38,7 @@ services:
     volumes:
       - .:/app
       - media_volume:/app/media
+      - backup_volume:/app/backups
     env_file:
       - .env
     depends_on:
@@ -56,6 +57,7 @@ services:
              celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/app
+      - backup_volume:/app/backups
     env_file:
       - .env
     depends_on:
@@ -167,6 +169,7 @@ volumes:
   grafana_data:
   static_volume:
   media_volume:
+  backup_volume:
 
 networks:
   filefinder_net:

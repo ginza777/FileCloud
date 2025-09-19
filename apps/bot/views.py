@@ -309,21 +309,21 @@ async def main_text_handler(update, context, user, language):
     # Build ES query using correct fields from DocumentIndex
     s = DocumentIndex.search()
     if search_mode == 'deep':
-        # Deep search: slug, title, parsed_content va completed=true
+        # Deep search: parsed_content, title va slug bilan qidirish va completed=true
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['slug^3', 'title^2', 'parsed_content^1'],
+            fields=['parsed_content^1', 'title^2', 'slug^3'],
             fuzziness='AUTO',
             type='best_fields'
         )
         s = s.highlight('parsed_content', fragment_size=100)
     else:
-        # Normal search: slug, title va completed=true
+        # Normal search: faqat title va slug bilan qidirish va completed=true
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['slug^3', 'title^2'],
+            fields=['title^2', 'slug^3'],
             fuzziness='AUTO',
             type='best_fields'
         )
@@ -383,13 +383,13 @@ async def handle_search_pagination(update, context, user, language):
 
     # Build ES query using correct fields
     if search_mode == 'deep':
-        # Deep search: slug, title, parsed_content va completed=true
-        exact_fields = ["slug^10", "title^8", "parsed_content^6"]
-        fuzzy_fields = ["slug^5", "title^4", "parsed_content^3"]
+        # Deep search: parsed_content, title va slug bilan qidirish va completed=true
+        exact_fields = ["parsed_content^6", "title^8", "slug^10"]
+        fuzzy_fields = ["parsed_content^3", "title^4", "slug^5"]
     else:
-        # Normal search: slug, title va completed=true
-        exact_fields = ["slug^10", "title^8"]
-        fuzzy_fields = ["slug^5", "title^4"]
+        # Normal search: faqat title va slug bilan qidirish va completed=true
+        exact_fields = ["title^8", "slug^10"]
+        fuzzy_fields = ["title^4", "slug^5"]
 
     exact_clause = Q("multi_match", query=query_text, fields=exact_fields, type="phrase", boost=5)
     fuzzy_clause = Q("multi_match", query=query_text, fields=fuzzy_fields, fuzziness="AUTO", boost=1)
