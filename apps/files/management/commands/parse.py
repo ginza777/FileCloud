@@ -17,20 +17,21 @@ BASE_API_URL_TEMPLATE = f"https://soff.uz/_next/data/{SOFF_BUILD_ID_HOLDER}/scie
 
 
 def extract_file_url(poster_url):
-    print(poster_url)
-
     """Poster URL'dan asosiy fayl URL'ini ajratib oladi."""
     if not poster_url:
         return None
-    match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)
-    if match:
-        file_id = match.group(1)
-        file_ext_match = re.search(r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|odt|ods|odp)(?:_page|$)', poster_url,
-                                   re.IGNORECASE)
-        if file_ext_match:
-            file_extension = file_ext_match.group(1).lower()
-            return f"https://d2co7bxjtnp5o.cloudfront.net/media/documents/{file_id}.{file_extension}"
-    return None
+
+    # Handle direct document URLs
+    if 'documents' in poster_url and any(ext in poster_url.lower() for ext in ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.txt', '.rtf', '.odt', '.ods', '.odp']):
+        return poster_url
+
+    # Extract document ID from the poster URL
+    uuid_match = re.search(r'file-(\d+)', poster_url)
+    if not uuid_match:
+        return None
+
+    file_id = uuid_match.group(1)
+    return f"https://soff.uz/api/v1/document/download/{file_id}"
 
 
 class Command(BaseCommand):
