@@ -4,9 +4,7 @@ from celery import shared_task
 from django.conf import settings
 import logging
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
-from datetime import datetime, timedelta
-from asgiref.sync import sync_to_async
-from functools import wraps
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -68,35 +66,17 @@ def create_database_backup():
         logger.error(f"An error occurred during database backup: {str(e)}")
         raise
 
-# Create the schedule
-async def create_backup_schedule():
-    """
-    Creates the backup schedule asynchronously
-    """
+# Replace async version with sync idempotent creator
+def create_backup_schedule():
+    """Synchronously ensure 3-hour backup periodic task exists (idempotent)."""
     try:
-        # Get or create an interval schedule for every 3 hours
-        @sync_to_async
-        def get_or_create_schedule():
-            return IntervalSchedule.objects.get_or_create(
-                every=3,
-                period=IntervalSchedule.HOURS,
-            )
-
-        @sync_to_async
-        def get_or_create_task(schedule):
-            return PeriodicTask.objects.get_or_create(
-                name='Database Backup Every 3 Hours',
-                task='create_database_backup',
-                interval=schedule,
-                defaults={
-                    'enabled': True,
-                    'description': 'Creates a backup of the PostgreSQL database every 3 hours'
-                }
-            )
-
-        schedule, created = await get_or_create_schedule()
-        task, created = await get_or_create_task(schedule)
-
-        logger.info("Database backup schedule created successfully")
+        schedule, _ = IntervalSchedule.objects.get_or_create(every=3, period=IntervalSchedule.HOURS)
+        PeriodicTask.objects.get_or_create(
+            name='Database Backup Every 3 Hours',
+            task='create_database_backup',
+            interval=schedule,
+            defaults={'enabled': True, 'description': 'Creates a backup of the PostgreSQL database every 3 hours'}
+        )
+        logger.info("Database backup schedule ensured (sync)")
     except Exception as e:
-        logger.error(f"Error creating backup schedule: {str(e)}")
+        logger.error(f"Error ensuring backup schedule: {e}")

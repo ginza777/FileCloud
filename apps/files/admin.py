@@ -19,7 +19,7 @@ class ParseProgressAdmin(admin.ModelAdmin):
 class DocumentAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'parse_file_url', 'download_status', 'parse_status', 'index_status',
-        'telegram_status', 'delete_status', 'completed', 'created_at', 'updated_at'
+        'telegram_status', 'delete_status','pipeline_running','completed', 'created_at', 'updated_at'
     )
     ordering = ('-created_at',)
     inlines = [ProductInline]
@@ -28,7 +28,7 @@ class DocumentAdmin(admin.ModelAdmin):
     )
     list_filter = (
         'download_status', 'parse_status', 'index_status', 'telegram_status', 'delete_status',
-        'completed', 'created_at', 'updated_at'
+        'completed', 'pipeline_running'
     )
 
 

@@ -59,6 +59,9 @@ class Command(BaseCommand):
         page = start_page
         total_created = 0
 
+        # Cache existing file URLs to prevent duplicates
+        existing_file_urls = set(Document.objects.values_list('parse_file_url', flat=True))
+
         try:
             while True:
                 if end_page and page > end_page:
@@ -92,7 +95,6 @@ class Command(BaseCommand):
                 except requests.exceptions.RequestException as e:
                     if response.status_code == 404:
                         self.stdout.write(self.style.WARNING("Token eskirgan, yangilanmoqda..."))
-                        # Token will be refreshed in the next iteration
                         time.sleep(2)
                         continue
                     else:
@@ -108,26 +110,24 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"Sahifa {page} da ma'lumot topilmadi. Parsing yakunlandi."))
                     break
 
-                product_ids_on_page = {item.get("id") for item in items if item.get("id")}
-                existing_ids = set(Product.objects.filter(id__in=product_ids_on_page).values_list('id', flat=True))
-                new_items = [item for item in items if item.get("id") and item.get("id") not in existing_ids]
-
-                if not new_items:
-                    self.stdout.write(f"Sahifa {page} da yangi ma'lumotlar yo'q. O'tkazib yuborildi.")
-                    progress.update_progress(page)
-                    page += 1
-                    continue
-
                 docs_to_create = []
                 doc_product_data_map = {}
+                skipped_count = 0
 
-                for item in new_items:
+                for item in items:
                     file_url = extract_file_url(item.get("poster_url"))
-                    # ===== ✅ TALABINGIZGA BINOAN QO'SHILDI =====
-                    # Agar fayl URL'i topilmasa, keyingisiga o'tamiz
+
+                    # Skip if no file URL or if file already exists
                     if not file_url:
                         self.stdout.write(
                             self.style.WARNING(f"ID {item.get('id')} uchun fayl URL topilmadi, o'tkazib yuborildi."))
+                        skipped_count += 1
+                        continue
+
+                    if file_url in existing_file_urls:
+                        self.stdout.write(
+                            self.style.WARNING(f"ID {item.get('id')} uchun fayl allaqachon mavjud, o'tkazib yuborildi."))
+                        skipped_count += 1
                         continue
 
                     doc = Document(
@@ -136,11 +136,14 @@ class Command(BaseCommand):
                     )
                     docs_to_create.append(doc)
                     doc_product_data_map[doc] = item
+                    existing_file_urls.add(file_url)  # Add to cache
 
                 if docs_to_create:
                     with transaction.atomic():
+                        # Create documents first
                         Document.objects.bulk_create(docs_to_create, batch_size=100)
 
+                        # Then create products
                         products_to_create = []
                         for doc in docs_to_create:
                             item_data = doc_product_data_map[doc]
@@ -157,7 +160,10 @@ class Command(BaseCommand):
                     created_count = len(products_to_create)
                     total_created += created_count
                     self.stdout.write(
-                        self.style.SUCCESS(f"Sahifa {page} dan {created_count} ta yangi ma'lumot qo'shildi."))
+                        self.style.SUCCESS(
+                            f"Sahifa {page} dan {created_count} ta yangi ma'lumot qo'shildi "
+                            f"({skipped_count} ta takroriy fayl o'tkazib yuborildi)."
+                        ))
 
                 progress.update_progress(page)
                 page += 1

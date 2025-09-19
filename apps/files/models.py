@@ -73,18 +73,21 @@ class Document(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At",db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
     json_data = models.JSONField(blank=True, null=True, verbose_name="JSON Data")
+    pipeline_running = models.BooleanField(default=False, db_index=True, help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi")
+
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
         ordering = ['-created_at']
 
     def save(self, *args, **kwargs):
+        done_states = {'completed', 'skipped'}
         self.completed = (
-            self.download_status == 'completed' and
-            self.parse_status == 'completed' and
-            self.index_status == 'completed' and
-            self.telegram_status == 'completed' and
-            self.delete_status == 'completed'
+            self.download_status in done_states and
+            self.parse_status in done_states and
+            self.index_status in done_states and
+            self.telegram_status in done_states and
+            self.delete_status in done_states
         )
         super().save(*args, **kwargs)
 
