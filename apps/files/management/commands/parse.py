@@ -121,6 +121,7 @@ class Command(BaseCommand):
 
                 for item in items:
                     item_id = item.get("id")
+                    print(f"ID: {item_id}, url: {item.get('poster_url')}")
                     file_url = extract_file_url(item.get("poster_url"))
 
                     if not file_url:
