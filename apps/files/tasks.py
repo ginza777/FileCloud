@@ -122,10 +122,10 @@ def process_document_pipeline(self, document_id):
                 doc.parse_status = 'processing'
                 doc.save(update_fields=['parse_status'])
             try:
-                if not os.path.exists(doc.file_path):
+                if not doc.file_path or not os.path.exists(doc.file_path):
                     doc.parse_status = 'failed'
                     doc.save(update_fields=['parse_status'])
-                    logger.error(f"[PIPELINE FAIL - Parse] {document_id}: File not found: {doc.file_path}")
+                    logger.error(f"[PIPELINE FAIL - Parse] {document_id}: File not found or path is None: {doc.file_path}")
                     return  # Exit gracefully, do not raise
                 parsed = tika_parser.from_file(doc.file_path)
                 content = parsed.get("content", "").strip() if parsed else ""
