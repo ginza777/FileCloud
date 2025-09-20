@@ -86,6 +86,8 @@ def process_document_pipeline(self, document_id):
         # Allaqachon tugagan bo'lsa chiqib ketamiz
         if doc.completed:
             logger.info(f"[PIPELINE ALREADY COMPLETED] {document_id}")
+            # Pipeline running holatini yechamiz
+            Document.objects.filter(id=document_id).update(pipeline_running=False)
             return
 
         file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
@@ -264,6 +266,9 @@ def process_document_pipeline(self, document_id):
                 logger.error(f"[PIPELINE FAIL - O'chirish] {document_id}: {e}")
                 raise
 
+        # Pipeline muvaffaqiyatli tugadi - completed holatini yangilaymiz
+        doc.refresh_from_db()
+        doc.save()  # Bu completed holatini avtomatik yangilaydi
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
     except Exception as pipeline_error:
         # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz (Celery autoretry keyingi chaqiriqda davom etadi)

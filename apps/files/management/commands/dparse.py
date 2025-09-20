@@ -6,11 +6,12 @@ from ...tasks import process_document_pipeline
 import re
 
 class Command(BaseCommand):
-    help = "Oddiy: hujjatlarni pipeline'ga yuborish. Faqat --limit mavjud."
+    help = "Hujjatlarni pipeline'ga yuborish. Chala qolgan hujjatlarni qayta ishlash imkoniyati bilan."
 
     def add_arguments(self, parser):
         parser.add_argument('--limit', type=int, default=1000, help='Bir martada nechta hujjatni yuborish (standart 1000)')
         parser.add_argument('--max-size', type=float, default=50.0, help='Maksimal fayl hajmi MB da (standart 50 MB)')
+        parser.add_argument('--include-incomplete', action='store_true', help='Chala qolgan (incomplete) hujjatlarni ham qo\'shish')
 
     def parse_file_size(self, file_size_str):
         """Parse file size string like '3.49 MB' to float value in MB"""
@@ -50,23 +51,67 @@ class Command(BaseCommand):
         except (AttributeError, KeyError, ValueError):
             return False
 
+    def reset_document_statuses(self, document):
+        """Hujjat statuslarini reset qilish"""
+        document.download_status = 'pending'
+        document.parse_status = 'pending'
+        document.index_status = 'pending'
+        document.telegram_status = 'pending'
+        document.delete_status = 'pending'
+        document.completed = False
+        document.file_path = None
+        document.save()
+
+    def is_incomplete_document(self, document):
+        """Hujjat chala qolgan yoki xatolik bilan tugagan mi?"""
+        failed_or_incomplete_states = ['failed', 'pending', 'processing']
+        
+        return (
+            document.download_status in failed_or_incomplete_states or
+            document.parse_status in failed_or_incomplete_states or
+            document.index_status in failed_or_incomplete_states or
+            document.telegram_status in failed_or_incomplete_states or
+            document.delete_status in failed_or_incomplete_states
+        )
+
     def handle(self, *args, **options):
         limit = options['limit']
         max_size_mb = options['max_size']
+        include_incomplete = options['include_incomplete']
+        
         self.stdout.write(self.style.SUCCESS("--- Oddiy dparse boshlandi ---"))
         self.stdout.write(self.style.SUCCESS(f"Maksimal fayl hajmi: {max_size_mb} MB"))
+        
+        if include_incomplete:
+            self.stdout.write(self.style.SUCCESS("Chala qolgan hujjatlar ham qo'shiladi"))
 
-        qs = Document.objects.filter(
+        # Asosiy query - completed=False va pipeline_running=False
+        base_qs = Document.objects.filter(
             parse_file_url__isnull=False,
             completed=False,
             pipeline_running=False
-        ).order_by('created_at')[:limit]
+        )
+        
+        # Agar include_incomplete flag berilgan bo'lsa, chala qolgan hujjatlarni ham qo'shamiz
+        if include_incomplete:
+            # Chala qolgan hujjatlarni topish
+            incomplete_qs = Document.objects.filter(
+                parse_file_url__isnull=False,
+                pipeline_running=False
+            ).exclude(completed=True)
+            
+            # Ikki query'ni birlashtirish
+            combined_ids = set(base_qs.values_list('id', flat=True)) | set(incomplete_qs.values_list('id', flat=True))
+            qs = Document.objects.filter(id__in=combined_ids).order_by('created_at')[:limit]
+        else:
+            qs = base_qs.order_by('created_at')[:limit]
 
         docs = list(qs)
         
-        # Filter out large files
+        # Filter out large files va chala qolgan hujjatlarni reset qilish
         filtered_docs = []
         skipped_count = 0
+        reset_count = 0
         
         for doc in docs:
             if self.is_file_too_large(doc, max_size_mb):
@@ -75,11 +120,24 @@ class Command(BaseCommand):
                     self.style.WARNING(f"Fayl o'tkazib yuborildi (hajmi katta): {doc.id}")
                 )
             else:
+                # Agar chala qolgan hujjat bo'lsa, statuslarini reset qilamiz
+                if include_incomplete and self.is_incomplete_document(doc):
+                    self.reset_document_statuses(doc)
+                    reset_count += 1
+                    self.stdout.write(
+                        self.style.HTTP_INFO(f"Hujjat statuslari reset qilindi: {doc.id}")
+                    )
+                
                 filtered_docs.append(doc)
         
         if skipped_count > 0:
             self.stdout.write(
                 self.style.WARNING(f"Jami {skipped_count} ta fayl hajmi katta bo'lgani uchun o'tkazib yuborildi")
+            )
+            
+        if reset_count > 0:
+            self.stdout.write(
+                self.style.HTTP_INFO(f"Jami {reset_count} ta chala qolgan hujjat statuslari reset qilindi")
             )
         
         docs = filtered_docs
