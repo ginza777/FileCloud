@@ -70,18 +70,20 @@ def create_database_backup():
 def create_backup_schedule():
     """Synchronously ensure 3-hour backup periodic task exists (idempotent)."""
     try:
-        # Use filter().first() to gracefully handle cases where multiple identical schedules might exist.
-        schedule = IntervalSchedule.objects.filter(every=3, period=IntervalSchedule.HOURS).first()
-        if not schedule:
-            # If no schedule exists, create a new one.
-            schedule, _ = IntervalSchedule.objects.get_or_create(every=3, period=IntervalSchedule.HOURS)
-
-        PeriodicTask.objects.get_or_create(
-            name='Database Backup Every 3 Hours',
-            task='create_database_backup',
-            interval=schedule,
-            defaults={'enabled': True, 'description': 'Creates a backup of the PostgreSQL database every 3 hours'}
-        )
+        schedule, _ = IntervalSchedule.objects.get_or_create(every=3, period=IntervalSchedule.HOURS)
+        task_name = 'Database Backup Every 3 Hours'
+        task_kwargs = {
+            'task': 'create_database_backup',
+            'interval': schedule,
+            'enabled': True,
+            'description': 'Creates a backup of the PostgreSQL database every 3 hours'
+        }
+        periodic_task, created = PeriodicTask.objects.get_or_create(name=task_name, defaults=task_kwargs)
+        if not created:
+            # Update the existing task if needed
+            for key, value in task_kwargs.items():
+                setattr(periodic_task, key, value)
+            periodic_task.save()
         logger.info("Database backup schedule ensured (sync)")
     except Exception as e:
         logger.error(f"Error ensuring backup schedule: {e}")
