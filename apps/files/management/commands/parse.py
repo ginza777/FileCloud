@@ -20,31 +20,28 @@ def extract_file_url(poster_url):
     """Poster URL'dan asosiy fayl URL'ini ajratib oladi."""
     if not poster_url:
         return None
-
-    # Handle direct document URLs
-    if 'documents' in poster_url and any(ext in poster_url.lower() for ext in ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.txt', '.rtf', '.odt', '.ods', '.odp']):
-        return poster_url
-
-    # Extract document ID from the poster URL
-    uuid_match = re.search(r'file-(\d+)', poster_url)
-    if not uuid_match:
-        return None
-
-    file_id = uuid_match.group(1)
-    return f"https://soff.uz/api/v1/document/download/{file_id}"
+    match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)
+    if match:
+        file_id = match.group(1)
+        file_ext_match = re.search(r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|odt|ods|odp)(?:_page|$)', poster_url,
+                                   re.IGNORECASE)
+        if file_ext_match:
+            file_extension = file_ext_match.group(1).lower()
+            return f"https://d2co7bxjtnp5o.cloudfront.net/media/documents/{file_id}.{file_extension}"
+    return None
 
 
 class Command(BaseCommand):
-    help = 'Soff.uz saytidan faqat yangi mahsulotlarni olib bazaga qo`shadi (Tuzatilgan versiya)'
+    help = 'Soff.uz saytidan ma\'lumotlarni oladi, mavjudlarini yangilaydi va yangilarini qo\'shadi.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--start-page', type=int, default=1000,
+        parser.add_argument('--start-page', type=int, default=None,
                             help='Boshlanadigan sahifa (standart: oxirgi to`xtagan joydan)')
-        parser.add_argument('--end-page', type=int, default=100000, help='Tugaydigan sahifa (standart: cheksiz)')
+        parser.add_argument('--end-page', type=int, default=None, help='Tugaydigan sahifa (standart: cheksiz)')
         parser.add_argument('--reset-progress', action='store_true', help='Parsing jarayonini 1-sahifadan boshlash')
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS("=== MA'LUMOTLARNI PARSE QILISH BOSHLANDI (SODDA REJIM) ==="))
+        self.stdout.write(self.style.SUCCESS("=== MA'LUMOTLARNI PARSE QILISH BOSHLANDI (YANGILASH REJIMI) ==="))
 
         progress = ParseProgress.get_current_progress()
 
@@ -58,9 +55,7 @@ class Command(BaseCommand):
 
         page = start_page
         total_created = 0
-
-        # Cache existing file URLs to prevent duplicates
-        existing_file_urls = set(Document.objects.values_list('parse_file_url', flat=True))
+        total_updated = 0
 
         try:
             while True:
@@ -68,22 +63,18 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f"Belgilangan oxirgi sahifaga ({end_page}) yetildi."))
                     break
 
-                self.stdout.write(f"\nSahifa {page} qayta ishlanmoqda...")
+                self.stdout.write(self.style.HTTP_INFO(f"\n{'=' * 20} Sahifa: {page} {'=' * 20}"))
 
-                # Get valid token before making request
                 token = get_valid_soff_token()
                 if not token:
-                    self.stdout.write(self.style.ERROR("Token olinmadi. Parsing to'xtatildi."))
-                    break
+                    self.stdout.write(self.style.ERROR("Yaroqli token olinmadi. 5 soniyadan so'ng qayta uriniladi..."))
+                    time.sleep(5)
+                    continue
 
                 base_api_url = BASE_API_URL_TEMPLATE.replace(SOFF_BUILD_ID_HOLDER, token)
                 site_token = SiteToken.objects.filter(name='soff').first()
 
-                headers = {
-                    "accept": "*/*",
-                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-                    "referer": "https://soff.uz/scientific-resources/all"
-                }
+                headers = {"accept": "*/*", "user-agent": "Mozilla/5.0"}
                 cookies = {"token": site_token.auth_token if site_token else None}
 
                 try:
@@ -91,18 +82,22 @@ class Command(BaseCommand):
                     response.raise_for_status()
                     data = response.json()
                     items = data.get("pageProps", {}).get("productsData", {}).get("results", [])
-
-                except requests.exceptions.RequestException as e:
-                    if response.status_code == 404:
-                        self.stdout.write(self.style.WARNING("Token eskirgan, yangilanmoqda..."))
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        self.stdout.write(self.style.WARNING(
+                            f"Sahifa {page} (404). Token eskirgan bo'lishi mumkin. Yangilanmoqda..."))
                         time.sleep(2)
                         continue
-                    else:
-                        self.stdout.write(self.style.ERROR(f"Sahifa {page} da tarmoq xatoligi: {e}"))
-                        time.sleep(10)
-                        continue
+                    self.stdout.write(self.style.ERROR(f"Sahifa {page} da HTTP xatoligi: {e}"))
+                    time.sleep(10)
+                    continue
+                except requests.exceptions.RequestException as e:
+                    self.stdout.write(self.style.ERROR(f"Sahifa {page} da tarmoq xatoligi: {e}."))
+                    time.sleep(10)
+                    continue
                 except ValueError:
-                    self.stdout.write(self.style.WARNING("JSON xatolik, token yangilanmoqda..."))
+                    self.stdout.write(
+                        self.style.WARNING(f"Sahifa {page} dan JSON javob o'qilmadi. Qayta urinilmoqda..."))
                     time.sleep(2)
                     continue
 
@@ -110,60 +105,72 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"Sahifa {page} da ma'lumot topilmadi. Parsing yakunlandi."))
                     break
 
-                docs_to_create = []
-                doc_product_data_map = {}
-                skipped_count = 0
+                # --- Sahifadagi ma'lumotlarni qayta ishlash ---
+                created_count = 0
+                updated_count = 0
+                invalid_url_count = 0
+
+                # Yangilash va yaratish uchun listlar
+                docs_to_create, products_to_create = [], []
+                docs_to_update, products_to_update = [], []
+
+                # Sahifadagi mavjud mahsulotlarni bir so'rovda olish
+                item_ids = [item['id'] for item in items if 'id' in item]
+                existing_products = Product.objects.filter(id__in=item_ids).select_related('document')
+                existing_products_map = {p.id: p for p in existing_products}
 
                 for item in items:
+                    item_id = item.get("id")
                     file_url = extract_file_url(item.get("poster_url"))
 
-                    # Skip if no file URL or if file already exists
                     if not file_url:
-                        self.stdout.write(
-                            self.style.WARNING(f"ID {item.get('id')} uchun fayl URL topilmadi, o'tkazib yuborildi."))
-                        skipped_count += 1
+                        invalid_url_count += 1
                         continue
 
-                    if file_url in existing_file_urls:
-                        self.stdout.write(
-                            self.style.WARNING(f"ID {item.get('id')} uchun fayl allaqachon mavjud, o'tkazib yuborildi."))
-                        skipped_count += 1
-                        continue
+                    # Agar mahsulot mavjud bo'lsa -> YANGILASH
+                    if item_id in existing_products_map:
+                        product = existing_products_map[item_id]
+                        doc = product.document
 
-                    doc = Document(
-                        parse_file_url=file_url,
-                        json_data=item
-                    )
-                    docs_to_create.append(doc)
-                    doc_product_data_map[doc] = item
-                    existing_file_urls.add(file_url)  # Add to cache
+                        # Ma'lumotlarni yangilash
+                        product.title = item.get("title", "")
+                        product.slug = item.get("slug", "")
+                        doc.json_data = item
+                        doc.parse_file_url = file_url  # URL ham yangilanishi mumkin
 
-                if docs_to_create:
-                    with transaction.atomic():
-                        # Create documents first
+                        products_to_update.append(product)
+                        docs_to_update.append(doc)
+
+                    # Agar mahsulot mavjud bo'lmasa -> YARATISH
+                    else:
+                        doc = Document(parse_file_url=file_url, json_data=item)
+                        prod = Product(id=item_id, title=item.get("title", ""), slug=item.get("slug", ""), document=doc)
+
+                        docs_to_create.append(doc)
+                        products_to_create.append(prod)
+
+                # --- Ma'lumotlar bazasi amaliyotlari ---
+                with transaction.atomic():
+                    # Yaratish
+                    if docs_to_create:
                         Document.objects.bulk_create(docs_to_create, batch_size=100)
-
-                        # Then create products
-                        products_to_create = []
-                        for doc in docs_to_create:
-                            item_data = doc_product_data_map[doc]
-                            prod = Product(
-                                id=item_data.get("id"),
-                                title=item_data.get("title", ""),
-                                slug=item_data.get("slug", ""),
-                                document=doc
-                            )
-                            products_to_create.append(prod)
-
                         Product.objects.bulk_create(products_to_create, batch_size=100)
+                        created_count = len(products_to_create)
+                        total_created += created_count
 
-                    created_count = len(products_to_create)
-                    total_created += created_count
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"Sahifa {page} dan {created_count} ta yangi ma'lumot qo'shildi "
-                            f"({skipped_count} ta takroriy fayl o'tkazib yuborildi)."
-                        ))
+                    # Yangilash
+                    if products_to_update:
+                        Product.objects.bulk_update(products_to_update, ['title', 'slug'], batch_size=100)
+                        Document.objects.bulk_update(docs_to_update, ['json_data', 'parse_file_url'], batch_size=100)
+                        updated_count = len(products_to_update)
+                        total_updated += updated_count
+
+                # --- Sahifa Statistikasi ---
+                self.stdout.write(self.style.SUCCESS(f"--- Sahifa {page} Statistikasi ---"))
+                self.stdout.write(f"  - Jami elementlar: {len(items)}")
+                self.stdout.write(self.style.SUCCESS(f"  - Yangi qo'shilganlar: {created_count}"))
+                self.stdout.write(self.style.HTTP_INFO(f"  - Yangilanganlar: {updated_count}"))
+                self.stdout.write(self.style.ERROR(f"  - O'tkazib yuborildi (yaroqsiz URL): {invalid_url_count}"))
 
                 progress.update_progress(page)
                 page += 1
@@ -173,7 +180,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("\n\nParsing foydalanuvchi tomonidan to'xtatildi."))
         finally:
             self.stdout.write(self.style.SUCCESS(
-                f"\n=== PARSING YAKUNLANDI ===\n"
+                f"\n{'=' * 20} PARSING YAKUNLANDI {'=' * 20}\n"
                 f"Jami qo'shildi: {total_created}\n"
+                f"Jami yangilandi: {total_updated}\n"
                 f"Oxirgi muvaffaqiyatli sahifa: {progress.last_page}\n"
             ))

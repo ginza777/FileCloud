@@ -4,6 +4,7 @@ python manage.py dparse --limit=500 --rate=15 --max-active=300
 
 
 
+
 Birdan 200 ta, lekin jitter bilan:
 
 python manage.py dparse --limit=200 --rate=0 --burst-limit=250 --jitter=0.8
