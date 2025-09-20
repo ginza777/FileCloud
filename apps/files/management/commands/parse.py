@@ -175,7 +175,7 @@ class Command(BaseCommand):
 
                 progress.update_progress(page)
                 page += 1
-                time.sleep(0.5)
+                time.sleep(0.02)
 
         except KeyboardInterrupt:
             self.stdout.write(self.style.WARNING("\n\nParsing foydalanuvchi tomonidan to'xtatildi."))
