@@ -1,11 +1,9 @@
-from elasticsearch.helpers import bulk
 from django.core.management.base import BaseCommand
 from apps.files.elasticsearch.documents import DocumentIndex
 from apps.files.models import Document
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class Command(BaseCommand):
     help = "Elasticsearch indeksini yaratadi va barcha hujjatlarni indekslaydi"
@@ -14,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--rebuild',
             action='store_true',
-            help="Indeksni qayta yaratadi va barcha ma'lumotlarni qayta indekslaydi"
+            help='Indeksni qayta yaratadi va barcha ma\'lumotlarni qayta indekslaydi'
         )
         parser.add_argument(
             '--force',
@@ -26,7 +24,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=== ELASTICSEARCH INDEKS YARATISH BOSHLANDI ==="))
 
         try:
-            # Initialize index
+            # Indeksni yaratish
             if options['rebuild'] or options['force']:
                 self.stdout.write("Indeks qayta yaratilmoqda...")
                 DocumentIndex.init_index()
@@ -36,8 +34,9 @@ class Command(BaseCommand):
                 DocumentIndex.init_index()
                 self.stdout.write(self.style.SUCCESS("✅ Indeks muvaffaqiyatli yaratildi"))
 
-            # Fetch documents
+            # Barcha hujjatlarni indekslash
             self.stdout.write("Hujjatlarni indekslash boshlandi...")
+
             documents = Document.objects.filter(
                 product__isnull=False,
                 parse_status='completed'
@@ -45,32 +44,20 @@ class Command(BaseCommand):
 
             total_docs = documents.count()
             indexed_count = 0
-            bulk_actions = []
 
             self.stdout.write(f"Jami {total_docs} ta hujjat topildi")
 
-            for doc in documents.iterator(chunk_size=1000):  # Use iterator with chunk_size
+            for doc in documents:
                 try:
-                    # Prepare document for bulk indexing
-                    action = DocumentIndex.prepare_bulk_action(doc)  # Hypothetical method
-                    bulk_actions.append(action)
-
-                    if len(bulk_actions) >= 1000:  # Adjust batch size as needed
-                        success, failed = bulk(DocumentIndex.get_es_client(), bulk_actions)
-                        indexed_count += success
-                        self.stdout.write(f"Indekslandi: {indexed_count}/{total_docs}")
-                        bulk_actions = []  # Reset for next batch
-
+                    result = DocumentIndex.index_document(doc)
+                    if result:
+                        indexed_count += 1
+                        if indexed_count % 10 == 0:
+                            self.stdout.write(f"Indekslandi: {indexed_count}/{total_docs}")
                 except Exception as e:
                     self.stdout.write(
                         self.style.ERROR(f"Hujjat {doc.id} indekslashda xato: {e}")
                     )
-                    logger.error(f"Document {doc.id} indexing failed: {e}")
-
-            # Index remaining documents
-            if bulk_actions:
-                success, failed = bulk(DocumentIndex.get_es_client(), bulk_actions)
-                indexed_count += success
 
             self.stdout.write(
                 self.style.SUCCESS(
