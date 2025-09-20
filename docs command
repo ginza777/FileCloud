@@ -33,3 +33,14 @@ python manage.py cancel_tasks --reset-documents
 
 # Majburiy bekor qilish
 python manage.py cancel_tasks --force
+
+
+
+docker exec -it   filefinder_web  python manage.py parse --start-page=1 --end-page=1000
+docker exec -it   filefinder_web  python manage.py parse --start-page=1001 --end-page=2000
+docker exec -it   filefinder_web  python manage.py parse --start-page=2001 --end-page=3000
+docker exec -it   filefinder_web  python manage.py parse --start-page=3001 --end-page=4000
+docker exec -it   filefinder_web  python manage.py parse --start-page=4001 --end-page=5000
+docker exec -it   filefinder_web  python manage.py parse --start-page=5001 --end-page=6000
+docker exec -it   filefinder_web  python manage.py parse --start-page=6001 --end-page=7000
+docker exec -it   filefinder_web  python manage.py parse --start-page=7001 --end-page=8000
