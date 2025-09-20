@@ -71,16 +71,6 @@ def process_document_pipeline(self, document_id):
     """
     logger.info(f"--- [PIPELINE START] Hujjat ID: {document_id} ---")
 
-    # Optimistik lock: agar dparse qo'ymagan bo'lsa shu yerda qo'yamiz
-    locked_now = False
-    try:
-        # Faqat pipeline_running=False bo'lsa lock o'rnata olamiz
-        updated = Document.objects.filter(id=document_id, pipeline_running=False).update(pipeline_running=True)
-        if updated:
-            locked_now = True
-    except DatabaseError as e:
-        logger.error(f"[LOCK ERROR] {document_id}: {e}")
-
     try:
         try:
             doc = Document.objects.select_related('product').get(id=document_id)
@@ -88,7 +78,7 @@ def process_document_pipeline(self, document_id):
             logger.error(f"[PIPELINE FAIL] Hujjat {document_id} topilmadi")
             return
 
-        # Agar lock yo'q va document pipeline_running=False bo'lsa demak boshqa task oldinroq tugatgan
+        # Agar document pipeline_running=False bo'lsa demak boshqa task oldinroq tugatgan yoki lock yo'q
         if not doc.pipeline_running:
             logger.warning(f"[PIPELINE SKIP] {document_id} lock yo'q (allaqachon qayta ishlangan yoki rejalashtirilmagan).")
             return
