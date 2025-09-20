@@ -4,12 +4,21 @@ from urllib.parse import urlparse
 import os
 
 ALL_EXTS = [
-    'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'rtf',
+    'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'rtf','PDF', 'DOCX', 'DOC', 'PPTX', 'PPT', 'XLSX', 'XLS', 'TXT', 'RTF',
     'PPT', 'DOC', 'DOCX', 'PPTX', 'PDF', 'XLS', 'XLSX', 'odt', 'ods', 'odp'
 ]
 
 class Command(BaseCommand):
     help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions.'
+
+    def get_poster_extension(self, poster_url):
+        """Extract the document extension from poster_url before any suffixes like _page-1_generate.webp"""
+        parsed_url = urlparse(poster_url).path
+        filename = os.path.basename(parsed_url)
+        # Remove known suffix like _page-1_generate.webp
+        if '_page-1_generate.webp' in filename:
+            filename = filename.split('_page-1_generate.webp')[0]
+        return os.path.splitext(filename)[1]
 
     def handle(self, *args, **options):
         updated = 0
@@ -18,7 +27,8 @@ class Command(BaseCommand):
             poster_url = data.get('poster_url')
             if not poster_url or not doc.parse_file_url:
                 continue
-            poster_ext = os.path.splitext(urlparse(poster_url).path)[1]
+            # Get extensions
+            poster_ext = self.get_poster_extension(poster_url)
             file_ext = os.path.splitext(urlparse(doc.parse_file_url).path)[1]
             # Remove leading dot for comparison
             poster_ext_nodot = poster_ext[1:] if poster_ext.startswith('.') else poster_ext
