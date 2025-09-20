@@ -29,7 +29,6 @@ TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
 # Yangi: Maksimal ruxsat etilgan fayl hajmi (masalan, 500 MB)
 MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
-
 def make_retry_session():
     """Qayta urinishlar bilan mustahkam HTTP session yaratadi."""
     session = requests.Session()
@@ -42,7 +41,6 @@ def make_retry_session():
     session.mount("https://", adapter)
     return session
 
-
 def get_es_client():
     es_url = getattr(settings, 'ES_URL', None)
     if not es_url:
@@ -54,17 +52,13 @@ def get_es_client():
         logger.error(f"Elasticsearch client initialization failed: {e}")
         return None
 
-
 try:
     import redis
-
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
 
-
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5,
-             time_limit=7200)  # 2 soat limit, retry backoff 1 daqiqa
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
 def download_task(self, document_id):
     """Alohida yuklab olish taski."""
     start_time = time.time()
@@ -73,26 +67,25 @@ def download_task(self, document_id):
         doc = Document.objects.select_related('product').get(id=document_id)
         if doc.download_status == 'completed':
             logger.info(f"[DOWNLOAD ALREADY COMPLETED] {document_id}")
-            return document_id  # Keyingi task uchun ID qaytar
+            return document_id
 
         doc.download_status = 'processing'
         doc.save(update_fields=['download_status'])
 
-        # Yangi: Fayl hajmini oldindan tekshirish (HEAD request)
         session = make_retry_session()
         head_response = session.head(doc.parse_file_url, timeout=60)
         if 'Content-Length' in head_response.headers:
             file_size = int(head_response.headers['Content-Length'])
             if file_size > MAX_FILE_SIZE_BYTES:
-                doc.download_status = 'skipped_too_large'
+                doc.download_status = 'skipped'
                 doc.save(update_fields=['download_status'])
                 logger.warning(f"[DOWNLOAD SKIPPED] Fayl juda katta: {file_size} bytes, ID: {document_id}")
-                return document_id  # Keyingi bosqichlarga o'tkazib yuborish uchun
+                return document_id
 
         file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
         Path(file_full_path_str).parent.mkdir(parents=True, exist_ok=True)
 
-        with session.get(doc.parse_file_url, stream=True, timeout=1800) as r:  # 30 daqiqa timeout
+        with session.get(doc.parse_file_url, stream=True, timeout=1800) as r:
             r.raise_for_status()
             downloaded_size = 0
             with open(file_full_path_str, "wb") as f:
@@ -100,9 +93,8 @@ def download_task(self, document_id):
                     if chunk:
                         f.write(chunk)
                         downloaded_size += len(chunk)
-                        if downloaded_size % (10 * 1024 * 1024) == 0:  # Har 10 MB da log
-                            logger.info(
-                                f"[DOWNLOAD PROGRESS] {document_id}: {downloaded_size / 1024 / 1024:.2f} MB yuklandi")
+                        if downloaded_size % (10 * 1024 * 1024) == 0:
+                            logger.info(f"[DOWNLOAD PROGRESS] {document_id}: {downloaded_size / 1024 / 1024:.2f} MB yuklandi")
 
         doc.file_path = file_full_path_str
         doc.download_status = 'completed'
@@ -111,10 +103,10 @@ def download_task(self, document_id):
         return document_id
     except Exception as e:
         doc.download_status = 'failed'
-        doc.save(update_fields=['download_status'])
+        doc.pipeline_running = False  # Reset pipeline_running on failure
+        doc.save(update_fields=['download_status', 'pipeline_running'])
         logger.error(f"[DOWNLOAD FAIL] {document_id}: {e}")
         raise
-
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
 def parse_task(self, document_id):
@@ -133,7 +125,6 @@ def parse_task(self, document_id):
         if not os.path.exists(doc.file_path):
             raise FileNotFoundError(f"Fayl topilmadi: {doc.file_path}")
 
-        # Yangi: Tika uchun timeout oshirish
         parsed = tika_parser.from_file(doc.file_path, requestOptions={'timeout': 1800})
         content = parsed.get("content", "").strip() if parsed else ""
 
@@ -148,10 +139,10 @@ def parse_task(self, document_id):
         return document_id
     except Exception as e:
         doc.parse_status = 'failed'
-        doc.save(update_fields=['parse_status'])
+        doc.pipeline_running = False  # Reset pipeline_running on failure
+        doc.save(update_fields=['parse_status', 'pipeline_running'])
         logger.error(f"[PARSE FAIL] {document_id}: {e}")
         raise
-
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
 def index_task(self, document_id):
@@ -187,10 +178,10 @@ def index_task(self, document_id):
         return document_id
     except Exception as e:
         doc.index_status = 'failed'
-        doc.save(update_fields=['index_status'])
+        doc.pipeline_running = False  # Reset pipeline_running on failure
+        doc.save(update_fields=['index_status', 'pipeline_running'])
         logger.error(f"[INDEX FAIL] {document_id}: {e}")
         raise
-
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
 def telegram_task(self, document_id):
@@ -247,7 +238,7 @@ def telegram_task(self, document_id):
             with open(doc.file_path, "rb") as f:
                 files = {"document": (Path(doc.file_path).name, f)}
                 data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
-                response = session.post(url, files=files, data=data, timeout=1800)  # 30 daqiqa timeout
+                response = session.post(url, files=files, data=data, timeout=1800)
             resp_data = response.json()
             if resp_data.get("ok"):
                 doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
@@ -269,10 +260,10 @@ def telegram_task(self, document_id):
         raise Exception("Telegram yuborish muvaffaqiyatsiz (5 urinish)")
     except Exception as e:
         doc.telegram_status = 'failed'
-        doc.save(update_fields=['telegram_status'])
+        doc.pipeline_running = False  # Reset pipeline_running on failure
+        doc.save(update_fields=['telegram_status', 'pipeline_running'])
         logger.error(f"[TELEGRAM FAIL] {document_id}: {e}")
         raise
-
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
 def delete_task(self, document_id):
@@ -293,30 +284,32 @@ def delete_task(self, document_id):
             doc.file_path = None
 
         doc.delete_status = 'completed'
-        doc.pipeline_running = False  # Pipeline tugadi
+        doc.pipeline_running = False
         doc.save()
         logger.info(f"[DELETE SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
     except Exception as e:
         doc.delete_status = 'failed'
-        doc.pipeline_running = False  # Pipeline xatoligi, qayta urinish uchun ochiq qoldirish
+        doc.pipeline_running = False
         doc.save(update_fields=['delete_status', 'pipeline_running'])
         logger.error(f"[DELETE FAIL] {document_id}: {e}")
         raise
-
 
 @shared_task(bind=True)
 def process_document_pipeline(self, document_id):
     """
     To'liq pipeline ni chain orqali chaqirish.
     Har bir bosqich alohida task bo'lib, o'z retry va timeoutlari bor.
-    Lockdan foydalanmaymiz, chunki alohida tasklar avtomatik boshqariladi.
     """
     logger.info(f"--- [PIPELINE START] Hujjat ID: {document_id} ---")
     try:
         doc = Document.objects.get(id=document_id)
-        # Pipeline_running=True bo'lsa ham davom etamiz, chunki dparse command tomonidan 
-        # qasddan ishga tushirilgan
-        logger.info(f"[PIPELINE CONTINUE] {document_id} pipeline davom etmoqda")
+        if doc.pipeline_running:
+            logger.warning(f"[PIPELINE SKIP] {document_id} allaqachon ishlamoqda")
+            return
+
+        # Set pipeline_running to True
+        doc.pipeline_running = True
+        doc.save(update_fields=['pipeline_running'])
 
         # Chain yaratish
         pipeline_chain = chain(
@@ -333,4 +326,4 @@ def process_document_pipeline(self, document_id):
         doc.pipeline_running = False
         doc.save(update_fields=['pipeline_running'])
         logger.error(f"[PIPELINE INIT FAIL] {document_id}: {e}")
-    # Muvaffaqiyatli tugash delete_task da yoki xatolarda avtomatik retry bo'ladi
+        raise
