@@ -112,6 +112,57 @@ class DocumentIndex(Document):
             return None
 
     @classmethod
+    def bulk_index_documents(cls, documents):
+        """Bulk index multiple documents for better performance."""
+        if not connections.get_connection():
+            if not configure_elasticsearch():
+                logger.error("Cannot bulk index documents: No Elasticsearch connection")
+                return 0
+
+        try:
+            from elasticsearch.helpers import bulk
+            
+            # Prepare documents for bulk indexing
+            actions = []
+            for doc in documents:
+                if not doc.product:
+                    continue
+                    
+                action = {
+                    '_index': cls._index._name,
+                    '_id': str(doc.id),
+                    '_source': {
+                        'id': str(doc.id),
+                        'title': doc.product.title,
+                        'slug': doc.product.slug,
+                        'parsed_content': doc.product.parsed_content or '',
+                        'completed': doc.completed,
+                        'document_id': str(doc.id)
+                    }
+                }
+                actions.append(action)
+            
+            if not actions:
+                return 0
+                
+            # Perform bulk indexing
+            success_count, failed_items = bulk(
+                connections.get_connection(),
+                actions,
+                chunk_size=100,
+                request_timeout=30
+            )
+            
+            if failed_items:
+                logger.warning(f"Bulk indexing: {len(failed_items)} items failed")
+                
+            return success_count
+            
+        except Exception as e:
+            logger.error(f"Bulk indexing failed: {e}")
+            return 0
+
+    @classmethod
     def search_documents(cls, query=None, completed=None):
         """Search documents with optional filters."""
         if not connections.get_connection():
