@@ -20,7 +20,7 @@ class DocumentAdmin(admin.ModelAdmin):
     actions = ['set_pipeline_running_to_false']
     list_display = (
         'id', 'parse_file_url', 'download_status', 'parse_status', 'index_status',
-        'telegram_status', 'delete_status','pipeline_running','completed', 'created_at', 'updated_at'
+        'telegram_status', 'delete_status','pipeline_running','completed','telegram_file_id', 'created_at', 'updated_at'
     )
     ordering = ('-created_at',)
     inlines = [ProductInline]
