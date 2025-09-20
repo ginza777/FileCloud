@@ -17,6 +17,7 @@ class ParseProgressAdmin(admin.ModelAdmin):
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
+    actions = ['set_pipeline_running_to_false']
     list_display = (
         'id', 'parse_file_url', 'download_status', 'parse_status', 'index_status',
         'telegram_status', 'delete_status','pipeline_running','completed', 'created_at', 'updated_at'
@@ -30,6 +31,11 @@ class DocumentAdmin(admin.ModelAdmin):
         'download_status', 'parse_status', 'index_status', 'telegram_status', 'delete_status',
         'completed', 'pipeline_running'
     )
+
+    def set_pipeline_running_to_false(self, request, queryset):
+        updated_count = queryset.update(pipeline_running=False)
+        self.message_user(request, f'{updated_count} ta hujjat uchun pipeline_running muvaffaqiyatli False ga o\'zgartirildi.')
+    set_pipeline_running_to_false.short_description = "Tanlangan hujjatlar uchun pipeline_running ni False qilish"
 
 
 @admin.register(Product)
