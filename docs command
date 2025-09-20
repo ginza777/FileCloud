@@ -44,3 +44,6 @@ docker exec -it   filefinder_web  python manage.py parse --start-page=4001 --end
 docker exec -it   filefinder_web  python manage.py parse --start-page=5001 --end-page=6000
 docker exec -it   filefinder_web  python manage.py parse --start-page=6001 --end-page=7000
 docker exec -it   filefinder_web  python manage.py parse --start-page=7001 --end-page=8000
+
+
+   docker exec -it filefinder_web python manage.py dparse --limit=50 --include-incomplete
