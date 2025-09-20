@@ -70,7 +70,12 @@ def create_database_backup():
 def create_backup_schedule():
     """Synchronously ensure 3-hour backup periodic task exists (idempotent)."""
     try:
-        schedule, _ = IntervalSchedule.objects.get_or_create(every=3, period=IntervalSchedule.HOURS)
+        # Use filter().first() to gracefully handle cases where multiple identical schedules might exist.
+        schedule = IntervalSchedule.objects.filter(every=3, period=IntervalSchedule.HOURS).first()
+        if not schedule:
+            # If no schedule exists, create a new one.
+            schedule, _ = IntervalSchedule.objects.get_or_create(every=3, period=IntervalSchedule.HOURS)
+
         PeriodicTask.objects.get_or_create(
             name='Database Backup Every 3 Hours',
             task='create_database_backup',
