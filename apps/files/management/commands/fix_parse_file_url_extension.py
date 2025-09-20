@@ -12,7 +12,7 @@ ALL_EXTS = [
 
 
 class Command(BaseCommand):
-    help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions and skip files larger than 50MB.'
+    help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions and skip files larger than 50MB. Also reset failed documents.'
 
     def get_poster_extension(self, poster_url):
         """Extract the document extension from poster_url before any suffixes like _page-1_generate.webp"""
@@ -39,9 +39,33 @@ class Command(BaseCommand):
             return size * 1024
         return 0
 
+    def has_failed_status(self, doc):
+        """Check if document has any failed status"""
+        return (
+            doc.download_status == 'failed' or
+            doc.parse_status == 'failed' or
+            doc.index_status == 'failed' or
+            doc.telegram_status == 'failed' or
+            doc.delete_status == 'failed'
+        )
+
+    def reset_document_statuses(self, doc):
+        """Reset all document statuses to pending"""
+        doc.download_status = 'pending'
+        doc.parse_status = 'pending'
+        doc.index_status = 'pending'
+        doc.telegram_status = 'pending'
+        doc.delete_status = 'pending'
+        doc.completed = False
+        doc.pipeline_running = False
+        doc.file_path = None
+        doc.save()
+
     def handle(self, *args, **options):
         updated = 0
         skipped = 0
+        reset_count = 0
+        
         for doc in Document.objects.all():
             data = doc.json_data or {}
             poster_url = data.get('poster_url')
@@ -56,6 +80,13 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(
                         f"Skipped and deleted Document {doc.id}: File size {file_size_str} exceeds 50MB"))
                     continue
+
+            # Check if document has any failed status and reset if needed
+            if self.has_failed_status(doc):
+                self.reset_document_statuses(doc)
+                reset_count += 1
+                self.stdout.write(self.style.HTTP_INFO(f"Reset failed document {doc.id}"))
+                continue
 
             if not poster_url or not doc.parse_file_url:
                 continue
@@ -79,4 +110,4 @@ class Command(BaseCommand):
                 updated += 1
                 self.stdout.write(self.style.SUCCESS(f"Updated Document {doc.id}: {file_ext} -> {poster_ext}"))
 
-        self.stdout.write(self.style.SUCCESS(f"Done. Total updated: {updated}, Total skipped and deleted: {skipped}"))
+        self.stdout.write(self.style.SUCCESS(f"Done. Total updated: {updated}, Total skipped and deleted: {skipped}, Total reset: {reset_count}"))
