@@ -293,11 +293,13 @@ def delete_task(self, document_id):
             doc.file_path = None
 
         doc.delete_status = 'completed'
+        doc.pipeline_running = False  # Pipeline tugadi
         doc.save()
         logger.info(f"[DELETE SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
     except Exception as e:
         doc.delete_status = 'failed'
-        doc.save(update_fields=['delete_status'])
+        doc.pipeline_running = False  # Pipeline xatoligi, qayta urinish uchun ochiq qoldirish
+        doc.save(update_fields=['delete_status', 'pipeline_running'])
         logger.error(f"[DELETE FAIL] {document_id}: {e}")
         raise
 
@@ -312,11 +314,9 @@ def process_document_pipeline(self, document_id):
     logger.info(f"--- [PIPELINE START] Hujjat ID: {document_id} ---")
     try:
         doc = Document.objects.get(id=document_id)
-        if doc.pipeline_running:
-            logger.warning(f"[PIPELINE SKIP] {document_id} allaqachon ishlamoqda")
-            return
-        doc.pipeline_running = True
-        doc.save(update_fields=['pipeline_running'])
+        # Pipeline_running=True bo'lsa ham davom etamiz, chunki dparse command tomonidan 
+        # qasddan ishga tushirilgan
+        logger.info(f"[PIPELINE CONTINUE] {document_id} pipeline davom etmoqda")
 
         # Chain yaratish
         pipeline_chain = chain(
