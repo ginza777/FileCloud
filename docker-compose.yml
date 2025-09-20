@@ -42,8 +42,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
     networks:
       - filefinder_net
     restart: unless-stopped
