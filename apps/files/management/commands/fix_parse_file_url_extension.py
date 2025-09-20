@@ -12,7 +12,7 @@ ALL_EXTS = [
 
 
 class Command(BaseCommand):
-    help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions and skip files larger than 50MB. Also reset failed documents.'
+    help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions and skip files larger than 50MB. Also reset failed/skipped documents.'
 
     def get_poster_extension(self, poster_url):
         """Extract the document extension from poster_url before any suffixes like _page-1_generate.webp"""
@@ -39,14 +39,15 @@ class Command(BaseCommand):
             return size * 1024
         return 0
 
-    def has_failed_status(self, doc):
-        """Check if document has any failed status"""
+    def has_failed_or_skipped_status(self, doc):
+        """Check if document has any failed or skipped status"""
+        problematic_statuses = ['failed', 'skipped']
         return (
-            doc.download_status == 'failed' or
-            doc.parse_status == 'failed' or
-            doc.index_status == 'failed' or
-            doc.telegram_status == 'failed' or
-            doc.delete_status == 'failed'
+            doc.download_status in problematic_statuses or
+            doc.parse_status in problematic_statuses or
+            doc.index_status in problematic_statuses or
+            doc.telegram_status in problematic_statuses or
+            doc.delete_status in problematic_statuses
         )
 
     def reset_document_statuses(self, doc):
@@ -81,11 +82,11 @@ class Command(BaseCommand):
                         f"Skipped and deleted Document {doc.id}: File size {file_size_str} exceeds 50MB"))
                     continue
 
-            # Check if document has any failed status and reset if needed
-            if self.has_failed_status(doc):
+            # Check if document has any failed or skipped status and reset if needed
+            if self.has_failed_or_skipped_status(doc):
                 self.reset_document_statuses(doc)
                 reset_count += 1
-                self.stdout.write(self.style.HTTP_INFO(f"Reset failed document {doc.id}"))
+                self.stdout.write(self.style.HTTP_INFO(f"Reset failed/skipped document {doc.id}"))
                 continue
 
             if not poster_url or not doc.parse_file_url:
