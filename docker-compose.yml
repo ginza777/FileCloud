@@ -53,26 +53,25 @@ services:
     restart: unless-stopped
 
   # 3. Celery Beat (Vaqti-vaqti bilan ishlaydigan vazifalar rejalashtiruvchisi)
-  # Bu service kommentga olingan, chunki tasklar avtomatik ishga tushmasligi kerak
-  # celery-beat:
-  #   build: .
-  #   container_name: filefinder_celery_beat
-  #   command: >
-  #     sh -c "python manage.py wait_for_db &&
-  #            celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
-  #   volumes:
-  #     - .:/app
-  #     - backup_volume:/app/backups
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     - redis
-  #     - postgres
-  #     - celery
-  #     - web
-  #   networks:
-  #     - filefinder_net
-  #   restart: unless-stopped
+#  celery-beat:
+#    build: .
+#    container_name: filefinder_celery_beat
+#    command: >
+#      sh -c "python manage.py wait_for_db &&
+#             celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+#    volumes:
+#      - .:/app
+#      - backup_volume:/app/backups
+#    env_file:
+#      - .env
+#    depends_on:
+#      - redis
+#      - postgres
+#      - celery
+#      - web
+#    networks:
+#      - filefinder_net
+#    restart: unless-stopped
 
   # 4. PostgreSQL Ma'lumotlar Bazasi
   postgres:
@@ -104,43 +103,78 @@ services:
     networks:
       - filefinder_net
     restart: unless-stopped
-    command: redis-server --appendonly yes
 
-  # 6. Elasticsearch
+  # 6. Elasticsearch (Qidiruv tizimi)
   es01:
-    image: elasticsearch:${ELASTIC_VERSION}
-    container_name: filefinder_elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.2
+    container_name: filefinder_elastic
     environment:
-      - node.name=es01
-      - cluster.name=${ELASTIC_CLUSTER_NAME}
       - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
-      - "${ES_PORT}:9200"
+      - "${ES_EXTERNAL_PORT}:${ES_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
     networks:
       - filefinder_net
-    healthcheck:
-      test: curl -s http://localhost:9200 >/dev/null || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 3
     restart: unless-stopped
 
-networks:
-  filefinder_net:
-    driver: bridge
+  # 7. Apache Tika (Fayllardan matn ajratib olish uchun)
+  tika:
+    image: apache/tika:latest
+    container_name: filefinder_tika
+    ports:
+      - "${TIKA_EXTERNAL_PORT}:${TIKA_PORT}"
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 8. Flower (Celery uchun monitoring interfeysi)
+  flower:
+    build: .
+    container_name: filefinder_flower
+    command: celery -A core flower
+    ports:
+      - "${FLOWER_EXTERNAL_PORT}:${FLOWER_PORT}"
+    env_file:
+      - .env
+    environment:
+      - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
+    depends_on:
+      - celery
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 9. Grafana (Monitoring uchun dashboard)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: filefinder_grafana
+    env_file:
+      - .env
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_EXTERNAL_PORT}:${GRAFANA_PORT}"
+    networks:
+      - filefinder_net
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
   elasticsearch_data:
+  grafana_data:
   static_volume:
   media_volume:
   backup_volume:
+
+networks:
+  filefinder_net:
+    driver: bridge
