@@ -8,7 +8,7 @@ class Command(BaseCommand):
         target_url = 'https://soff.uz/api/v1/document/download/'
 
         # Get all documents with matching URL
-        documents = Document.objects.filter(file_url__startswith=target_url)
+        documents = Document.objects.filter(parse_file_url__startswith=target_url)
 
         if documents.exists():
             # Get related products
