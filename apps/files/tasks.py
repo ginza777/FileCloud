@@ -119,10 +119,35 @@ def process_document_pipeline(self, document_id):
                 doc.save()
                 logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
             except Exception as e:
-                doc.download_status = 'failed'
-                doc.save(update_fields=['download_status'])
-                logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e}")
-                raise
+                # Try again with uppercase extension if not already uppercase
+                orig_ext = Path(file_full_path_str).suffix
+                upper_ext = orig_ext.upper()
+                if orig_ext != upper_ext:
+                    upper_path = str(Path(file_full_path_str).with_suffix(upper_ext))
+                    upper_url = doc.parse_file_url[:-len(orig_ext)] + upper_ext
+                    try:
+                        logger.info(f"[1. Yuklash] Pastki harf extension bilan muvaffaqiyatsiz, yuqori harf bilan urinilmoqda: {upper_ext}")
+                        Path(upper_path).parent.mkdir(parents=True, exist_ok=True)
+                        with make_retry_session().get(upper_url, stream=True, timeout=180) as r:
+                            r.raise_for_status()
+                            with open(upper_path, "wb") as f:
+                                for chunk in r.iter_content(chunk_size=8192):
+                                    if chunk:
+                                        f.write(chunk)
+                        doc.file_path = upper_path
+                        doc.download_status = 'completed'
+                        doc.save()
+                        logger.info(f"[1. Yuklash] Muvaffaqiyatli (yuqori harf extension): {document_id}")
+                    except Exception as e2:
+                        doc.download_status = 'failed'
+                        doc.save(update_fields=['download_status'])
+                        logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e} | Uppercase ext fail: {e2}")
+                        raise
+                else:
+                    doc.download_status = 'failed'
+                    doc.save(update_fields=['download_status'])
+                    logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e}")
+                    raise
 
         doc.refresh_from_db()
         # 2. PARSE
