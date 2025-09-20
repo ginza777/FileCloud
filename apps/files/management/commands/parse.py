@@ -23,7 +23,7 @@ def extract_file_url(poster_url):
     match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)
     if match:
         file_id = match.group(1)
-        file_ext_match = re.search(r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|odt|ods|odp)(?:_page|$)', poster_url,
+        file_ext_match = re.search(r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|PPT|DOC|DOCX|PPTX|PDF|XLS|XLSX|odt|ods|odp)(?:_page|$)', poster_url,
                                    re.IGNORECASE)
         if file_ext_match:
             file_extension = file_ext_match.group(1).lower()
