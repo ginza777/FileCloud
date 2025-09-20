@@ -130,7 +130,14 @@ def process_document_pipeline(self, document_id):
                     logger.error(f"[PIPELINE FAIL - Parse] {document_id}: File not found or path is None: {doc.file_path}")
                     return  # Exit gracefully, do not raise
                 parsed = tika_parser.from_file(doc.file_path)
-                content = parsed.get("content", "").strip() if parsed else ""
+                # Safely extract content with proper None handling
+                content = ""
+                if parsed:
+                    raw_content = parsed.get("content", "")
+                    if raw_content is not None:
+                        content = raw_content.strip()
+                    else:
+                        content = ""
                 with transaction.atomic():
                     product = doc.product
                     product.parsed_content = content
