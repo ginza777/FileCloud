@@ -2,14 +2,17 @@ from django.core.management.base import BaseCommand
 from ...models import Document
 from urllib.parse import urlparse
 import os
+import re
 
 ALL_EXTS = [
-    'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'rtf','PDF', 'DOCX', 'DOC', 'PPTX', 'PPT', 'XLSX', 'XLS', 'TXT', 'RTF',
+    'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'rtf', 'PDF', 'DOCX', 'DOC', 'PPTX', 'PPT', 'XLSX',
+    'XLS', 'TXT', 'RTF',
     'PPT', 'DOC', 'DOCX', 'PPTX', 'PDF', 'XLS', 'XLSX', 'odt', 'ods', 'odp'
 ]
 
+
 class Command(BaseCommand):
-    help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions.'
+    help = 'Fix parse_file_url extension to match poster_url extension case for all supported extensions and skip files larger than 50MB.'
 
     def get_poster_extension(self, poster_url):
         """Extract the document extension from poster_url before any suffixes like _page-1_generate.webp"""
@@ -20,13 +23,43 @@ class Command(BaseCommand):
             filename = filename.split('_page-1_generate.webp')[0]
         return os.path.splitext(filename)[1]
 
+    def parse_file_size(self, file_size_str):
+        """Convert file size string (e.g., '3.49 MB') to bytes"""
+        if not file_size_str:
+            return 0
+        match = re.match(r'(\d+\.?\d*)\s*(MB|GB|KB)', file_size_str, re.IGNORECASE)
+        if not match:
+            return 0
+        size, unit = float(match.group(1)), match.group(2).upper()
+        if unit == 'GB':
+            return size * 1024 * 1024 * 1024
+        elif unit == 'MB':
+            return size * 1024 * 1024
+        elif unit == 'KB':
+            return size * 1024
+        return 0
+
     def handle(self, *args, **options):
         updated = 0
+        skipped = 0
         for doc in Document.objects.all():
             data = doc.json_data or {}
             poster_url = data.get('poster_url')
+            file_size_str = data.get('document', {}).get('file_size')
+
+            # Skip if file size > 50MB
+            if file_size_str:
+                file_size_bytes = self.parse_file_size(file_size_str)
+                if file_size_bytes > 50 * 1024 * 1024:  # 50MB in bytes
+                    doc.delete()
+                    skipped += 1
+                    self.stdout.write(self.style.WARNING(
+                        f"Skipped and deleted Document {doc.id}: File size {file_size_str} exceeds 50MB"))
+                    continue
+
             if not poster_url or not doc.parse_file_url:
                 continue
+
             # Get extensions
             poster_ext = self.get_poster_extension(poster_url)
             file_ext = os.path.splitext(urlparse(doc.parse_file_url).path)[1]
@@ -35,9 +68,9 @@ class Command(BaseCommand):
             file_ext_nodot = file_ext[1:] if file_ext.startswith('.') else file_ext
             # Check if both are in ALL_EXTS and only case differs
             if (
-                poster_ext_nodot.lower() in [e.lower() for e in ALL_EXTS]
-                and file_ext_nodot.lower() == poster_ext_nodot.lower()
-                and file_ext_nodot != poster_ext_nodot
+                    poster_ext_nodot.lower() in [e.lower() for e in ALL_EXTS]
+                    and file_ext_nodot.lower() == poster_ext_nodot.lower()
+                    and file_ext_nodot != poster_ext_nodot
             ):
                 # Replace extension in parse_file_url
                 new_url = doc.parse_file_url[:-len(file_ext)] + poster_ext
@@ -45,4 +78,5 @@ class Command(BaseCommand):
                 doc.save(update_fields=['parse_file_url'])
                 updated += 1
                 self.stdout.write(self.style.SUCCESS(f"Updated Document {doc.id}: {file_ext} -> {poster_ext}"))
-        self.stdout.write(self.style.SUCCESS(f"Done. Total updated: {updated}"))
+
+        self.stdout.write(self.style.SUCCESS(f"Done. Total updated: {updated}, Total skipped and deleted: {skipped}"))
