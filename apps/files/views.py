@@ -51,3 +51,4 @@ def recent_documents(request):
 
     serializer = DocumentSerializer(documents, many=True)
     return Response(serializer.data)
+
