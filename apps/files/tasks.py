@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 import requests
-from celery import shared_task, chain
+from celery import shared_task
 from django.conf import settings
 from django.db import transaction, DatabaseError
 from elasticsearch import Elasticsearch
@@ -23,11 +23,9 @@ logger = logging.getLogger(__name__)
 tika_parser.TikaClientOnly = True
 tika_parser.TikaServerEndpoint = settings.TIKA_URL if hasattr(settings, 'TIKA_URL') else 'http://localhost:9998'
 
-# Telegram maksimal fayl hajmi (49 MB)
+# Telegramning maksimal fayl hajmi (49 MB)
 TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
 
-# Yangi: Maksimal ruxsat etilgan fayl hajmi (masalan, 500 MB)
-MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
 def make_retry_session():
     """Qayta urinishlar bilan mustahkam HTTP session yaratadi."""
@@ -41,6 +39,7 @@ def make_retry_session():
     session.mount("https://", adapter)
     return session
 
+
 def get_es_client():
     es_url = getattr(settings, 'ES_URL', None)
     if not es_url:
@@ -52,278 +51,238 @@ def get_es_client():
         logger.error(f"Elasticsearch client initialization failed: {e}")
         return None
 
+
 try:
     import redis
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
-def download_task(self, document_id):
-    """Alohida yuklab olish taski."""
-    start_time = time.time()
-    logger.info(f"[DOWNLOAD START] Hujjat ID: {document_id}")
-    try:
-        doc = Document.objects.select_related('product').get(id=document_id)
-        if doc.download_status == 'completed':
-            logger.info(f"[DOWNLOAD ALREADY COMPLETED] {document_id}")
-            return document_id
 
-        doc.download_status = 'processing'
-        doc.save(update_fields=['download_status'])
-
-        session = make_retry_session()
-        head_response = session.head(doc.parse_file_url, timeout=60)
-        if 'Content-Length' in head_response.headers:
-            file_size = int(head_response.headers['Content-Length'])
-            if file_size > MAX_FILE_SIZE_BYTES:
-                doc.download_status = 'skipped'
-                doc.save(update_fields=['download_status'])
-                logger.warning(f"[DOWNLOAD SKIPPED] Fayl juda katta: {file_size} bytes, ID: {document_id}")
-                return document_id
-
-        file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
-        Path(file_full_path_str).parent.mkdir(parents=True, exist_ok=True)
-
-        with session.get(doc.parse_file_url, stream=True, timeout=1800) as r:
-            r.raise_for_status()
-            downloaded_size = 0
-            with open(file_full_path_str, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded_size += len(chunk)
-                        if downloaded_size % (10 * 1024 * 1024) == 0:
-                            logger.info(f"[DOWNLOAD PROGRESS] {document_id}: {downloaded_size / 1024 / 1024:.2f} MB yuklandi")
-
-        doc.file_path = file_full_path_str
-        doc.download_status = 'completed'
-        doc.save()
-        logger.info(f"[DOWNLOAD SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
-        return document_id
-    except Exception as e:
-        doc.download_status = 'failed'
-        doc.pipeline_running = False  # Reset pipeline_running on failure
-        doc.save(update_fields=['download_status', 'pipeline_running'])
-        logger.error(f"[DOWNLOAD FAIL] {document_id}: {e}")
-        raise
-
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
-def parse_task(self, document_id):
-    """Alohida parse taski."""
-    start_time = time.time()
-    logger.info(f"[PARSE START] Hujjat ID: {document_id}")
-    try:
-        doc = Document.objects.select_related('product').get(id=document_id)
-        if doc.parse_status == 'completed' or doc.download_status != 'completed':
-            logger.info(f"[PARSE SKIP] {document_id} (allaqachon yoki yuklanmagan)")
-            return document_id
-
-        doc.parse_status = 'processing'
-        doc.save(update_fields=['parse_status'])
-
-        if not os.path.exists(doc.file_path):
-            raise FileNotFoundError(f"Fayl topilmadi: {doc.file_path}")
-
-        parsed = tika_parser.from_file(doc.file_path, requestOptions={'timeout': 1800})
-        content = parsed.get("content", "").strip() if parsed else ""
-
-        with transaction.atomic():
-            product = doc.product
-            product.parsed_content = content
-            product.save(update_fields=['parsed_content'])
-            doc.parse_status = 'completed'
-            doc.save()
-
-        logger.info(f"[PARSE SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
-        return document_id
-    except Exception as e:
-        doc.parse_status = 'failed'
-        doc.pipeline_running = False  # Reset pipeline_running on failure
-        doc.save(update_fields=['parse_status', 'pipeline_running'])
-        logger.error(f"[PARSE FAIL] {document_id}: {e}")
-        raise
-
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
-def index_task(self, document_id):
-    """Alohida indekslash taski."""
-    start_time = time.time()
-    logger.info(f"[INDEX START] Hujjat ID: {document_id}")
-    try:
-        doc = Document.objects.select_related('product').get(id=document_id)
-        if doc.index_status == 'completed' or doc.parse_status != 'completed':
-            logger.info(f"[INDEX SKIP] {document_id}")
-            return document_id
-
-        doc.index_status = 'processing'
-        doc.save(update_fields=['index_status'])
-
-        es_client = get_es_client()
-        es_index = getattr(settings, 'ES_INDEX', None)
-        if es_client is None or not es_index:
-            raise Exception("Elasticsearch sozlanmagan (ES_URL / ES_INDEX).")
-
-        product = doc.product
-        body = {
-            "title": product.title,
-            "slug": product.slug,
-            "parsed_content": product.parsed_content,
-            "document_id": str(doc.id),
-        }
-        es_client.index(index=es_index, id=str(doc.id), document=body)
-        doc.index_status = 'completed'
-        doc.save()
-
-        logger.info(f"[INDEX SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
-        return document_id
-    except Exception as e:
-        doc.index_status = 'failed'
-        doc.pipeline_running = False  # Reset pipeline_running on failure
-        doc.save(update_fields=['index_status', 'pipeline_running'])
-        logger.error(f"[INDEX FAIL] {document_id}: {e}")
-        raise
-
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
-def telegram_task(self, document_id):
-    """Alohida Telegram yuborish taski."""
-    start_time = time.time()
-    logger.info(f"[TELEGRAM START] Hujjat ID: {document_id}")
-    try:
-        doc = Document.objects.select_related('product').get(id=document_id)
-        if doc.telegram_status in ['completed', 'skipped'] or doc.index_status != 'completed':
-            logger.info(f"[TELEGRAM SKIP] {document_id}")
-            return document_id
-
-        doc.telegram_status = 'processing'
-        doc.save(update_fields=['telegram_status'])
-
-        if not doc.file_path or not os.path.exists(doc.file_path):
-            doc.telegram_status = 'skipped'
-            doc.save(update_fields=['telegram_status'])
-            logger.warning(f"[TELEGRAM SKIPPED] Fayl yo'q: {doc.file_path}")
-            return document_id
-
-        file_size = os.path.getsize(doc.file_path)
-        if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
-            doc.telegram_status = 'skipped'
-            doc.save(update_fields=['telegram_status'])
-            logger.warning(f"[TELEGRAM SKIPPED] Fayl katta: {file_size} bytes, ID: {document_id}")
-            return document_id
-
-        json_data_str = json.dumps(doc.json_data, ensure_ascii=False, indent=2) if doc.json_data else '{}'
-        json_data_str = json_data_str.replace('`', '\u200b`')
-        static_caption = (
-            f"*{doc.product.title}*\n"
-            f"ID: `{doc.id}`\n"
-            f"URL: {doc.parse_file_url}\n"
-            f"Slug: `{doc.product.slug}`\n"
-            f"\n*JSON:*\n```"
-        )
-        closing = "\n```"
-        max_caption_len = 1024
-        available_json_len = max_caption_len - len(static_caption) - len(closing)
-        if len(json_data_str) > available_json_len:
-            json_data_str = json_data_str[:available_json_len - 10] + '\n...'
-        caption = static_caption + json_data_str + closing
-        if len(caption) > 1024:
-            truncated = caption[:1000].rstrip()
-            if not truncated.endswith('```'):
-                truncated += '\n...\n```'
-            caption = truncated
-
-        url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
-        max_telegram_retries = 5
-        session = make_retry_session()
-        for attempt in range(max_telegram_retries):
-            with open(doc.file_path, "rb") as f:
-                files = {"document": (Path(doc.file_path).name, f)}
-                data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
-                response = session.post(url, files=files, data=data, timeout=1800)
-            resp_data = response.json()
-            if resp_data.get("ok"):
-                doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
-                doc.telegram_status = 'completed'
-                doc.save()
-                logger.info(f"[TELEGRAM SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
-                return document_id
-            elif resp_data.get("error_code") == 429 and "retry_after" in resp_data.get("parameters", {}):
-                retry_after = int(resp_data["parameters"]["retry_after"])
-                logger.warning(f"[TELEGRAM RATE LIMIT] {document_id}, {retry_after}s kutamiz...")
-                time.sleep(retry_after)
-                continue
-            else:
-                raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
-
-        doc.telegram_status = 'failed'
-        doc.save(update_fields=['telegram_status'])
-        logger.error(f"[TELEGRAM FAIL] 5 urinish muvaffaqiyatsiz: {document_id}")
-        raise Exception("Telegram yuborish muvaffaqiyatsiz (5 urinish)")
-    except Exception as e:
-        doc.telegram_status = 'failed'
-        doc.pipeline_running = False  # Reset pipeline_running on failure
-        doc.save(update_fields=['telegram_status', 'pipeline_running'])
-        logger.error(f"[TELEGRAM FAIL] {document_id}: {e}")
-        raise
-
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=60, max_retries=5, time_limit=7200)
-def delete_task(self, document_id):
-    """Alohida o'chirish taski."""
-    start_time = time.time()
-    logger.info(f"[DELETE START] Hujjat ID: {document_id}")
-    try:
-        doc = Document.objects.get(id=document_id)
-        if doc.delete_status == 'completed' or doc.telegram_status not in ['completed', 'skipped']:
-            logger.info(f"[DELETE SKIP] {document_id}")
-            return
-
-        doc.delete_status = 'processing'
-        doc.save(update_fields=['delete_status'])
-
-        if doc.file_path and os.path.exists(doc.file_path):
-            os.remove(doc.file_path)
-            doc.file_path = None
-
-        doc.delete_status = 'completed'
-        doc.pipeline_running = False
-        doc.save()
-        logger.info(f"[DELETE SUCCESS] {document_id} | Vaqt: {time.time() - start_time:.2f}s")
-    except Exception as e:
-        doc.delete_status = 'failed'
-        doc.pipeline_running = False
-        doc.save(update_fields=['delete_status', 'pipeline_running'])
-        logger.error(f"[DELETE FAIL] {document_id}: {e}")
-        raise
-
-@shared_task(bind=True)
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3)
 def process_document_pipeline(self, document_id):
     """
-    To'liq pipeline ni chain orqali chaqirish.
-    Har bir bosqich alohida task bo'lib, o'z retry va timeoutlari bor.
+    To'liq pipeline. pipeline_running lock ishlatiladi:
+    - dparse band qilgan bo'lishi mumkin
+    - Agar band emas bo'lsa bu yerda optimistik lock qo'lga olinadi
+    - Retry jarayonida lock yechilmaydi
+    - Faqat muvaffaqiyatli tugaganda yoki final (oxirgi) muvaffaqiyatsiz holatda yechiladi
+    Idempotent Telegram yuborish: telegram_status completed bo'lsa qayta yuborilmaydi.
     """
     logger.info(f"--- [PIPELINE START] Hujjat ID: {document_id} ---")
+
+    # Optimistik lock: agar dparse qo'ymagan bo'lsa shu yerda qo'yamiz
+    locked_now = False
     try:
-        doc = Document.objects.get(id=document_id)
-        if doc.pipeline_running:
-            logger.warning(f"[PIPELINE SKIP] {document_id} allaqachon ishlamoqda")
+        # Faqat pipeline_running=False bo'lsa lock o'rnata olamiz
+        updated = Document.objects.filter(id=document_id, pipeline_running=False).update(pipeline_running=True)
+        if updated:
+            locked_now = True
+    except DatabaseError as e:
+        logger.error(f"[LOCK ERROR] {document_id}: {e}")
+
+    try:
+        try:
+            doc = Document.objects.select_related('product').get(id=document_id)
+        except Document.DoesNotExist:
+            logger.error(f"[PIPELINE FAIL] Hujjat {document_id} topilmadi")
             return
 
-        # Set pipeline_running to True
-        doc.pipeline_running = True
-        doc.save(update_fields=['pipeline_running'])
+        # Agar lock yo'q va document pipeline_running=False bo'lsa demak boshqa task oldinroq tugatgan
+        if not doc.pipeline_running:
+            logger.warning(f"[PIPELINE SKIP] {document_id} lock yo'q (allaqachon qayta ishlangan yoki rejalashtirilmagan).")
+            return
 
-        # Chain yaratish
-        pipeline_chain = chain(
-            download_task.s(document_id),
-            parse_task.s(),
-            index_task.s(),
-            telegram_task.s(),
-            delete_task.s()
-        )
-        pipeline_chain.apply_async()
+        # Allaqachon tugagan bo'lsa chiqib ketamiz
+        if doc.completed:
+            logger.info(f"[PIPELINE ALREADY COMPLETED] {document_id}")
+            return
 
-        logger.info(f"--- [PIPELINE INITIATED] Hujjat ID: {document_id} ---")
-    except Exception as e:
-        doc.pipeline_running = False
-        doc.save(update_fields=['pipeline_running'])
-        logger.error(f"[PIPELINE INIT FAIL] {document_id}: {e}")
+        file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
+
+        # 1. DOWNLOAD
+        if doc.download_status != 'completed':
+            logger.info(f"[1. Yuklash] Boshlandi: {document_id}")
+            if doc.download_status != 'processing':
+                doc.download_status = 'processing'
+                doc.save(update_fields=['download_status'])
+            try:
+                Path(file_full_path_str).parent.mkdir(parents=True, exist_ok=True)
+                with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
+                    r.raise_for_status()
+                    with open(file_full_path_str, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                doc.file_path = file_full_path_str
+                doc.download_status = 'completed'
+                doc.save()
+                logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
+            except Exception as e:
+                doc.download_status = 'failed'
+                doc.save(update_fields=['download_status'])
+                logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e}")
+                raise
+
+        doc.refresh_from_db()
+        # 2. PARSE
+        if doc.download_status == 'completed' and doc.parse_status != 'completed':
+            logger.info(f"[2. Parse] Boshlandi: {document_id}")
+            if doc.parse_status != 'processing':
+                doc.parse_status = 'processing'
+                doc.save(update_fields=['parse_status'])
+            try:
+                if not os.path.exists(doc.file_path):
+                    doc.parse_status = 'failed'
+                    doc.save(update_fields=['parse_status'])
+                    logger.error(f"[PIPELINE FAIL - Parse] {document_id}: File not found: {doc.file_path}")
+                    return  # Exit gracefully, do not raise
+                parsed = tika_parser.from_file(doc.file_path)
+                content = parsed.get("content", "").strip() if parsed else ""
+                with transaction.atomic():
+                    product = doc.product
+                    product.parsed_content = content
+                    product.save(update_fields=['parsed_content'])
+                    doc.parse_status = 'completed'
+                    doc.save()
+                logger.info(f"[2. Parse] Muvaffaqiyatli: {document_id}")
+            except Exception as e:
+                doc.parse_status = 'failed'
+                doc.save(update_fields=['parse_status'])
+                logger.error(f"[PIPELINE FAIL - Parse] {document_id}: {e}")
+                raise
+
+        doc.refresh_from_db()
+        # 3. INDEX
+        if doc.parse_status == 'completed' and doc.index_status != 'completed':
+            logger.info(f"[3. Indekslash] Boshlandi: {document_id}")
+            if doc.index_status != 'processing':
+                doc.index_status = 'processing'
+                doc.save(update_fields=['index_status'])
+            try:
+                es_client = get_es_client()
+                es_index = getattr(settings, 'ES_INDEX', None)
+                if es_client is None or not es_index:
+                    raise Exception("Elasticsearch sozlanmagan (ES_URL / ES_INDEX).")
+                product = doc.product
+                body = {
+                    "title": product.title,
+                    "slug": product.slug,
+                    "parsed_content": product.parsed_content,
+                    "document_id": str(doc.id),
+                }
+                es_client.index(index=es_index, id=str(doc.id), document=body)
+                doc.index_status = 'completed'
+                doc.save()
+                logger.info(f"[3. Indekslash] Muvaffaqiyatli: {document_id}")
+            except Exception as e:
+                doc.index_status = 'failed'
+                doc.save(update_fields=['index_status'])
+                logger.error(f"[PIPELINE FAIL - Indekslash] {document_id}: {e}")
+                raise
+
+        doc.refresh_from_db()
+        # 4. TELEGRAM (idempotent)
+        if doc.index_status == 'completed' and doc.telegram_status not in ['completed', 'skipped']:
+            logger.info(f"[4. Telegram] Boshlandi: {document_id}")
+            if doc.telegram_file_id and doc.telegram_status == 'completed':
+                logger.info(f"[4. Telegram] Allaqachon yuborilgan: {document_id}")
+            else:
+                if doc.telegram_status != 'processing':
+                    doc.telegram_status = 'processing'
+                    doc.save(update_fields=['telegram_status'])
+                try:
+                    if not doc.file_path or not os.path.exists(doc.file_path):
+                        doc.telegram_status = 'skipped'
+                        doc.save(update_fields=['telegram_status'])
+                        logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: {doc.file_path}")
+                    else:
+                        file_size = os.path.getsize(doc.file_path)
+                        if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
+                            doc.telegram_status = 'skipped'
+                            doc.save(update_fields=['telegram_status'])
+                            logger.warning(f"[4. Telegram] Fayl katta, o'tkazildi: {file_size}")
+                        else:
+                            json_data_str = json.dumps(doc.json_data, ensure_ascii=False, indent=2) if doc.json_data else '{}'
+                            json_data_str = json_data_str.replace('`', '\u200b`')
+                            static_caption = (
+                                f"*{doc.product.title}*\n"
+                                f"ID: `{doc.id}`\n"
+                                f"URL: {doc.parse_file_url}\n"
+                                f"Slug: `{doc.product.slug}`\n"
+                                f"\n*JSON:*\n```")
+                            closing = "\n```"
+                            max_caption_len = 1024
+                            available_json_len = max_caption_len - len(static_caption) - len(closing)
+                            if len(json_data_str) > available_json_len:
+                                json_data_str = json_data_str[:available_json_len-10] + '\n...'
+                            caption = static_caption + json_data_str + closing
+                            if len(caption) > 1024:
+                                truncated = caption[:1000].rstrip()
+                                if not truncated.endswith('```'):
+                                    truncated += '\n...\n```'
+                                caption = truncated
+                            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
+                            max_telegram_retries = 5
+                            for attempt in range(max_telegram_retries):
+                                with open(doc.file_path, "rb") as f:
+                                    files = {"document": (Path(doc.file_path).name, f)}
+                                    data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
+                                    response = make_retry_session().post(url, files=files, data=data, timeout=180)
+                                resp_data = response.json()
+                                if resp_data.get("ok"):
+                                    doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
+                                    doc.telegram_status = 'completed'
+                                    doc.save()
+                                    logger.info(f"[4. Telegram] Muvaffaqiyatli: {document_id}")
+                                    break
+                                elif resp_data.get("error_code") == 429 and "retry_after" in resp_data:
+                                    retry_after = int(resp_data["retry_after"])
+                                    logger.warning(f"[4. Telegram] Rate limit {document_id}, {retry_after}s kutyapmiz...")
+                                    time.sleep(retry_after)
+                                    continue
+                                else:
+                                    raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
+                            else:
+                                doc.telegram_status = 'failed'
+                                doc.save(update_fields=['telegram_status'])
+                                logger.error(f"[4. Telegram] 5 urinish muvaffaqiyatsiz: {document_id}")
+                                raise Exception("Telegram yuborish muvaffaqiyatsiz (5 urinish)")
+                except Exception as e:
+                    doc.telegram_status = 'failed'
+                    doc.save(update_fields=['telegram_status'])
+                    logger.error(f"[PIPELINE FAIL - Telegram] {document_id}: {e}")
+                    raise
+
+        doc.refresh_from_db()
+        # 5. DELETE LOCAL
+        if doc.telegram_status in ['completed', 'skipped'] and doc.delete_status != 'completed':
+            logger.info(f"[5. O'chirish] Boshlandi: {document_id}")
+            if doc.delete_status != 'processing':
+                doc.delete_status = 'processing'
+                doc.save(update_fields=['delete_status'])
+            try:
+                if doc.file_path and os.path.exists(doc.file_path):
+                    os.remove(doc.file_path)
+                    doc.file_path = None
+                doc.delete_status = 'completed'
+                doc.save()
+                logger.info(f"[5. O'chirish] Tugadi: {document_id}")
+            except Exception as e:
+                doc.delete_status = 'failed'
+                doc.save(update_fields=['delete_status'])
+                logger.error(f"[PIPELINE FAIL - O'chirish] {document_id}: {e}")
+                raise
+
+        logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
+    except Exception as pipeline_error:
+        # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz (Celery autoretry keyingi chaqiriqda davom etadi)
+        if self.request.retries >= self.max_retries:
+            Document.objects.filter(id=document_id).update(pipeline_running=False)
+            logger.error(f"[PIPELINE FINAL FAIL] {document_id}: {pipeline_error}")
         raise
+    else:
+        # Muvaffaqiyatli tugadi -> lockni yechamiz
+        Document.objects.filter(id=document_id).update(pipeline_running=False)
+    finally:
+        pass  # Qo'shimcha cleanup hozircha kerak emas
