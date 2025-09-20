@@ -21,6 +21,8 @@ class Command(BaseCommand):
         ).order_by('created_at')[:limit]
 
         docs = list(qs)
+        print(docs)
+        process_document_pipeline.delay(docs)
         if not docs:
             self.stdout.write(self.style.WARNING('Yuboriladigan hujjat topilmadi.'))
             return
