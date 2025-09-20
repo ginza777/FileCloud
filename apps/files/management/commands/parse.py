@@ -12,9 +12,23 @@ from ...utils import get_valid_soff_token
 SOFF_BUILD_ID_HOLDER = "{build_id}"
 BASE_API_URL_TEMPLATE = f"https://soff.uz/_next/data/{SOFF_BUILD_ID_HOLDER}/scientific-resources/all.json"
 
-
 # =======================================================================
 
+def parse_file_size(file_size_str):
+    """Convert file size string (e.g., '3.49 MB') to bytes"""
+    if not file_size_str:
+        return 0
+    match = re.match(r'(\d+\.?\d*)\s*(MB|GB|KB)', file_size_str, re.IGNORECASE)
+    if not match:
+        return 0
+    size, unit = float(match.group(1)), match.group(2).upper()
+    if unit == 'GB':
+        return size * 1024 * 1024 * 1024
+    elif unit == 'MB':
+        return size * 1024 * 1024
+    elif unit == 'KB':
+        return size * 1024
+    return 0
 
 def extract_file_url(poster_url):
     """Poster URL'dan asosiy fayl URL'ini ajratib oladi."""
@@ -26,10 +40,9 @@ def extract_file_url(poster_url):
         file_ext_match = re.search(r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|PPT|DOC|DOCX|PPTX|PDF|XLS|XLSX|odt|ods|odp)(?:_page|$)', poster_url,
                                    re.IGNORECASE)
         if file_ext_match:
-            file_extension = file_ext_match.group(1).lower()
+            file_extension = file_ext_match.group(1)  # Preserve original case
             return f"https://d2co7bxjtnp5o.cloudfront.net/media/documents/{file_id}.{file_extension}"
     return None
-
 
 class Command(BaseCommand):
     help = 'Soff.uz saytidan ma\'lumotlarni oladi, mavjudlarini yangilaydi va yangilarini qo\'shadi.'
@@ -56,6 +69,7 @@ class Command(BaseCommand):
         page = start_page
         total_created = 0
         total_updated = 0
+        total_skipped = 0
 
         try:
             while True:
@@ -109,6 +123,7 @@ class Command(BaseCommand):
                 created_count = 0
                 updated_count = 0
                 invalid_url_count = 0
+                skipped_large_file_count = 0
 
                 # Yangilash va yaratish uchun listlar
                 docs_to_create, products_to_create = [], []
@@ -121,12 +136,19 @@ class Command(BaseCommand):
 
                 for item in items:
                     item_id = item.get("id")
-                    print(f"ID: {item_id}, url: {item.get('poster_url')}")
                     file_url = extract_file_url(item.get("poster_url"))
+                    file_size_str = item.get("document", {}).get("file_size")
 
+                    # Skip if file size > 50MB or no file URL
                     if not file_url:
                         invalid_url_count += 1
                         continue
+                    if file_size_str:
+                        file_size_bytes = parse_file_size(file_size_str)
+                        if file_size_bytes > 50 * 1024 * 1024:  # 50MB in bytes
+                            skipped_large_file_count += 1
+                            self.stdout.write(self.style.WARNING(f"Skipped item {item_id}: File size {file_size_str} exceeds 50MB"))
+                            continue
 
                     # Agar mahsulot mavjud bo'lsa -> YANGILASH
                     if item_id in existing_products_map:
@@ -172,6 +194,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"  - Yangi qo'shilganlar: {created_count}"))
                 self.stdout.write(self.style.HTTP_INFO(f"  - Yangilanganlar: {updated_count}"))
                 self.stdout.write(self.style.ERROR(f"  - O'tkazib yuborildi (yaroqsiz URL): {invalid_url_count}"))
+                self.stdout.write(self.style.WARNING(f"  - O'tkazib yuborildi (fayl hajmi > 50MB): {skipped_large_file_count}"))
 
                 progress.update_progress(page)
                 page += 1
@@ -184,5 +207,6 @@ class Command(BaseCommand):
                 f"\n{'=' * 20} PARSING YAKUNLANDI {'=' * 20}\n"
                 f"Jami qo'shildi: {total_created}\n"
                 f"Jami yangilandi: {total_updated}\n"
+                f"Jami o'tkazib yuborildi (fayl hajmi > 50MB yoki yaroqsiz URL): {invalid_url_count + skipped_large_file_count}\n"
                 f"Oxirgi muvaffaqiyatli sahifa: {progress.last_page}\n"
             ))
