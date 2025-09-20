@@ -1,0 +1,173 @@
+services:
+  # 1. Django Web ilovasi (Uvicorn orqali)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filefinder_web
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py collectstatic --no-input &&
+             python manage.py elasticsearch_index --rebuild --force &&
+             uvicorn core.asgi:application --host 0.0.0.0 --workers 4 --timeout-keep-alive 120"
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - .env
+    ports:
+      - "${WEB_EXTERNAL_PORT}:${WEB_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      es01:
+        condition: service_healthy
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 2. Celery Worker (Asosiy fon vazifalarini bajaruvchi)
+  celery:
+    build: .
+    container_name: filefinder_celery
+    command: celery -A core worker --loglevel=info --concurrency=8
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 3. Celery Beat (Vaqti-vaqti bilan ishlaydigan vazifalar rejalashtiruvchisi)
+  celery-beat:
+    build: .
+    container_name: filefinder_celery_beat
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+      - celery
+      - web
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 4. PostgreSQL Ma'lumotlar Bazasi
+  postgres:
+    image: postgres:15-alpine
+    container_name: filefinder_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 5. Redis (Kesh va Celery uchun broker)
+  redis:
+    image: redis:7-alpine
+    container_name: filefinder_redis
+    ports:
+      - "${REDIS_EXTERNAL_PORT}:${REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 6. Elasticsearch (Qidiruv tizimi)
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.2
+    container_name: filefinder_elastic
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "${ES_EXTERNAL_PORT}:${ES_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 7. Apache Tika (Fayllardan matn ajratib olish uchun)
+  tika:
+    image: apache/tika:latest
+    container_name: filefinder_tika
+    ports:
+      - "${TIKA_EXTERNAL_PORT}:${TIKA_PORT}"
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 8. Flower (Celery uchun monitoring interfeysi)
+  flower:
+    build: .
+    container_name: filefinder_flower
+    command: celery -A core flower
+    ports:
+      - "${FLOWER_EXTERNAL_PORT}:${FLOWER_PORT}"
+    env_file:
+      - .env
+    environment:
+      - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
+    depends_on:
+      - celery
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 9. Grafana (Monitoring uchun dashboard)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: filefinder_grafana
+    env_file:
+      - .env
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_EXTERNAL_PORT}:${GRAFANA_PORT}"
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  grafana_data:
+  static_volume:
+  media_volume:
+
+networks:
+  filefinder_net:
+    driver: bridge
