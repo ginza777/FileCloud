@@ -90,9 +90,7 @@ def process_document_pipeline(self, document_id):
             Document.objects.filter(id=document_id).update(pipeline_running=False)
             return
 
-        # Save to /app/backups/downloads instead of MEDIA_ROOT
-        backups_root = os.path.join(settings.BASE_DIR, 'backups')
-        file_full_path_str = str(Path(backups_root) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
+        file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
 
         # 1. DOWNLOAD
         if doc.download_status != 'completed':
@@ -284,14 +282,10 @@ def process_document_pipeline(self, document_id):
 
         # Pipeline muvaffaqiyatli tugadi - completed holatini yangilaymiz
         doc.refresh_from_db()
-        if all(status == 'completed' for status in [doc.download_status, doc.parse_status, doc.index_status,
-                                                    doc.delete_status]) and doc.telegram_status in ['completed',
-                                                                                                    'skipped']:
-            doc.completed = True
-            doc.save(update_fields=['completed'])
+        doc.save()  # Bu completed holatini avtomatik yangilaydi
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
     except Exception as pipeline_error:
-        # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz
+        # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz (Celery autoretry keyingi chaqiriqda davom etadi)
         if self.request.retries >= self.max_retries:
             Document.objects.filter(id=document_id).update(pipeline_running=False)
             logger.error(f"[PIPELINE FINAL FAIL] {document_id}: {pipeline_error}")
