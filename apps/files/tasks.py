@@ -90,7 +90,9 @@ def process_document_pipeline(self, document_id):
             Document.objects.filter(id=document_id).update(pipeline_running=False)
             return
 
-        file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
+        # Save to /app/backups/downloads instead of MEDIA_ROOT
+        backups_root = os.path.join(settings.BASE_DIR, 'backups')
+        file_full_path_str = str(Path(backups_root) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
 
         # 1. DOWNLOAD
         if doc.download_status != 'completed':
@@ -261,11 +263,18 @@ def process_document_pipeline(self, document_id):
                 doc.delete_status = 'processing'
                 doc.save(update_fields=['delete_status'])
             try:
-                if doc.file_path and os.path.exists(doc.file_path):
-                    os.remove(doc.file_path)
-                    doc.file_path = None
+                # Fayl nomini document.id va parse_file_url kengaytmasidan shakllantirish
+                file_name = f"{doc.id}{Path(doc.parse_file_url).suffix}"
+                file_full_path = os.path.join(settings.MEDIA_ROOT, 'downloads', file_name)
+                logger.info(f"[5. O'chirish] Fayl yo'li: {file_full_path}")
+                if os.path.exists(file_full_path):
+                    os.remove(file_full_path)
+                    logger.info(f"[5. O'chirish] Muvaffaqiyatli o'chirildi: {file_full_path}")
+                else:
+                    logger.warning(f"[5. O'chirish] Fayl topilmadi: {file_full_path}")
+                # doc.file_path ni yangilash shart emas, chunki u ishlatilmaydi
                 doc.delete_status = 'completed'
-                doc.save()
+                doc.save(update_fields=['delete_status'])
                 logger.info(f"[5. O'chirish] Tugadi: {document_id}")
             except Exception as e:
                 doc.delete_status = 'failed'
@@ -275,10 +284,14 @@ def process_document_pipeline(self, document_id):
 
         # Pipeline muvaffaqiyatli tugadi - completed holatini yangilaymiz
         doc.refresh_from_db()
-        doc.save()  # Bu completed holatini avtomatik yangilaydi
+        if all(status == 'completed' for status in [doc.download_status, doc.parse_status, doc.index_status,
+                                                    doc.delete_status]) and doc.telegram_status in ['completed',
+                                                                                                    'skipped']:
+            doc.completed = True
+            doc.save(update_fields=['completed'])
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
     except Exception as pipeline_error:
-        # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz (Celery autoretry keyingi chaqiriqda davom etadi)
+        # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz
         if self.request.retries >= self.max_retries:
             Document.objects.filter(id=document_id).update(pipeline_running=False)
             logger.error(f"[PIPELINE FINAL FAIL] {document_id}: {pipeline_error}")

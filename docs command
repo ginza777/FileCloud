@@ -23,7 +23,7 @@ python manage.py dparse --limit=120 --dry-run
 python manage.py cancel_tasks
 
 # Barcha funksiyalar bilan
-python manage.py cancel_tasks --force --clear-results --reset-documents
+docker exec -it   filefinder_web python manage.py cancel_tasks --force --clear-results --reset-documents
 
 # Faqat task natijalarini tozalash
 python manage.py cancel_tasks --clear-results
