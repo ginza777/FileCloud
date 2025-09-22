@@ -185,6 +185,7 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'django-db')
 
 ES_URL = os.getenv('ES_URL', 'http://localhost:9200')
 ES_INDEX = os.getenv('ES_INDEX', 'documents')
+TIKA_URL = os.getenv('TIKA_URL', 'http://tika:9998')
 BOT_TOKEN= os.getenv('BOT_TOKEN', '')
 CHANNEL_ID= os.getenv('FORCE_CHANNEL_USERNAME', '')
 WEBHOOK_URL= os.getenv('WEBHOOK_URL', '')

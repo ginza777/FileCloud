@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 
 # --- Clients Setup ---
 tika_parser.TikaClientOnly = True
-tika_parser.TikaServerEndpoint = settings.TIKA_URL if hasattr(settings, 'TIKA_URL') else 'http://localhost:9998'
+tika_parser.TikaServerEndpoint = getattr(settings, 'TIKA_URL', 'http://tika:9998')
+# Tika server ni ishga tushirmaslik uchun
+tika_parser.TikaServerClasspath = None
 
 # Telegramning maksimal fayl hajmi (49 MB)
 TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
