@@ -62,12 +62,13 @@ class Command(BaseCommand):
                 ).select_related('product')
                 self.stdout.write("⚠️  To'liq tugallanmagan hujjatlarni ham indekslash rejimi faollashtirildi")
             else:
-                # Only fully completed documents
+                # Parse completed va Telegram ga yuborilgan hujjatlarni indekslash
                 documents = Document.objects.filter(
                     product__isnull=False,
-                    completed=True
+                    parse_status='completed',
+                    telegram_file_id__isnull=False
                 ).select_related('product')
-                self.stdout.write("✅ Faqat to'liq tugallangan hujjatlarni indekslash rejimi")
+                self.stdout.write("✅ Parse tugallangan va Telegram ga yuborilgan hujjatlarni indekslash rejimi")
 
             total_docs = documents.count()
             indexed_count = 0
