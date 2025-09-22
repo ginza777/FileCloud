@@ -31,15 +31,8 @@ app.autodiscover_tasks()
 # Import backup tasks to register them
 from apps.files import backup_tasks
 
-# Periodic tasks
-# Periodic tasks
-app.conf.beat_schedule = {
-    # --- YANGI VAZIFA ---
-    'cleanup-completed-files-every-10-minutes': {
-        'task': 'apps.files.tasks.cleanup_completed_files_task',
-        'schedule': crontab(minute='*/10'),  # Har 10 daqiqada
-    },
-}
+# BU QISM OLIB TASHLANDI, CHUNKI ADMIN PANELDAN FOYDALANAMIZ
+# app.conf.beat_schedule = { ... }
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
