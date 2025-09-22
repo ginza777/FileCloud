@@ -250,48 +250,55 @@ def process_document_pipeline(self, document_id):
             logger.error(f"[DELETE FAIL] Faylni o'chirishda xato: {document_id} - {delete_error}")
 
 
-@shared_task
-def cleanup_completed_files_task():
-    """
-    Har 10 daqiqada ishga tushib, 'media/downloads' papkasidagi ortiqcha fayllarni tozalaydi.
-    Faqatgina Document'i 'completed=True' va 'telegram_file_id' mavjud bo'lgan fayllarni o'chiradi.
-    """
-    logger.info("Fayllarni rejali tozalash boshlandi...")
-    downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+from django.utils import timezone
+from datetime import timedelta
 
-    if not os.path.exists(downloads_dir):
-        logger.warning(f"Tozalash uchun 'downloads' papkasi topilmadi: {downloads_dir}")
-        return
+
+@shared_task(name="cleanup_stale_files")
+def cleanup_stale_files_task():
+    """
+    5 daqiqadan ortiq 'pending' yoki 'processing' holatida qolib ketgan
+    va tugallanmagan hujjatlarni va ularga tegishli fayllarni o'chiradi.
+    """
+    logger.info("Qotib qolgan fayl va hujjatlarni tozalash boshlandi...")
+
+    # 5 daqiqalik vaqt chegarasini belgilaymiz
+    cutoff_time = timezone.now() - timedelta(minutes=5)
+
+    # Qotib qolgan hujjatlarni topamiz:
+    # - Tugallanmagan (completed=False)
+    # - Hozirda ishlov berilmayotgan (pipeline_running=False)
+    # - Oxirgi 5 daqiqada yangilanmagan
+    stale_docs = Document.objects.filter(
+        completed=False,
+        pipeline_running=False,
+        updated_at__lt=cutoff_time
+    )
 
     deleted_count = 0
-    for filename in os.listdir(downloads_dir):
-        file_path = os.path.join(downloads_dir, filename)
-        if not os.path.isfile(file_path):
-            continue  # Agar papka bo'lsa, o'tkazib yuboramiz
-
-        # Fayl nomidan UUID'ni ajratib olamiz (masalan: 'uuid.pptx' -> 'uuid')
-        doc_id = os.path.splitext(filename)[0]
-
+    for doc in stale_docs:
+        file_path = None
         try:
-            # Fayl nomi bo'yicha Document'ni bazadan qidiramiz
-            doc = Document.objects.get(id=doc_id)
+            logger.warning(f"5 daqiqadan ortiq qotib qolgan hujjat va fayl o'chirilmoqda: ID {doc.id}")
 
-            # Asosiy shartlarni tekshiramiz
-            if doc.completed and doc.telegram_file_id:
-                try:
+            # Fayl yo'lini aniqlash (xatolik yuzaga kelishi ehtimoliga qarshi)
+            if doc.parse_file_url:
+                file_extension = Path(doc.parse_file_url).suffix
+                file_path = os.path.join(settings.MEDIA_ROOT, 'downloads', f"{doc.id}{file_extension}")
+
+                # Faylni o'chirish (agar mavjud bo'lsa)
+                if os.path.exists(file_path):
                     os.remove(file_path)
-                    deleted_count += 1
-                    logger.info(f"Keraksiz fayl o'chirildi: {filename}")
-                except OSError as e:
-                    logger.error(f"Faylni ({file_path}) o'chirishda xatolik: {e}")
 
-        except Document.DoesNotExist:
-            # Agar faylga mos hujjat bazada topilmasa, e'tibor bermaymiz
-            # Bu vaqtinchalik fayl bo'lishi mumkin
-            pass
+            # Ma'lumotlar bazasidan hujjat yozuvini o'chirish
+            doc.delete()
+            deleted_count += 1
+
         except Exception as e:
-            # Boshqa kutilmagan xatoliklar (masalan, fayl nomi noto'g'ri formatda bo'lsa)
-            logger.error(f"Faylni ({filename}) tekshirishda tizimli xatolik: {e}")
+            logger.error(f"Qotib qolgan hujjatni ({doc.id}) yoki faylni ({file_path}) o'chirishda xato: {e}")
 
-    logger.info(f"Rejali tozalash yakunlandi. {deleted_count} ta fayl o'chirildi.")
+    if deleted_count > 0:
+        logger.info(f"Qotib qolgan fayllarni tozalash yakunlandi. {deleted_count} ta hujjat va fayl o'chirildi.")
+    else:
+        logger.info("Qotib qolgan fayllarni tozalash yakunlandi. O'chiriladigan hujjatlar topilmadi.")
 
