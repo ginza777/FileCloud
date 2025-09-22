@@ -254,85 +254,84 @@ from django.utils import timezone
 from datetime import timedelta
 
 
+
+
+
+
 @shared_task(name="apps.files.tasks.cleanup_completed_files_task")
 def cleanup_completed_files_task():
     """
-    Qotib qolgan 'pending' yoki 'processing' holatidagi fayllarni tozalaydi:
-    - Tugallanmagan (completed=False)
-    - Hozirda ishlov berilmayotgan (pipeline_running=False)
-    - Oxirgi 2 soatda yangilanmagan fayl va hujjatlarni o'chiradi
+    Fayl tizimini skanerlab, qolib ketgan fayllarni va nomuvofiq holatdagi
+    hujjatlarni tozalaydi. Bu vazifa barcha tozalash mantig'ini o'z ichiga oladi.
     """
-    logger.info("Qotib qolgan fayl va hujjatlarni tozalash boshlandi...")
+    logger.info("Fayl tizimi bo'yicha rejali tozalash boshlandi...")
+    downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
 
-    # 2 soatlik vaqt chegarasini belgilaymiz (avval 30 daqiqa edi)
-    cutoff_time = timezone.now() - timedelta(hours=2)
+    if not os.path.exists(downloads_dir):
+        logger.warning(f"Tozalash uchun 'downloads' papkasi topilmadi: {downloads_dir}")
+        return
 
-    # Perfectly completed docs kriteriyasini aniqlaymiz - bularni O'CHIRMAYMIZ
-    from django.db.models import Q
-    perfectly_completed_q = Q(
-        download_status='completed',
-        parse_status='completed',
-        index_status='completed',
-        telegram_status='completed',
-        telegram_file_id__isnull=False,
-        completed=True,
-        pipeline_running=False
-    ) & ~Q(telegram_file_id='')
+    # Aniqlash uchun vaqt chegaralari
+    stale_cutoff = timezone.now() - timedelta(minutes=10)
 
-    # Muvaffaqiyatli tugallangan hujjatlarni ham HIMOYA qilamiz
-    protected_q = perfectly_completed_q | Q(completed=True)
+    deleted_files = 0
+    reset_docs = 0
 
-    # Q obektlari bilan murakkab so'rovni tuzamiz
-    status_filter = (
-        Q(download_status__in=['pending', 'processing', 'failed']) |
-        Q(parse_status__in=['pending', 'processing', 'failed']) |
-        Q(index_status__in=['pending', 'processing', 'failed']) |
-        Q(telegram_status__in=['pending', 'processing', 'failed'])
-    )
+    for filename in os.listdir(downloads_dir):
+        file_path = os.path.join(downloads_dir, filename)
+        if not os.path.isfile(file_path):
+            continue
 
-    # Qotib qolgan hujjatlarni topamiz:
-    # - Tugallanmagan (completed=False)
-    # - Hozirda ishlov berilmayotgan (pipeline_running=False)
-    # - Oxirgi 2 soatda yangilanmagan
-    # - Status filterga mos keladigan
-    # - Va eng muhimi: perfectly_completed qoidasiga mos kelmaydigan
-    stale_docs = Document.objects.filter(
-        pipeline_running=False,
-        updated_at__lt=cutoff_time
-    ).filter(status_filter).exclude(protected_q)
+        doc_id = os.path.splitext(filename)[0]
 
-    # Natijalarni logda ko'rsatamiz
-    total_stale = stale_docs.count()
-    logger.info(f"Jami {total_stale} ta qotib qolgan hujjat topildi")
-
-    deleted_count = 0
-    for doc in stale_docs:
-        file_path = None
         try:
-            logger.warning(f"Qotib qolgan hujjat va fayl o'chirilmoqda: ID {doc.id}, "
-                          f"Holat: download={doc.download_status}, parse={doc.parse_status}, "
-                          f"index={doc.index_status}, telegram={doc.telegram_status}, "
-                          f"Yangilangan: {doc.updated_at}")
+            doc = Document.objects.get(id=doc_id)
 
-            # Fayl yo'lini aniqlash (xatolik yuzaga kelishi ehtimoliga qarshi)
-            if doc.parse_file_url:
-                file_extension = Path(doc.parse_file_url).suffix
-                file_path = os.path.join(settings.MEDIA_ROOT, 'downloads', f"{doc.id}{file_extension}")
+            # 1-Qoida: Hujjat mukammal tugallanganmi?
+            is_perfectly_completed = (
+                    doc.completed and
+                    doc.telegram_file_id is not None and
+                    doc.telegram_file_id.strip() != ''
+            )
 
-                # Faylni o'chirish (agar mavjud bo'lsa)
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"Fayl o'chirildi: {file_path}")
-                else:
-                    logger.info(f"Fayl topilmadi: {file_path}")
+            if is_perfectly_completed:
+                # Ha, mukammal tugallangan. Demak fayl ortiqcha.
+                logger.info(f"Muvaffaqiyatli hujjatning ortiqcha fayli o'chirilmoqda: {filename}")
+                os.remove(file_path)
+                deleted_files += 1
+                # Hujjatning o'ziga tegmaymiz, u to'g'ri holatda.
+                continue
 
-            # Ma'lumotlar bazasidan hujjat yozuvini o'chirish
+            # 2- va 3-Qoidalar: Hujjat mukammal EMAS. Eskirganmi?
+            file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
+            if file_mtime < stale_cutoff:
+                logger.warning(f"10 daqiqadan ortiq qolib ketgan fayl o'chirilmoqda va hujjat tozalanyapti: {filename}")
 
+                # Faylni o'chiramiz
+                os.remove(file_path)
+                deleted_files += 1
+
+                # Hujjatni "pending" holatiga qaytaramiz
+                doc.download_status = 'pending'
+                doc.parse_status = 'pending'
+                doc.index_status = 'pending'
+                doc.telegram_status = 'pending'
+                doc.delete_status = 'pending'
+                doc.completed = False
+                doc.pipeline_running = False
+                doc.save()
+                reset_docs += 1
+
+        except Document.DoesNotExist:
+            # Fayl bor, lekin bazada unga mos yozuv yo'q ("yetim" fayl)
+            file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
+            if file_mtime < stale_cutoff:
+                logger.warning(f"Bazadan o'chirilgan hujjatning 'yetim' fayli topildi va o'chirilmoqda: {filename}")
+                os.remove(file_path)
+                deleted_files += 1
         except Exception as e:
-            logger.error(f"Qotib qolgan hujjatni ({doc.id}) yoki faylni ({file_path}) o'chirishda xato: {e}")
+            logger.error(f"Faylni ({filename}) tozalashda kutilmagan xato: {e}")
 
-    if deleted_count > 0:
-        logger.info(f"Qotib qolgan fayllarni tozalash yakunlandi. {deleted_count} ta hujjat va fayl o'chirildi.")
-    else:
-        logger.info("Qotib qolgan fayllarni tozalash yakunlandi. O'chiriladigan hujjatlar topilmadi.")
+    logger.info(
+        f"Rejali tozalash yakunlandi. O'chirilgan fayllar: {deleted_files}. Tozalangan hujjatlar: {reset_docs}.")
 
