@@ -257,29 +257,48 @@ from datetime import timedelta
 @shared_task(name="apps.files.tasks.cleanup_completed_files_task")
 def cleanup_completed_files_task():
     """
-    5 daqiqadan ortiq 'pending' yoki 'processing' holatida qolib ketgan
-    va tugallanmagan hujjatlarni va ularga tegishli fayllarni o'chiradi.
+    Qotib qolgan 'pending' yoki 'processing' holatidagi fayllarni tozalaydi:
+    - Tugallanmagan (completed=False)
+    - Hozirda ishlov berilmayotgan (pipeline_running=False)
+    - Oxirgi 30 daqiqada yangilanmagan fayl va hujjatlarni o'chiradi
     """
     logger.info("Qotib qolgan fayl va hujjatlarni tozalash boshlandi...")
 
-    # 5 daqiqalik vaqt chegarasini belgilaymiz
-    cutoff_time = timezone.now() - timedelta(minutes=2)
+    # 30 daqiqalik vaqt chegarasini belgilaymiz (oldin 2 daqiqa edi)
+    cutoff_time = timezone.now() - timedelta(minutes=5)
+
+    # Q obektlari bilan murakkab so'rovni tuzamiz
+    from django.db.models import Q
+    status_filter = (
+        Q(download_status__in=['pending', 'processing', 'failed']) |
+        Q(parse_status__in=['pending', 'processing', 'failed']) |
+        Q(index_status__in=['pending', 'processing', 'failed']) |
+        Q(telegram_status__in=['pending', 'processing', 'failed'])
+    )
 
     # Qotib qolgan hujjatlarni topamiz:
     # - Tugallanmagan (completed=False)
     # - Hozirda ishlov berilmayotgan (pipeline_running=False)
-    # - Oxirgi 5 daqiqada yangilanmagan
+    # - Oxirgi 30 daqiqada yangilanmagan
+    # - Status filterga mos keladigan
     stale_docs = Document.objects.filter(
         completed=False,
         pipeline_running=False,
         updated_at__lt=cutoff_time
-    )
+    ).filter(status_filter)
+
+    # Natijalarni logda ko'rsatamiz
+    total_stale = stale_docs.count()
+    logger.info(f"Jami {total_stale} ta qotib qolgan hujjat topildi")
 
     deleted_count = 0
     for doc in stale_docs:
         file_path = None
         try:
-            logger.warning(f"5 daqiqadan ortiq qotib qolgan hujjat va fayl o'chirilmoqda: ID {doc.id}")
+            logger.warning(f"Qotib qolgan hujjat va fayl o'chirilmoqda: ID {doc.id}, "
+                          f"Holat: download={doc.download_status}, parse={doc.parse_status}, "
+                          f"index={doc.index_status}, telegram={doc.telegram_status}, "
+                          f"Yangilangan: {doc.updated_at}")
 
             # Fayl yo'lini aniqlash (xatolik yuzaga kelishi ehtimoliga qarshi)
             if doc.parse_file_url:
@@ -289,6 +308,9 @@ def cleanup_completed_files_task():
                 # Faylni o'chirish (agar mavjud bo'lsa)
                 if os.path.exists(file_path):
                     os.remove(file_path)
+                    logger.info(f"Fayl o'chirildi: {file_path}")
+                else:
+                    logger.info(f"Fayl topilmadi: {file_path}")
 
             # Ma'lumotlar bazasidan hujjat yozuvini o'chirish
             doc.delete()
