@@ -248,3 +248,49 @@ def process_document_pipeline(self, document_id):
                 logger.info(f"[DELETE] Fayl o'chirildi: {file_path}")
         except Exception as delete_error:
             logger.error(f"[DELETE FAIL] Faylni o'chirishda xato: {document_id} - {delete_error}")
+
+
+@shared_task(name="cleanup_completed_files")
+def cleanup_completed_files_task():
+    """
+    Har 10 daqiqada ishga tushib, 'media/downloads' papkasidagi ortiqcha fayllarni tozalaydi.
+    Faqatgina Document'i 'completed=True' va 'telegram_file_id' mavjud bo'lgan fayllarni o'chiradi.
+    """
+    logger.info("Fayllarni rejali tozalash boshlandi...")
+    downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+
+    if not os.path.exists(downloads_dir):
+        logger.warning(f"Tozalash uchun 'downloads' papkasi topilmadi: {downloads_dir}")
+        return
+
+    deleted_count = 0
+    for filename in os.listdir(downloads_dir):
+        file_path = os.path.join(downloads_dir, filename)
+        if not os.path.isfile(file_path):
+            continue  # Agar papka bo'lsa, o'tkazib yuboramiz
+
+        # Fayl nomidan UUID'ni ajratib olamiz (masalan: 'uuid.pptx' -> 'uuid')
+        doc_id = os.path.splitext(filename)[0]
+
+        try:
+            # Fayl nomi bo'yicha Document'ni bazadan qidiramiz
+            doc = Document.objects.get(id=doc_id)
+
+            # Asosiy shartlarni tekshiramiz
+            if doc.completed and doc.telegram_file_id:
+                try:
+                    os.remove(file_path)
+                    deleted_count += 1
+                    logger.info(f"Keraksiz fayl o'chirildi: {filename}")
+                except OSError as e:
+                    logger.error(f"Faylni ({file_path}) o'chirishda xatolik: {e}")
+
+        except Document.DoesNotExist:
+            # Agar faylga mos hujjat bazada topilmasa, e'tibor bermaymiz
+            # Bu vaqtinchalik fayl bo'lishi mumkin
+            pass
+        except Exception as e:
+            # Boshqa kutilmagan xatoliklar (masalan, fayl nomi noto'g'ri formatda bo'lsa)
+            logger.error(f"Faylni ({filename}) tekshirishda tizimli xatolik: {e}")
+
+    logger.info(f"Rejali tozalash yakunlandi. {deleted_count} ta fayl o'chirildi.")
