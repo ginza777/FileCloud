@@ -69,8 +69,23 @@ def get_temp_file_path(document_id, file_extension):
     """Vaqtincha fayl yo'li yaratadi."""
     temp_dir = getattr(settings, 'TEMP_DIR', None)
     if temp_dir:
-        os.makedirs(temp_dir, exist_ok=True)
-        return os.path.join(temp_dir, f"temp_{document_id}{file_extension}")
+        try:
+            # Papka yaratish va ruxsatlarni to'g'rilash
+            os.makedirs(temp_dir, exist_ok=True, mode=0o755)
+            temp_file_path = os.path.join(temp_dir, f"temp_{document_id}{file_extension}")
+            logger.info(f"Vaqtincha fayl yo'li yaratildi: {temp_file_path}")
+            return temp_file_path
+        except PermissionError as e:
+            logger.error(f"TEMP_DIR da ruxsat xatosi: {e}")
+            # Fallback: system temp dir ishlatamiz
+            temp_file = tempfile.NamedTemporaryFile(
+                suffix=file_extension, 
+                prefix=f"doc_{document_id}_", 
+                delete=False
+            )
+            temp_file.close()
+            logger.info(f"System temp dir ishlatildi: {temp_file.name}")
+            return temp_file.name
     else:
         # Agar TEMP_DIR sozlanmagan bo'lsa, system temp dir ishlatamiz
         temp_file = tempfile.NamedTemporaryFile(
@@ -79,6 +94,7 @@ def get_temp_file_path(document_id, file_extension):
             delete=False
         )
         temp_file.close()
+        logger.info(f"System temp dir ishlatildi: {temp_file.name}")
         return temp_file.name
 
 
@@ -186,6 +202,11 @@ def process_document_pipeline(self, document_id):
                 doc.download_status = 'processing'
                 doc.save(update_fields=['download_status'])
             try:
+                # Fayl yozish uchun ruxsatni tekshiramiz
+                temp_dir = os.path.dirname(temp_file_path)
+                if not os.access(temp_dir, os.W_OK):
+                    raise PermissionError(f"Fayl yozish uchun ruxsat yo'q: {temp_dir}")
+                
                 with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                     r.raise_for_status()
                     with open(temp_file_path, "wb") as f:
@@ -196,6 +217,12 @@ def process_document_pipeline(self, document_id):
                 doc.download_status = 'completed'
                 doc.save()
                 logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
+            except PermissionError as e:
+                doc.download_status = 'failed'
+                doc.save(update_fields=['download_status'])
+                cleanup_temp_file(temp_file_path)  # Xato bo'lsa vaqtincha faylni o'chiramiz
+                logger.error(f"[PIPELINE FAIL - Yuklash] Permission denied: {document_id}: {e}")
+                raise
             except Exception as e:
                 doc.download_status = 'failed'
                 doc.save(update_fields=['download_status'])
