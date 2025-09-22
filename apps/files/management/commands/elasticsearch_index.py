@@ -22,7 +22,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch-size',
             type=int,
-            default=400,
+            default=1000,
             help='Batch hajmi (standart 200)'
         )
         parser.add_argument(
@@ -76,7 +76,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Jami {total_docs} ta hujjat topildi")
 
             # Batch processing bilan tezlashtirish
-            batch_size = options.get('batch_size', 200)
+            batch_size = options.get('batch_size', 1000)
             use_parallel = options.get('parallel', False)
             
             self.stdout.write(f"Batch hajmi: {batch_size}")

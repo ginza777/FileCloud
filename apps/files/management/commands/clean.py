@@ -1,4 +1,4 @@
-# management/commands/maintenance.py
+# management/commands/clean.py
 import os
 import re
 import redis
@@ -45,13 +45,13 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write(self.style.WARNING("⚠️  DRY RUN rejimi yoqilgan. Hech qanday o'zgarishlar saqlanmaydi."))
 
-        if options['all'] or options['cancel_tasks']:
+        if options['all'] or options['cancel-tasks']:
             self.run_cancel_tasks(options['force'], options['dry_run'])
         if options['all'] or options['cleanup_data']:
             self.run_cleanup_data(options['dry_run'])
         if options['all'] or options['fix_urls']:
             self.run_fix_urls(options['dry_run'])
-        if options['all'] or options['fix_states']:
+        if options['all'] or options['fix-states']:
             self.run_fix_states(options['dry_run'])
 
         self.stdout.write(self.style.SUCCESS("===== BARCHA AMALLAR YAKUNLANDI ====="))
@@ -89,7 +89,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.HTTP_INFO("\n[2] Keraksiz ma'lumotlar va fayllarni tozalash..."))
         large_docs_count = 0
 
-        # 50MB dan katta fayllarni o'chirish (iterator() xotirani tejaydi)
         for doc in Document.objects.iterator():
             file_size_str = (doc.json_data or {}).get('document', {}).get('file_size')
             if file_size_str and self._parse_file_size_to_bytes(file_size_str) > 50 * 1024 * 1024:
@@ -104,7 +103,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f"   ➡️  Jami {large_docs_count} ta hujjat hajmi katta bo'lgani uchun {action_verb}."))
 
-        # O'chirilmagan fayllarni qayta o'chirish
         retry_delete_count = 0
         done_statuses = ['completed', 'skipped']
         docs_to_retry_delete = Document.objects.filter(download_status__in=done_statuses,
@@ -154,6 +152,7 @@ class Command(BaseCommand):
         fixed_to_false = 0
         fixed_telegram_status = 0
         reset_failed_docs = 0
+        reset_stuck_telegram = 0
 
         try:
             with transaction.atomic():
@@ -162,8 +161,7 @@ class Command(BaseCommand):
                     needs_save = False
 
                     # 1. Agar biror status 'failed' bo'lsa, hujjatni to'liq reset qilish
-                    failed_statuses = ['failed']
-                    if any(status in failed_statuses for status in
+                    if any(status == 'failed' for status in
                            [doc.download_status, doc.parse_status, doc.index_status, doc.telegram_status,
                             doc.delete_status]):
                         doc.download_status = 'pending'
@@ -185,7 +183,18 @@ class Command(BaseCommand):
                         needs_save = True
                         fixed_telegram_status += 1
 
-                    # 3. Asosiy holatni tekshirish
+                    # 3. YANGI MANTIQ: Telegram bosqichida qotib qolgan, lekin ID'si yo'q hujjatlarni tozalash
+                    if (doc.download_status == 'completed' and
+                            doc.parse_status == 'completed' and
+                            doc.index_status == 'completed' and
+                            not doc.telegram_file_id and
+                            doc.telegram_status != 'pending'):
+                        doc.telegram_status = 'pending'
+                        doc.completed = False
+                        needs_save = True
+                        reset_stuck_telegram += 1
+
+                    # 4. Asosiy yakuniy holatni tekshirish
                     is_perfectly_completed = all([doc.download_status == 'completed', doc.parse_status == 'completed',
                                                   doc.index_status == 'completed', doc.telegram_status == 'completed',
                                                   doc.telegram_file_id is not None and doc.telegram_file_id.strip() != ''])
@@ -200,7 +209,7 @@ class Command(BaseCommand):
                         doc.completed = is_perfectly_completed
                         doc.pipeline_running = False
 
-                    # 4. Agar o'zgarish bo'lsa, saqlash
+                    # 5. Agar o'zgarish bo'lsa, saqlash
                     if needs_save and not dry_run:
                         doc.save()
 
@@ -209,6 +218,9 @@ class Command(BaseCommand):
 
         if reset_failed_docs > 0: self.stdout.write(
             self.style.SUCCESS(f"   ✅ {reset_failed_docs} ta xatolikda qolgan hujjat qayta ishlash uchun tozaladi."))
+        if reset_stuck_telegram > 0: self.stdout.write(
+            self.style.SUCCESS(
+                f"   ✅ {reset_stuck_telegram} ta Telegram'da qotib qolgan hujjat qayta ishlashga yuborildi."))
         if fixed_telegram_status > 0: self.stdout.write(self.style.SUCCESS(
             f"   ✅ {fixed_telegram_status} ta hujjatning Telegram statusi 'completed' ga o'zgartirildi."))
         if fixed_to_true > 0: self.stdout.write(
