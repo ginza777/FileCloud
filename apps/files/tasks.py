@@ -320,7 +320,13 @@ def cleanup_completed_files_task():
                        f"telegram_file_id={doc.telegram_file_id is not None}, "
                        f"completed={doc.completed}, pipeline_running={doc.pipeline_running}")
 
-            # 1-Qoida: Hujjat mukammal tugallanganmi? (completed=True va telegram_file_id bor)
+            # 1-Qoida: Hujjat hozirda pipeline'da ishlayaptimi?
+            if doc.pipeline_running:
+                logger.info(f"🔄 PIPELINE ISHLAYAPTI: Hujjat hozirda ishlov berilmoqda, himoyalanadi: {doc_id}")
+                protected_files += 1
+                continue
+
+            # 2-Qoida: Hujjat mukammal tugallanganmi? (completed=True va telegram_file_id bor)
             is_perfectly_completed = (
                     doc.completed and
                     doc.telegram_file_id is not None and
@@ -339,7 +345,7 @@ def cleanup_completed_files_task():
                 # Hujjatning o'ziga tegmaymiz, u to'g'ri holatda.
                 continue
 
-            # 2-Qoida: Hujjat mukammal EMAS. Faylni o'chiramiz va hujjatni pending qilamiz
+            # 3-Qoida: Hujjat mukammal EMAS. Faylni o'chiramiz va hujjatni pending qilamiz
             logger.info(f"🔶 TUGALLANMAGAN: Hujjat mukammal tugallanmagan, fayl o'chirilmoqda: {doc_id}")
             
             # Faylni o'chiramiz
