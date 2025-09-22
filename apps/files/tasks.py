@@ -504,3 +504,10 @@ def cleanup_old_files_task(self):
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
 def cleanup_old_temp_files_task(self):
+    """Eski vaqtincha fayllarni tozalash"""
+    try:
+        cleanup_old_temp_files()
+        logger.info("[CLEANUP TEMP TASK] Vaqtincha fayllar tozalandi")
+    except Exception as e:
+        logger.error(f"[CLEANUP TEMP TASK] Xato: {e}")
+        raise
