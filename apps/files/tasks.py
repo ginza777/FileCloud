@@ -254,7 +254,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 
-@shared_task(name="cleanup_stale_files")
+@shared_task(name="apps.files.tasks.cleanup_completed_files_task")
 def cleanup_completed_files_task():
     """
     5 daqiqadan ortiq 'pending' yoki 'processing' holatida qolib ketgan
