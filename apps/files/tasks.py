@@ -260,15 +260,29 @@ def cleanup_completed_files_task():
     Qotib qolgan 'pending' yoki 'processing' holatidagi fayllarni tozalaydi:
     - Tugallanmagan (completed=False)
     - Hozirda ishlov berilmayotgan (pipeline_running=False)
-    - Oxirgi 30 daqiqada yangilanmagan fayl va hujjatlarni o'chiradi
+    - Oxirgi 2 soatda yangilanmagan fayl va hujjatlarni o'chiradi
     """
     logger.info("Qotib qolgan fayl va hujjatlarni tozalash boshlandi...")
 
-    # 30 daqiqalik vaqt chegarasini belgilaymiz (oldin 2 daqiqa edi)
-    cutoff_time = timezone.now() - timedelta(minutes=5)
+    # 2 soatlik vaqt chegarasini belgilaymiz (avval 30 daqiqa edi)
+    cutoff_time = timezone.now() - timedelta(hours=2)
+
+    # Perfectly completed docs kriteriyasini aniqlaymiz - bularni O'CHIRMAYMIZ
+    from django.db.models import Q
+    perfectly_completed_q = Q(
+        download_status='completed',
+        parse_status='completed',
+        index_status='completed',
+        telegram_status='completed',
+        telegram_file_id__isnull=False,
+        completed=True,
+        pipeline_running=False
+    ) & ~Q(telegram_file_id='')
+
+    # Muvaffaqiyatli tugallangan hujjatlarni ham HIMOYA qilamiz
+    protected_q = perfectly_completed_q | Q(completed=True)
 
     # Q obektlari bilan murakkab so'rovni tuzamiz
-    from django.db.models import Q
     status_filter = (
         Q(download_status__in=['pending', 'processing', 'failed']) |
         Q(parse_status__in=['pending', 'processing', 'failed']) |
@@ -279,13 +293,13 @@ def cleanup_completed_files_task():
     # Qotib qolgan hujjatlarni topamiz:
     # - Tugallanmagan (completed=False)
     # - Hozirda ishlov berilmayotgan (pipeline_running=False)
-    # - Oxirgi 30 daqiqada yangilanmagan
+    # - Oxirgi 2 soatda yangilanmagan
     # - Status filterga mos keladigan
+    # - Va eng muhimi: perfectly_completed qoidasiga mos kelmaydigan
     stale_docs = Document.objects.filter(
-        completed=False,
         pipeline_running=False,
         updated_at__lt=cutoff_time
-    ).filter(status_filter)
+    ).filter(status_filter).exclude(protected_q)
 
     # Natijalarni logda ko'rsatamiz
     total_stale = stale_docs.count()
@@ -313,8 +327,6 @@ def cleanup_completed_files_task():
                     logger.info(f"Fayl topilmadi: {file_path}")
 
             # Ma'lumotlar bazasidan hujjat yozuvini o'chirish
-            doc.delete()
-            deleted_count += 1
 
         except Exception as e:
             logger.error(f"Qotib qolgan hujjatni ({doc.id}) yoki faylni ({file_path}) o'chirishda xato: {e}")
