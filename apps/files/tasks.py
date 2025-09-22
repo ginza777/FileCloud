@@ -263,7 +263,7 @@ def cleanup_completed_files_task():
     logger.info("Qotib qolgan fayl va hujjatlarni tozalash boshlandi...")
 
     # 5 daqiqalik vaqt chegarasini belgilaymiz
-    cutoff_time = timezone.now() - timedelta(minutes=5)
+    cutoff_time = timezone.now() - timedelta(minutes=2)
 
     # Qotib qolgan hujjatlarni topamiz:
     # - Tugallanmagan (completed=False)
