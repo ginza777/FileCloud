@@ -264,28 +264,56 @@ def cleanup_completed_files_task():
     Fayl tizimini skanerlab, qolib ketgan fayllarni va nomuvofiq holatdagi
     hujjatlarni tozalaydi. Bu vazifa barcha tozalash mantig'ini o'z ichiga oladi.
     """
+    logger.info("========= FAYL TIZIMI TOZALASH BOSHLANDI =========")
     logger.info("Fayl tizimi bo'yicha rejali tozalash boshlandi...")
     downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+    logger.info(f"Tozalash joyi: {downloads_dir}")
 
     if not os.path.exists(downloads_dir):
         logger.warning(f"Tozalash uchun 'downloads' papkasi topilmadi: {downloads_dir}")
         return
 
     # Aniqlash uchun vaqt chegaralari
-    stale_cutoff = timezone.now() - timedelta(minutes=10)
+    minutes_threshold = 5
+    stale_cutoff = timezone.now() - timedelta(minutes=minutes_threshold)
+    logger.info(f"Vaqt chegarasi: {minutes_threshold} daqiqa ({stale_cutoff.isoformat()})")
 
+    # Tozalash statistikasi
+    found_files = 0
     deleted_files = 0
     reset_docs = 0
+    protected_files = 0
 
-    for filename in os.listdir(downloads_dir):
+    # Avval papkadagi barcha fayllarni sanab chiqamiz
+    try:
+        all_files = os.listdir(downloads_dir)
+        logger.info(f"Jami {len(all_files)} ta fayl topildi")
+    except Exception as e:
+        logger.error(f"Papkani o'qishda xato: {e}")
+        return
+
+    for filename in all_files:
         file_path = os.path.join(downloads_dir, filename)
         if not os.path.isfile(file_path):
             continue
 
+        found_files += 1
         doc_id = os.path.splitext(filename)[0]
+        file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB da
+        file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
+        time_diff = timezone.now() - file_mtime
+        minutes_old = time_diff.total_seconds() / 60
+
+        logger.info(f"FAYL: {filename} | {file_size:.2f} MB | {minutes_old:.1f} daqiqa oldin o'zgartirilgan")
 
         try:
             doc = Document.objects.get(id=doc_id)
+
+            # Hujjat holatini log qilamiz
+            logger.info(f"HUJJAT #{doc_id}: download={doc.download_status}, parse={doc.parse_status}, "
+                       f"index={doc.index_status}, telegram={doc.telegram_status}, "
+                       f"telegram_file_id={doc.telegram_file_id is not None}, "
+                       f"completed={doc.completed}, pipeline_running={doc.pipeline_running}")
 
             # 1-Qoida: Hujjat mukammal tugallanganmi?
             is_perfectly_completed = (
@@ -296,22 +324,33 @@ def cleanup_completed_files_task():
 
             if is_perfectly_completed:
                 # Ha, mukammal tugallangan. Demak fayl ortiqcha.
-                logger.info(f"Muvaffaqiyatli hujjatning ortiqcha fayli o'chirilmoqda: {filename}")
-                os.remove(file_path)
-                deleted_files += 1
+                logger.info(f"✅ HIMOYALANGAN: Muvaffaqiyatli hujjatning ortiqcha fayli o'chirilmoqda: {filename}")
+                try:
+                    os.remove(file_path)
+                    logger.info(f"✅ FAYL O'CHIRILDI: {filename}")
+                    deleted_files += 1
+                except Exception as e:
+                    logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
                 # Hujjatning o'ziga tegmaymiz, u to'g'ri holatda.
                 continue
+            else:
+                # Mukammal tugallanmagan hujjat
+                logger.info(f"🔶 TUGALLANMAGAN: Hujjat mukammal tugallanmagan: {doc_id}")
 
             # 2- va 3-Qoidalar: Hujjat mukammal EMAS. Eskirganmi?
-            file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
             if file_mtime < stale_cutoff:
-                logger.warning(f"10 daqiqadan ortiq qolib ketgan fayl o'chirilmoqda va hujjat tozalanyapti: {filename}")
+                logger.warning(f"⏰ ESKIRGAN: {minutes_threshold} daqiqadan ortiq qolib ketgan fayl va hujjat: {filename}")
 
                 # Faylni o'chiramiz
-                os.remove(file_path)
-                deleted_files += 1
+                try:
+                    os.remove(file_path)
+                    logger.info(f"🗑️ FAYL O'CHIRILDI: {filename}")
+                    deleted_files += 1
+                except Exception as e:
+                    logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
 
                 # Hujjatni "pending" holatiga qaytaramiz
+                old_status = f"download={doc.download_status}, parse={doc.parse_status}, index={doc.index_status}, telegram={doc.telegram_status}"
                 doc.download_status = 'pending'
                 doc.parse_status = 'pending'
                 doc.index_status = 'pending'
@@ -320,18 +359,31 @@ def cleanup_completed_files_task():
                 doc.completed = False
                 doc.pipeline_running = False
                 doc.save()
+                logger.info(f"🔄 HUJJAT QAYTA TIKLANDI: ID {doc_id}, eski holat: {old_status}")
                 reset_docs += 1
+            else:
+                logger.info(f"⏳ YANGI FAYL: Fayl hali eskirmagan ({minutes_old:.1f} daqiqa < {minutes_threshold} daqiqa)")
+                protected_files += 1
 
         except Document.DoesNotExist:
             # Fayl bor, lekin bazada unga mos yozuv yo'q ("yetim" fayl)
-            file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
+            logger.warning(f"👻 YETIM FAYL: Bazada yozuvi yo'q fayl topildi: {filename}")
             if file_mtime < stale_cutoff:
-                logger.warning(f"Bazadan o'chirilgan hujjatning 'yetim' fayli topildi va o'chirilmoqda: {filename}")
-                os.remove(file_path)
-                deleted_files += 1
+                logger.warning(f"🗑️ O'CHIRILMOQDA: Eskirgan yetim fayl o'chirilmoqda: {filename}")
+                try:
+                    os.remove(file_path)
+                    logger.info(f"✅ YETIM FAYL O'CHIRILDI: {filename}")
+                    deleted_files += 1
+                except Exception as e:
+                    logger.error(f"❌ XATO: Yetim faylni o'chirishda xatolik: {e}")
+            else:
+                logger.info(f"⏳ YANGI YETIM FAYL: Fayl hali eskirmagan ({minutes_old:.1f} daqiqa < {minutes_threshold} daqiqa)")
         except Exception as e:
-            logger.error(f"Faylni ({filename}) tozalashda kutilmagan xato: {e}")
+            logger.error(f"❌ XATO: Faylni ({filename}) tozalashda kutilmagan xato: {e}")
 
-    logger.info(
-        f"Rejali tozalash yakunlandi. O'chirilgan fayllar: {deleted_files}. Tozalangan hujjatlar: {reset_docs}.")
-
+    logger.info(f"========= TOZALASH STATISTIKASI =========")
+    logger.info(f"Jami ko'rib chiqilgan fayllar: {found_files}")
+    logger.info(f"O'chirilgan fayllar: {deleted_files}")
+    logger.info(f"Tozalangan hujjatlar: {reset_docs}")
+    logger.info(f"Himoyalangan yangi fayllar: {protected_files}")
+    logger.info(f"========= FAYL TIZIMI TOZALASH TUGADI =========")
