@@ -28,6 +28,14 @@ app.conf.update(
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
+# Periodic tasks
+app.conf.beat_schedule = {
+    'cleanup-temp-files': {
+        'task': 'apps.files.tasks.cleanup_old_temp_files_task',
+        'schedule': crontab(hour=2, minute=0),  # Har kuni soat 2:00 da
+    },
+}
+
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')

@@ -2,6 +2,8 @@
 
 import logging
 import os
+import tempfile
+import shutil
 from pathlib import Path
 import requests
 from celery import shared_task
@@ -13,6 +15,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import json
 import time
+import threading
+from datetime import datetime, timedelta
 
 from .models import Document
 
@@ -26,6 +30,10 @@ tika_parser.TikaServerEndpoint = settings.TIKA_URL if hasattr(settings, 'TIKA_UR
 # Telegramning maksimal fayl hajmi (49 MB)
 TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
 
+# Telegram rate limiting uchun global lock
+telegram_lock = threading.Lock()
+last_telegram_send = None
+
 
 def make_retry_session():
     """Qayta urinishlar bilan mustahkam HTTP session yaratadi."""
@@ -38,6 +46,72 @@ def make_retry_session():
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     return session
+
+
+def wait_for_telegram_rate_limit():
+    """Telegram rate limiting uchun kutish funksiyasi."""
+    global last_telegram_send
+    
+    with telegram_lock:
+        if last_telegram_send is not None:
+            time_since_last = datetime.now() - last_telegram_send
+            # Telegram uchun minimal 1 soniya oraliq
+            min_interval = timedelta(seconds=1)
+            if time_since_last < min_interval:
+                wait_time = (min_interval - time_since_last).total_seconds()
+                logger.info(f"Telegram rate limit uchun {wait_time:.2f} soniya kutamiz...")
+                time.sleep(wait_time)
+        
+        last_telegram_send = datetime.now()
+
+
+def get_temp_file_path(document_id, file_extension):
+    """Vaqtincha fayl yo'li yaratadi."""
+    temp_dir = getattr(settings, 'TEMP_DIR', None)
+    if temp_dir:
+        os.makedirs(temp_dir, exist_ok=True)
+        return os.path.join(temp_dir, f"temp_{document_id}{file_extension}")
+    else:
+        # Agar TEMP_DIR sozlanmagan bo'lsa, system temp dir ishlatamiz
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix=file_extension, 
+            prefix=f"doc_{document_id}_", 
+            delete=False
+        )
+        temp_file.close()
+        return temp_file.name
+
+
+def cleanup_temp_file(file_path):
+    """Vaqtincha faylni o'chiradi."""
+    try:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"Vaqtincha fayl o'chirildi: {file_path}")
+    except Exception as e:
+        logger.warning(f"Vaqtincha fayl o'chirishda xato: {e}")
+
+
+def cleanup_old_temp_files():
+    """Eski vaqtincha fayllarni tozalaydi."""
+    temp_dir = getattr(settings, 'TEMP_DIR', None)
+    if not temp_dir or not os.path.exists(temp_dir):
+        return
+    
+    try:
+        current_time = time.time()
+        max_age = 24 * 60 * 60  # 24 soat
+        
+        for filename in os.listdir(temp_dir):
+            if filename.startswith('temp_') or filename.startswith('doc_'):
+                file_path = os.path.join(temp_dir, filename)
+                if os.path.isfile(file_path):
+                    file_age = current_time - os.path.getmtime(file_path)
+                    if file_age > max_age:
+                        os.remove(file_path)
+                        logger.info(f"Eski vaqtincha fayl o'chirildi: {filename}")
+    except Exception as e:
+        logger.warning(f"Eski vaqtincha fayllarni tozalashda xato: {e}")
 
 
 def get_es_client():
@@ -57,6 +131,14 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
+
+
+@shared_task
+def cleanup_old_temp_files_task():
+    """Eski vaqtincha fayllarni tozalash uchun periodic task."""
+    logger.info("Eski vaqtincha fayllarni tozalash boshlandi...")
+    cleanup_old_temp_files()
+    logger.info("Eski vaqtincha fayllarni tozalash tugadi.")
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3)
@@ -90,7 +172,12 @@ def process_document_pipeline(self, document_id):
             Document.objects.filter(id=document_id).update(pipeline_running=False)
             return
 
-        file_full_path_str = str(Path(settings.MEDIA_ROOT) / f"downloads/{doc.id}{Path(doc.parse_file_url).suffix}")
+        # Vaqtincha fayl yo'li yaratamiz
+        file_extension = Path(doc.parse_file_url).suffix
+        temp_file_path = get_temp_file_path(doc.id, file_extension)
+        
+        # Eski vaqtincha fayllarni tozalaymiz
+        cleanup_old_temp_files()
 
         # 1. DOWNLOAD
         if doc.download_status != 'completed':
@@ -99,20 +186,20 @@ def process_document_pipeline(self, document_id):
                 doc.download_status = 'processing'
                 doc.save(update_fields=['download_status'])
             try:
-                Path(file_full_path_str).parent.mkdir(parents=True, exist_ok=True)
                 with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                     r.raise_for_status()
-                    with open(file_full_path_str, "wb") as f:
+                    with open(temp_file_path, "wb") as f:
                         for chunk in r.iter_content(chunk_size=8192):
                             if chunk:
                                 f.write(chunk)
-                doc.file_path = file_full_path_str
+                doc.file_path = temp_file_path
                 doc.download_status = 'completed'
                 doc.save()
                 logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
             except Exception as e:
                 doc.download_status = 'failed'
                 doc.save(update_fields=['download_status'])
+                cleanup_temp_file(temp_file_path)  # Xato bo'lsa vaqtincha faylni o'chiramiz
                 logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e}")
                 raise
 
@@ -202,6 +289,9 @@ def process_document_pipeline(self, document_id):
                             doc.save(update_fields=['telegram_status'])
                             logger.warning(f"[4. Telegram] Fayl katta, o'tkazildi: {file_size}")
                         else:
+                            # Rate limiting uchun kutamiz
+                            wait_for_telegram_rate_limit()
+                            
                             json_data_str = json.dumps(doc.json_data, ensure_ascii=False, indent=2) if doc.json_data else '{}'
                             json_data_str = json_data_str.replace('`', '\u200b`')
                             static_caption = (
@@ -261,16 +351,20 @@ def process_document_pipeline(self, document_id):
                 doc.delete_status = 'processing'
                 doc.save(update_fields=['delete_status'])
             try:
-                # Fayl nomini document.id va parse_file_url kengaytmasidan shakllantirish
-                file_name = f"{doc.id}{Path(doc.parse_file_url).suffix}"
-                file_full_path = os.path.join(settings.MEDIA_ROOT, 'downloads', file_name)
-                logger.info(f"[5. O'chirish] Fayl yo'li: {file_full_path}")
-                if os.path.exists(file_full_path):
-                    os.remove(file_full_path)
-                    logger.info(f"[5. O'chirish] Muvaffaqiyatli o'chirildi: {file_full_path}")
+                # Vaqtincha faylni o'chiramiz
+                if doc.file_path and os.path.exists(doc.file_path):
+                    cleanup_temp_file(doc.file_path)
+                    logger.info(f"[5. O'chirish] Vaqtincha fayl o'chirildi: {doc.file_path}")
                 else:
-                    logger.warning(f"[5. O'chirish] Fayl topilmadi: {file_full_path}")
-                # doc.file_path ni yangilash shart emas, chunki u ishlatilmaydi
+                    logger.warning(f"[5. O'chirish] Vaqtincha fayl topilmadi: {doc.file_path}")
+                
+                # Eski downloads papkasidagi faylni ham o'chirishga harakat qilamiz (agar mavjud bo'lsa)
+                old_file_name = f"{doc.id}{Path(doc.parse_file_url).suffix}"
+                old_file_path = os.path.join(settings.MEDIA_ROOT, 'downloads', old_file_name)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+                    logger.info(f"[5. O'chirish] Eski fayl o'chirildi: {old_file_path}")
+                
                 doc.delete_status = 'completed'
                 doc.save(update_fields=['delete_status'])
                 logger.info(f"[5. O'chirish] Tugadi: {document_id}")
@@ -294,4 +388,9 @@ def process_document_pipeline(self, document_id):
         # Muvaffaqiyatli tugadi -> lockni yechamiz
         Document.objects.filter(id=document_id).update(pipeline_running=False)
     finally:
-        pass  # Qo'shimcha cleanup hozircha kerak emas
+        # Har doim vaqtincha faylni o'chirishga harakat qilamiz
+        try:
+            if 'temp_file_path' in locals() and temp_file_path:
+                cleanup_temp_file(temp_file_path)
+        except Exception as cleanup_error:
+            logger.warning(f"Cleanup xatosi {document_id}: {cleanup_error}")
