@@ -70,13 +70,33 @@ def get_temp_file_path(document_id, file_extension):
     temp_dir = getattr(settings, 'TEMP_DIR', None)
     if temp_dir:
         try:
-            # Papka yaratish va ruxsatlarni to'g'rilash
-            os.makedirs(temp_dir, exist_ok=True, mode=0o755)
+            # Papka yaratish - bir nechta usul bilan
+            try:
+                os.makedirs(temp_dir, exist_ok=True, mode=0o777)
+            except PermissionError:
+                try:
+                    os.makedirs(temp_dir, exist_ok=True, mode=0o755)
+                except PermissionError:
+                    try:
+                        os.makedirs(temp_dir, exist_ok=True)
+                        os.chmod(temp_dir, 0o777)
+                    except PermissionError:
+                        # Agar hali ham ishlamasa, system temp dir ishlatamiz
+                        raise PermissionError("Custom temp dir yaratishda xato")
+            
+            # Ruxsatlarni tekshirish
+            if not os.access(temp_dir, os.W_OK):
+                try:
+                    os.chmod(temp_dir, 0o777)
+                except PermissionError:
+                    raise PermissionError("Temp dir ruxsatlarini o'zgartirishda xato")
+            
             temp_file_path = os.path.join(temp_dir, f"temp_{document_id}{file_extension}")
             logger.info(f"Vaqtincha fayl yo'li yaratildi: {temp_file_path}")
             return temp_file_path
+            
         except PermissionError as e:
-            logger.error(f"TEMP_DIR da ruxsat xatosi: {e}")
+            logger.warning(f"TEMP_DIR da ruxsat xatosi: {e}")
             # Fallback: system temp dir ishlatamiz
             temp_file = tempfile.NamedTemporaryFile(
                 suffix=file_extension, 
