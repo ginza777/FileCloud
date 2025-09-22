@@ -1,49 +1,62 @@
-Sekin, xavfsiz rejim (har daqiqada 15 ta):
+============================================================
+                   BOSHqaruv Komandalari
+============================================================
 
-python manage.py dparse --limit=500 --rate=15 --max-active=300
-
-
-
-
-Birdan 200 ta, lekin jitter bilan:
-
-python manage.py dparse --limit=200 --rate=0 --burst-limit=250 --jitter=0.8
-
-Katta hajmni bo‘lib yuborish:
-
-python manage.py dparse --limit=1000 --rate=40 --batch-size=40 --batch-sleep=1.5
+Bu faylda loyihani boshqarish, ma'lumotlarni yuklash va tizimni sozlash uchun ishlatiladigan asosiy komandalar jamlangan.
 
 
-Sinov (hech narsa yubormaydi):
+------------------------------------------------------------
+               dparse - Hujjatlarni Navbatga Qo'yish
+------------------------------------------------------------
 
-python manage.py dparse --limit=120 --dry-run
-
-
-# Asosiy ishlatish (faol tasklarni bekor qilish)
-python manage.py cancel_tasks
-
-# Barcha funksiyalar bilan
-docker exec -it   filefinder_web python manage.py cancel_tasks --force --clear-results --reset-documents
-
-# Faqat task natijalarini tozalash
-python manage.py cancel_tasks --clear-results
-
-# Faqat document flaglarini qayta tiklash
-python manage.py cancel_tasks --reset-documents
-
-# Majburiy bekor qilish
-python manage.py cancel_tasks --force
+# Sekin va xavfsiz rejimda hujjatlarni navbatga qo'yish (masalan, 500 ta):
+# Bu komanda ishlov berilmagan hujjatlarni topib, Celery navbatiga qo'shadi.
+docker exec -it filefinder_web python manage.py dparse --limit=500 --include-incomplete
 
 
-
-docker exec -it   filefinder_web  python manage.py parse --start-page=1 --end-page=1000
-docker exec -it   filefinder_web  python manage.py parse --start-page=1001 --end-page=2000
-docker exec -it   filefinder_web  python manage.py parse --start-page=2001 --end-page=3000
-docker exec -it   filefinder_web  python manage.py parse --start-page=3001 --end-page=4000
-docker exec -it   filefinder_web  python manage.py parse --start-page=4001 --end-page=5000
-docker exec -it   filefinder_web  python manage.py parse --start-page=5001 --end-page=6000
-docker exec -it   filefinder_web  python manage.py parse --start-page=6001 --end-page=7000
-docker exec -it   filefinder_web  python manage.py parse --start-page=7001 --end-page=8000
+# Sinov rejimi (hech narsa yubormaydi):
+# Hujjatlarni navbatga qo'ymaydi, faqat qaysi hujjatlar yuborilishini ko'rsatadi.
+docker exec -it filefinder_web python manage.py dparse --limit=120 --dry-run
 
 
-   docker exec -it filefinder_web python manage.py dparse --limit=50 --include-incomplete
+------------------------------------------------------------
+               parse - Saytdan Ma'lumotlarni Olish
+------------------------------------------------------------
+
+# Saytdan ma'lumotlarni (hujjatlar ro'yxatini) parse qilish:
+# Belgilangan sahifalar oralig'idagi ma'lumotlarni yig'ib, ma'lumotlar bazasiga saqlaydi.
+docker exec -it filefinder_web python manage.py parse --start-page=1 --end-page=1000
+
+
+------------------------------------------------------------
+               maintenance - Tizimni Sozlash va Tuzatish
+------------------------------------------------------------
+
+# To'liq tizimni tozalash va tuzatish (eng ko'p ishlatiladigan rejim):
+# Barcha kerakli amallarni (Celery'ni tozalash, fayllarni o'chirish, statuslarni to'g'rilash) bajaradi.
+docker exec -it filefinder_web python manage.py maintenance --all
+
+
+# Sinov rejimi (hech narsa o'zgartirilmaydi):
+# Tizimni to'liq skanerlaydi, lekin o'zgarishlar kiritmaydi. Nima bo'lishini oldindan ko'rish uchun.
+docker exec -it filefinder_web python manage.py maintenance --all --dry-run
+
+
+# Celery vazifalarini favqulodda to'xtatish:
+# Agar Celery'da vazifalar qotib qolsa, ularni majburan to'xtatish va navbatni tozalash uchun.
+docker exec -it filefinder_web python manage.py maintenance --cancel-tasks --force
+
+
+# Faqat ma'lumotlar bazasi holatini tuzatish:
+# Faqat `Document` modelidagi `completed` va `pipeline_running` maydonlarini to'g'rilaydi.
+docker exec -it filefinder_web python manage.py maintenance --fix-states
+
+
+# Keraksiz hujjatlarni o'chirish:
+# Hajmi 50MB dan katta bo'lgan hujjatlarni va avval o'chirilmay qolgan fayllarni tozalaydi.
+docker exec -it filefinder_web python manage.py maintenance --cleanup-data
+
+
+# URL manzillarini tuzatish:
+# `parse_file_url` va `poster_url` orasidagi fayl kengaytmalari nomuvofiqligini tuzatadi.
+docker exec -it filefinder_web python manage.py maintenance --fix-urls
