@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 # --- Clients Setup ---
 tika_parser.TikaClientOnly = True
 tika_parser.TikaServerEndpoint = getattr(settings, 'TIKA_URL', 'http://tika:9998')
-tika_parser.TikaServerClasspath = None
 
 TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
 

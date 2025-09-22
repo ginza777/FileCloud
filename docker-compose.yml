@@ -34,7 +34,7 @@ services:
   celery:
     build: .
     container_name: filefinder_celery
-    command: celery -A core worker --loglevel=info --concurrency=2
+    command: celery -A core worker --loglevel=info --concurrency=1
     volumes:
       - .:/app
       - ./media:/app/media
