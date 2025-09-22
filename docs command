@@ -22,6 +22,9 @@ docker exec -it filefinder_web python manage.py dparse --limit=500
 # Saytdan ma'lumotlarni (hujjatlar ro'yxatini) parse qilish:
 # Belgilangan sahifalar oralig'idagi ma'lumotlarni yig'ib, ma'lumotlar bazasiga saqlaydi.
 docker exec -it filefinder_web python manage.py parse --start-page=1 --end-page=1000
+docker exec -it filefinder_web python manage.py parse --start-page=4000 --end-page=8000
+docker exec -it filefinder_web python manage.py parse --start-page=1 --end-page=1000
+docker exec -it filefinder_web python manage.py parse --start-page=1 --end-page=1000
 
 
 ------------------------------------------------------------
@@ -66,3 +69,6 @@ docker-compose up -d celery celery-beat
 
 restart filefinder_web
 docker restart filefinder_web
+
+
+ls -l media/downloads | grep ^- | wc -l
