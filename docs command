@@ -65,4 +65,4 @@ docker exec -it filefinder_redis redis-cli FLUSHALL
 docker-compose up -d celery celery-beat
 
 restart filefinder_web
-docker-compose restart filefinder_web
+docker restart filefinder_web
