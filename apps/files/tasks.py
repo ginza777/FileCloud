@@ -255,7 +255,7 @@ from datetime import timedelta
 
 
 @shared_task(name="cleanup_stale_files")
-def cleanup_stale_files_task():
+def cleanup_completed_files_task():
     """
     5 daqiqadan ortiq 'pending' yoki 'processing' holatida qolib ketgan
     va tugallanmagan hujjatlarni va ularga tegishli fayllarni o'chiradi.
