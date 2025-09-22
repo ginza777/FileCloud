@@ -30,6 +30,11 @@ class Command(BaseCommand):
             action='store_true',
             help='Parallel indekslash (tezroq, lekin ko\'proq resurs talab qiladi)'
         )
+        parser.add_argument(
+            '--include-partial',
+            action='store_true',
+            help='To\'liq tugallanmagan hujjatlarni ham indekslash (parse_status=completed)'
+        )
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("=== ELASTICSEARCH INDEKS YARATISH BOSHLANDI ==="))
@@ -48,10 +53,21 @@ class Command(BaseCommand):
             # Barcha hujjatlarni indekslash
             self.stdout.write("Hujjatlarni indekslash boshlandi...")
 
-            documents = Document.objects.filter(
-                product__isnull=False,
-                parse_status='completed'
-            ).select_related('product')
+            # Filter logic based on options
+            if options.get('include_partial', False):
+                # Include partially completed documents (parse_status=completed)
+                documents = Document.objects.filter(
+                    product__isnull=False,
+                    parse_status='completed'
+                ).select_related('product')
+                self.stdout.write("⚠️  To'liq tugallanmagan hujjatlarni ham indekslash rejimi faollashtirildi")
+            else:
+                # Only fully completed documents
+                documents = Document.objects.filter(
+                    product__isnull=False,
+                    completed=True
+                ).select_related('product')
+                self.stdout.write("✅ Faqat to'liq tugallangan hujjatlarni indekslash rejimi")
 
             total_docs = documents.count()
             indexed_count = 0
