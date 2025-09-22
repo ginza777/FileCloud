@@ -65,7 +65,7 @@ class Command(BaseCommand):
                         continue  # O'tkazib yuboramiz
 
                     # Agar bu hujjat allaqachon mukammal bo'lsa (ehtimoldan yiroq, lekin tekshiramiz)
-                    if perfectly_completed_q.check(locked_doc, use_database=True):
+                    if perfectly_completed_q.check(locked_doc): # <--- XATO TUZATILDI
                         continue
 
                     # 3. Hujjatni tozalab, "pending" holatiga o'tkazamiz
