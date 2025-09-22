@@ -85,9 +85,13 @@ class Command(BaseCommand):
         if include_incomplete:
             self.stdout.write(self.style.SUCCESS("Chala qolgan hujjatlar ham qo'shiladi"))
 
-        # Asosiy query - completed=False va pipeline_running=False
+        # Asosiy query - faqat pending hujjatlarni tanlaymiz
         base_qs = Document.objects.filter(
             parse_file_url__isnull=False,
+            download_status='pending',
+            parse_status='pending',
+            index_status='pending',
+            telegram_status='pending',
             completed=False,
             pipeline_running=False
         )
