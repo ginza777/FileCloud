@@ -52,8 +52,6 @@ class Document(models.Model):
 
     parse_file_url = models.TextField(blank=True, null=True, verbose_name="File URL",
                                 help_text="Direct link to the document file")
-    file_path = models.TextField(blank=True, null=True, verbose_name="Local File Path",
-                                 help_text="Path where file is saved locally")
     #status
     download_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
                                        verbose_name="Yuklab olish holati")

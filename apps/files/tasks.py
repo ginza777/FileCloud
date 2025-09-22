@@ -210,9 +210,11 @@ def process_document_pipeline(self, document_id):
             Document.objects.filter(id=document_id).update(pipeline_running=False)
             return
 
-        # Vaqtincha fayl yo'li yaratamiz
+        # Media papkasida fayl yo'li yaratamiz
         file_extension = Path(doc.parse_file_url).suffix
-        temp_file_path = get_temp_file_path(doc.id, file_extension)
+        media_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+        os.makedirs(media_dir, exist_ok=True)
+        file_path = os.path.join(media_dir, f"{doc.id}{file_extension}")
         
         # Eski vaqtincha fayllarni tozalaymiz
         cleanup_old_temp_files()
@@ -225,30 +227,33 @@ def process_document_pipeline(self, document_id):
                 doc.save(update_fields=['download_status'])
             try:
                 # Fayl yozish uchun ruxsatni tekshiramiz
-                temp_dir = os.path.dirname(temp_file_path)
-                if not os.access(temp_dir, os.W_OK):
-                    raise PermissionError(f"Fayl yozish uchun ruxsat yo'q: {temp_dir}")
+                media_dir = os.path.dirname(file_path)
+                if not os.access(media_dir, os.W_OK):
+                    raise PermissionError(f"Fayl yozish uchun ruxsat yo'q: {media_dir}")
                 
                 with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                     r.raise_for_status()
-                    with open(temp_file_path, "wb") as f:
+                    with open(file_path, "wb") as f:
                         for chunk in r.iter_content(chunk_size=8192):
                             if chunk:
                                 f.write(chunk)
-                doc.file_path = temp_file_path
                 doc.download_status = 'completed'
                 doc.save()
                 logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
             except PermissionError as e:
                 doc.download_status = 'failed'
                 doc.save(update_fields=['download_status'])
-                cleanup_temp_file(temp_file_path)  # Xato bo'lsa vaqtincha faylni o'chiramiz
+                # Xato bo'lsa faylni o'chiramiz
+                if os.path.exists(file_path):
+                    os.remove(file_path)
                 logger.error(f"[PIPELINE FAIL - Yuklash] Permission denied: {document_id}: {e}")
                 raise
             except Exception as e:
                 doc.download_status = 'failed'
                 doc.save(update_fields=['download_status'])
-                cleanup_temp_file(temp_file_path)  # Xato bo'lsa vaqtincha faylni o'chiramiz
+                # Xato bo'lsa faylni o'chiramiz
+                if os.path.exists(file_path):
+                    os.remove(file_path)
                 logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e}")
                 raise
 
@@ -260,12 +265,12 @@ def process_document_pipeline(self, document_id):
                 doc.parse_status = 'processing'
                 doc.save(update_fields=['parse_status'])
             try:
-                if not doc.file_path or not os.path.exists(doc.file_path):
+                if not file_path or not os.path.exists(file_path):
                     doc.parse_status = 'failed'
                     doc.save(update_fields=['parse_status'])
-                    logger.error(f"[PIPELINE FAIL - Parse] {document_id}: File not found or path is None: {doc.file_path}")
+                    logger.error(f"[PIPELINE FAIL - Parse] {document_id}: File not found or path is None: {file_path}")
                     return  # Exit gracefully, do not raise
-                parsed = tika_parser.from_file(doc.file_path)
+                parsed = tika_parser.from_file(file_path)
                 # Safely extract content with proper None handling
                 content = ""
                 if parsed:
@@ -321,16 +326,14 @@ def process_document_pipeline(self, document_id):
         if doc.index_status == 'completed' and doc.telegram_status not in ['completed', 'skipped']:
             # Avval fayl mavjudligini tekshiramiz
             file_to_check = None
-            if temp_file_path and os.path.exists(temp_file_path):
-                file_to_check = temp_file_path
-            elif doc.file_path and os.path.exists(doc.file_path):
-                file_to_check = doc.file_path
+            if file_path and os.path.exists(file_path):
+                file_to_check = file_path
             
             if not file_to_check:
                 # Fayl topilmadi, Telegram qadamini o'tkazib yuboramiz
                 doc.telegram_status = 'skipped'
                 doc.save(update_fields=['telegram_status'])
-                logger.warning(f"[4. Telegram] Fayl topilmadi, o'tkazildi: temp={temp_file_path}, file_path={doc.file_path}")
+                logger.warning(f"[4. Telegram] Fayl topilmadi, o'tkazildi: file_path={file_path}")
             else:
                 logger.info(f"[4. Telegram] Boshlandi: {document_id}")
                 if doc.telegram_file_id and doc.telegram_status == 'completed':
@@ -346,7 +349,7 @@ def process_document_pipeline(self, document_id):
                         if not file_to_send:
                             doc.telegram_status = 'skipped'
                             doc.save(update_fields=['telegram_status'])
-                            logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: temp={temp_file_path}, file_path={doc.file_path}")
+                            logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: file_path={file_path}")
                         else:
                             file_size = os.path.getsize(file_to_send)
                             if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
@@ -408,41 +411,16 @@ def process_document_pipeline(self, document_id):
                         logger.error(f"[PIPELINE FAIL - Telegram] {document_id}: {e}")
                         raise
 
-        doc.refresh_from_db()
-        # 5. DELETE LOCAL
-        if doc.telegram_status in ['completed', 'skipped'] and doc.delete_status != 'completed':
-            logger.info(f"[5. O'chirish] Boshlandi: {document_id}")
-            if doc.delete_status != 'processing':
-                doc.delete_status = 'processing'
-                doc.save(update_fields=['delete_status'])
-            try:
-                # Vaqtincha faylni o'chiramiz
-                if doc.file_path and os.path.exists(doc.file_path):
-                    cleanup_temp_file(doc.file_path)
-                    logger.info(f"[5. O'chirish] Vaqtincha fayl o'chirildi: {doc.file_path}")
-                else:
-                    logger.warning(f"[5. O'chirish] Vaqtincha fayl topilmadi: {doc.file_path}")
-                
-                # Eski downloads papkasidagi faylni ham o'chirishga harakat qilamiz (agar mavjud bo'lsa)
-                old_file_name = f"{doc.id}{Path(doc.parse_file_url).suffix}"
-                old_file_path = os.path.join(settings.MEDIA_ROOT, 'downloads', old_file_name)
-                if os.path.exists(old_file_path):
-                    os.remove(old_file_path)
-                    logger.info(f"[5. O'chirish] Eski fayl o'chirildi: {old_file_path}")
-                
-                doc.delete_status = 'completed'
-                doc.save(update_fields=['delete_status'])
-                logger.info(f"[5. O'chirish] Tugadi: {document_id}")
-            except Exception as e:
-                doc.delete_status = 'failed'
-                doc.save(update_fields=['delete_status'])
-                logger.error(f"[PIPELINE FAIL - O'chirish] {document_id}: {e}")
-                raise
-
         # Pipeline muvaffaqiyatli tugadi - completed holatini yangilaymiz
         doc.refresh_from_db()
-        doc.save()  # Bu completed holatini avtomatik yangilaydi
+        # Pipeline muvaffaqiyatli tugadi
+        doc.completed = True
+        doc.pipeline_running = False
+        doc.save()
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
+        
+        # 3 daqiqadan keyin faylni o'chirish uchun task yuboramiz
+        delete_file_after_delay.apply_async(args=[document_id], countdown=180)  # 3 daqiqa = 180 soniya
     except Exception as pipeline_error:
         # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz (Celery autoretry keyingi chaqiriqda davom etadi)
         if self.request.retries >= self.max_retries:
@@ -450,12 +428,79 @@ def process_document_pipeline(self, document_id):
             logger.error(f"[PIPELINE FINAL FAIL] {document_id}: {pipeline_error}")
         raise
     else:
-        # Muvaffaqiyatli tugadi -> lockni yechamiz
-        Document.objects.filter(id=document_id).update(pipeline_running=False)
+        # Muvaffaqiyatli tugadi -> lockni yechamiz (bu yerda allaqachon qilingan)
+        pass
     finally:
-        # Har doim vaqtincha faylni o'chirishga harakat qilamiz
-        try:
-            if 'temp_file_path' in locals() and temp_file_path:
-                cleanup_temp_file(temp_file_path)
-        except Exception as cleanup_error:
-            logger.warning(f"Cleanup xatosi {document_id}: {cleanup_error}")
+        # Faylni o'chirmaymiz, 3 daqiqadan keyin o'chiriladi
+        pass
+
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+def delete_file_after_delay(self, document_id):
+    """3 daqiqadan keyin faylni o'chirish"""
+    try:
+        from apps.files.models import Document
+        import os
+        from django.conf import settings
+        
+        doc = Document.objects.get(id=document_id)
+        
+        # Fayl yo'lini yaratamiz
+        file_extension = Path(doc.parse_file_url).suffix
+        media_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+        file_path = os.path.join(media_dir, f"{doc.id}{file_extension}")
+        
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"[DELETE TASK] Fayl o'chirildi: {file_path}")
+        else:
+            logger.warning(f"[DELETE TASK] Fayl topilmadi: {file_path}")
+            
+    except Document.DoesNotExist:
+        logger.warning(f"[DELETE TASK] Hujjat topilmadi: {document_id}")
+    except Exception as e:
+        logger.error(f"[DELETE TASK] Xato: {document_id}: {e}")
+        raise
+
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+def cleanup_old_files_task(self):
+    """Eski fayllarni tozalash - har 6 soatda ishlaydi"""
+    try:
+        from apps.files.models import Document
+        import os
+        from django.conf import settings
+        from datetime import datetime, timedelta
+        
+        # 1 soatdan eski completed hujjatlarni topamiz
+        cutoff_time = datetime.now() - timedelta(hours=1)
+        old_docs = Document.objects.filter(
+            completed=True,
+            updated_at__lt=cutoff_time
+        )
+        
+        deleted_count = 0
+        for doc in old_docs:
+            try:
+                # Fayl yo'lini yaratamiz
+                file_extension = Path(doc.parse_file_url).suffix
+                media_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+                file_path = os.path.join(media_dir, f"{doc.id}{file_extension}")
+                
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    deleted_count += 1
+                    logger.info(f"[CLEANUP TASK] Eski fayl o'chirildi: {file_path}")
+                    
+            except Exception as e:
+                logger.error(f"[CLEANUP TASK] Fayl o'chirishda xato {doc.id}: {e}")
+                
+        logger.info(f"[CLEANUP TASK] Jami {deleted_count} ta eski fayl o'chirildi")
+        
+    except Exception as e:
+        logger.error(f"[CLEANUP TASK] Umumiy xato: {e}")
+        raise
+
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+def cleanup_old_temp_files_task(self):

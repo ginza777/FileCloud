@@ -37,6 +37,10 @@ app.conf.beat_schedule = {
         'task': 'apps.files.tasks.cleanup_old_temp_files_task',
         'schedule': crontab(hour=2, minute=0),  # Har kuni soat 2:00 da
     },
+    'cleanup-old-files': {
+        'task': 'apps.files.tasks.cleanup_old_files_task',
+        'schedule': crontab(minute=0, hour='*/6'),  # Har 6 soatda bir marta
+    },
 }
 
 @app.task(bind=True, ignore_result=True)
