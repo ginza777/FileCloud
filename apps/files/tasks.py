@@ -413,8 +413,7 @@ def process_document_pipeline(self, document_id):
 
         # Pipeline muvaffaqiyatli tugadi - completed holatini yangilaymiz
         doc.refresh_from_db()
-        # Pipeline muvaffaqiyatli tugadi
-        doc.completed = True
+        # Pipeline running ni False qilamiz, completed avtomatik yangilanadi
         doc.pipeline_running = False
         doc.save()
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")

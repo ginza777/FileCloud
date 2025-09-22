@@ -84,8 +84,7 @@ class Document(models.Model):
             self.download_status in done_states and
             self.parse_status in done_states and
             self.index_status in done_states and
-            self.telegram_status in done_states and
-            self.delete_status in done_states
+            self.telegram_status in done_states
         )
         super().save(*args, **kwargs)
 
