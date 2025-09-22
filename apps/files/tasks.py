@@ -16,6 +16,7 @@ import json
 import time
 from datetime import datetime, timedelta, timezone
 from django.utils import timezone as django_timezone
+import pytz
 
 # YECHIM UCHUN: Redis'ni import qilamiz
 try:
@@ -276,6 +277,7 @@ def cleanup_completed_files_task():
 
     # Aniqlash uchun vaqt chegaralari
     minutes_threshold = 5
+    tashkent_tz = pytz.timezone('Asia/Tashkent')
     stale_cutoff = django_timezone.now() - timedelta(minutes=minutes_threshold)
     logger.info(f"Vaqt chegarasi: {minutes_threshold} daqiqa ({stale_cutoff.isoformat()})")
 
@@ -301,7 +303,9 @@ def cleanup_completed_files_task():
         found_files += 1
         doc_id = os.path.splitext(filename)[0]
         file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB da
-        file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
+        # Tashkent vaqt mintaqasi
+        tashkent_tz = pytz.timezone('Asia/Tashkent')
+        file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=tashkent_tz)
         time_diff = django_timezone.now() - file_mtime
         minutes_old = time_diff.total_seconds() / 60
 
