@@ -28,6 +28,9 @@ app.conf.update(
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
+# Import backup tasks to register them
+from apps.files import backup_tasks
+
 # Periodic tasks
 app.conf.beat_schedule = {
     'cleanup-temp-files': {

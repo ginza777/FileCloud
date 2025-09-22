@@ -3,7 +3,6 @@ import subprocess
 from celery import shared_task
 from django.conf import settings
 import logging
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -70,6 +69,8 @@ def create_database_backup():
 def create_backup_schedule():
     """Synchronously ensure 3-hour backup periodic task exists (idempotent)."""
     try:
+        from django_celery_beat.models import PeriodicTask, IntervalSchedule
+        
         schedule_qs = IntervalSchedule.objects.filter(every=3, period=IntervalSchedule.HOURS)
         if schedule_qs.count() > 1:
             logger.warning(f"Multiple IntervalSchedule objects found for every=3, period=HOURS. Keeping the first, please clean up duplicates.")
