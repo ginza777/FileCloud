@@ -315,7 +315,7 @@ def cleanup_completed_files_task():
                        f"telegram_file_id={doc.telegram_file_id is not None}, "
                        f"completed={doc.completed}, pipeline_running={doc.pipeline_running}")
 
-            # 1-Qoida: Hujjat mukammal tugallanganmi?
+            # 1-Qoida: Hujjat mukammal tugallanganmi? (completed=True va telegram_file_id bor)
             is_perfectly_completed = (
                     doc.completed and
                     doc.telegram_file_id is not None and
@@ -333,37 +333,30 @@ def cleanup_completed_files_task():
                     logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
                 # Hujjatning o'ziga tegmaymiz, u to'g'ri holatda.
                 continue
-            else:
-                # Mukammal tugallanmagan hujjat
-                logger.info(f"🔶 TUGALLANMAGAN: Hujjat mukammal tugallanmagan: {doc_id}")
 
-            # 2- va 3-Qoidalar: Hujjat mukammal EMAS. Eskirganmi?
-            if file_mtime < stale_cutoff:
-                logger.warning(f"⏰ ESKIRGAN: {minutes_threshold} daqiqadan ortiq qolib ketgan fayl va hujjat: {filename}")
+            # 2-Qoida: Hujjat mukammal EMAS. Faylni o'chiramiz va hujjatni pending qilamiz
+            logger.info(f"🔶 TUGALLANMAGAN: Hujjat mukammal tugallanmagan, fayl o'chirilmoqda: {doc_id}")
+            
+            # Faylni o'chiramiz
+            try:
+                os.remove(file_path)
+                logger.info(f"🗑️ FAYL O'CHIRILDI: {filename}")
+                deleted_files += 1
+            except Exception as e:
+                logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
 
-                # Faylni o'chiramiz
-                try:
-                    os.remove(file_path)
-                    logger.info(f"🗑️ FAYL O'CHIRILDI: {filename}")
-                    deleted_files += 1
-                except Exception as e:
-                    logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
-
-                # Hujjatni "pending" holatiga qaytaramiz
-                old_status = f"download={doc.download_status}, parse={doc.parse_status}, index={doc.index_status}, telegram={doc.telegram_status}"
-                doc.download_status = 'pending'
-                doc.parse_status = 'pending'
-                doc.index_status = 'pending'
-                doc.telegram_status = 'pending'
-                doc.delete_status = 'pending'
-                doc.completed = False
-                doc.pipeline_running = False
-                doc.save()
-                logger.info(f"🔄 HUJJAT QAYTA TIKLANDI: ID {doc_id}, eski holat: {old_status}")
-                reset_docs += 1
-            else:
-                logger.info(f"⏳ YANGI FAYL: Fayl hali eskirmagan ({minutes_old:.1f} daqiqa < {minutes_threshold} daqiqa)")
-                protected_files += 1
+            # Hujjatni "pending" holatiga qaytaramiz
+            old_status = f"download={doc.download_status}, parse={doc.parse_status}, index={doc.index_status}, telegram={doc.telegram_status}"
+            doc.download_status = 'pending'
+            doc.parse_status = 'pending'
+            doc.index_status = 'pending'
+            doc.telegram_status = 'pending'
+            doc.delete_status = 'pending'
+            doc.completed = False
+            doc.pipeline_running = False
+            doc.save()
+            logger.info(f"🔄 HUJJAT QAYTA TIKLANDI: ID {doc_id}, eski holat: {old_status}")
+            reset_docs += 1
 
         except Document.DoesNotExist:
             # Fayl bor, lekin bazada unga mos yozuv yo'q ("yetim" fayl)
