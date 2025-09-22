@@ -319,85 +319,94 @@ def process_document_pipeline(self, document_id):
         doc.refresh_from_db()
         # 4. TELEGRAM (idempotent)
         if doc.index_status == 'completed' and doc.telegram_status not in ['completed', 'skipped']:
-            logger.info(f"[4. Telegram] Boshlandi: {document_id}")
-            if doc.telegram_file_id and doc.telegram_status == 'completed':
-                logger.info(f"[4. Telegram] Allaqachon yuborilgan: {document_id}")
+            # Avval fayl mavjudligini tekshiramiz
+            file_to_check = None
+            if temp_file_path and os.path.exists(temp_file_path):
+                file_to_check = temp_file_path
+            elif doc.file_path and os.path.exists(doc.file_path):
+                file_to_check = doc.file_path
+            
+            if not file_to_check:
+                # Fayl topilmadi, Telegram qadamini o'tkazib yuboramiz
+                doc.telegram_status = 'skipped'
+                doc.save(update_fields=['telegram_status'])
+                logger.warning(f"[4. Telegram] Fayl topilmadi, o'tkazildi: temp={temp_file_path}, file_path={doc.file_path}")
             else:
-                if doc.telegram_status != 'processing':
-                    doc.telegram_status = 'processing'
-                    doc.save(update_fields=['telegram_status'])
-                try:
-                    # Fayl yo'lini tekshirish - avval temp_file_path, keyin doc.file_path
-                    file_to_send = None
-                    if temp_file_path and os.path.exists(temp_file_path):
-                        file_to_send = temp_file_path
-                    elif doc.file_path and os.path.exists(doc.file_path):
-                        file_to_send = doc.file_path
-                    
-                    if not file_to_send:
-                        doc.telegram_status = 'skipped'
+                logger.info(f"[4. Telegram] Boshlandi: {document_id}")
+                if doc.telegram_file_id and doc.telegram_status == 'completed':
+                    logger.info(f"[4. Telegram] Allaqachon yuborilgan: {document_id}")
+                else:
+                    if doc.telegram_status != 'processing':
+                        doc.telegram_status = 'processing'
                         doc.save(update_fields=['telegram_status'])
-                        logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: temp={temp_file_path}, file_path={doc.file_path}")
-                    else:
-                        file_size = os.path.getsize(file_to_send)
-                        if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
+                    try:
+                        # Fayl yo'lini tekshirish - avval temp_file_path, keyin doc.file_path
+                        file_to_send = file_to_check  # Yuqorida tekshirilgan fayl
+                        
+                        if not file_to_send:
                             doc.telegram_status = 'skipped'
                             doc.save(update_fields=['telegram_status'])
-                            logger.warning(f"[4. Telegram] Fayl katta, o'tkazildi: {file_size}")
+                            logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: temp={temp_file_path}, file_path={doc.file_path}")
                         else:
-                            # Rate limiting uchun kutamiz
-                            wait_for_telegram_rate_limit()
-                            
-                            json_data_str = json.dumps(doc.json_data, ensure_ascii=False, indent=2) if doc.json_data else '{}'
-                            json_data_str = json_data_str.replace('`', '\u200b`')
-                            static_caption = (
-                                f"*{doc.product.title}*\n"
-                                f"ID: `{doc.id}`\n"
-                                f"URL: {doc.parse_file_url}\n"
-                                f"Slug: `{doc.product.slug}`\n"
-                                f"\n*JSON:*\n```")
-                            closing = "\n```"
-                            max_caption_len = 1024
-                            available_json_len = max_caption_len - len(static_caption) - len(closing)
-                            if len(json_data_str) > available_json_len:
-                                json_data_str = json_data_str[:available_json_len-10] + '\n...'
-                            caption = static_caption + json_data_str + closing
-                            if len(caption) > 1024:
-                                truncated = caption[:1000].rstrip()
-                                if not truncated.endswith('```'):
-                                    truncated += '\n...\n```'
-                                caption = truncated
-                            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
-                            max_telegram_retries = 5
-                            for attempt in range(max_telegram_retries):
-                                with open(file_to_send, "rb") as f:
-                                    files = {"document": (Path(file_to_send).name, f)}
-                                    data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
-                                    response = make_retry_session().post(url, files=files, data=data, timeout=180)
-                                resp_data = response.json()
-                                if resp_data.get("ok"):
-                                    doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
-                                    doc.telegram_status = 'completed'
-                                    doc.save()
-                                    logger.info(f"[4. Telegram] Muvaffaqiyatli: {document_id}")
-                                    break
-                                elif resp_data.get("error_code") == 429 and "retry_after" in resp_data:
-                                    retry_after = int(resp_data["retry_after"])
-                                    logger.warning(f"[4. Telegram] Rate limit {document_id}, {retry_after}s kutyapmiz...")
-                                    time.sleep(retry_after)
-                                    continue
-                                else:
-                                    raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
-                            else:
-                                doc.telegram_status = 'failed'
+                            file_size = os.path.getsize(file_to_send)
+                            if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
+                                doc.telegram_status = 'skipped'
                                 doc.save(update_fields=['telegram_status'])
-                                logger.error(f"[4. Telegram] 5 urinish muvaffaqiyatsiz: {document_id}")
-                                raise Exception("Telegram yuborish muvaffaqiyatsiz (5 urinish)")
-                except Exception as e:
-                    doc.telegram_status = 'failed'
-                    doc.save(update_fields=['telegram_status'])
-                    logger.error(f"[PIPELINE FAIL - Telegram] {document_id}: {e}")
-                    raise
+                                logger.warning(f"[4. Telegram] Fayl katta, o'tkazildi: {file_size}")
+                            else:
+                                # Rate limiting uchun kutamiz
+                                wait_for_telegram_rate_limit()
+                                
+                                json_data_str = json.dumps(doc.json_data, ensure_ascii=False, indent=2) if doc.json_data else '{}'
+                                json_data_str = json_data_str.replace('`', '\u200b`')
+                                static_caption = (
+                                    f"*{doc.product.title}*\n"
+                                    f"ID: `{doc.id}`\n"
+                                    f"URL: {doc.parse_file_url}\n"
+                                    f"Slug: `{doc.product.slug}`\n"
+                                    f"\n*JSON:*\n```")
+                                closing = "\n```"
+                                max_caption_len = 1024
+                                available_json_len = max_caption_len - len(static_caption) - len(closing)
+                                if len(json_data_str) > available_json_len:
+                                    json_data_str = json_data_str[:available_json_len-10] + '\n...'
+                                caption = static_caption + json_data_str + closing
+                                if len(caption) > 1024:
+                                    truncated = caption[:1000].rstrip()
+                                    if not truncated.endswith('```'):
+                                        truncated += '\n...\n```'
+                                    caption = truncated
+                                url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
+                                max_telegram_retries = 5
+                                for attempt in range(max_telegram_retries):
+                                    with open(file_to_send, "rb") as f:
+                                        files = {"document": (Path(file_to_send).name, f)}
+                                        data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
+                                        response = make_retry_session().post(url, files=files, data=data, timeout=180)
+                                    resp_data = response.json()
+                                    if resp_data.get("ok"):
+                                        doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
+                                        doc.telegram_status = 'completed'
+                                        doc.save()
+                                        logger.info(f"[4. Telegram] Muvaffaqiyatli: {document_id}")
+                                        break
+                                    elif resp_data.get("error_code") == 429 and "retry_after" in resp_data:
+                                        retry_after = int(resp_data["retry_after"])
+                                        logger.warning(f"[4. Telegram] Rate limit {document_id}, {retry_after}s kutyapmiz...")
+                                        time.sleep(retry_after)
+                                        continue
+                                    else:
+                                        raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
+                                else:
+                                    doc.telegram_status = 'failed'
+                                    doc.save(update_fields=['telegram_status'])
+                                    logger.error(f"[4. Telegram] 5 urinish muvaffaqiyatsiz: {document_id}")
+                                    raise Exception("Telegram yuborish muvaffaqiyatsiz (5 urinish)")
+                    except Exception as e:
+                        doc.telegram_status = 'failed'
+                        doc.save(update_fields=['telegram_status'])
+                        logger.error(f"[PIPELINE FAIL - Telegram] {document_id}: {e}")
+                        raise
 
         doc.refresh_from_db()
         # 5. DELETE LOCAL
