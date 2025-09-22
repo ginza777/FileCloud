@@ -419,7 +419,7 @@ def process_document_pipeline(self, document_id):
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
         
         # 3 daqiqadan keyin faylni o'chirish uchun task yuboramiz
-        delete_file_after_delay.apply_async(args=[document_id], countdown=180)  # 3 daqiqa = 180 soniya
+        delete_file_after_delay.apply_async(args=[document_id], countdown=5)  # 3 daqiqa = 180 soniya
     except Exception as pipeline_error:
         # Agar yana retry bo'ladigan bo'lsa lockni yechmaymiz (Celery autoretry keyingi chaqiriqda davom etadi)
         if self.request.retries >= self.max_retries:
