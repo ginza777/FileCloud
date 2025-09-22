@@ -14,7 +14,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from django.utils import timezone as django_timezone
 
 # YECHIM UCHUN: Redis'ni import qilamiz
 try:
@@ -275,7 +276,7 @@ def cleanup_completed_files_task():
 
     # Aniqlash uchun vaqt chegaralari
     minutes_threshold = 5
-    stale_cutoff = timezone.now() - timedelta(minutes=minutes_threshold)
+    stale_cutoff = django_timezone.now() - timedelta(minutes=minutes_threshold)
     logger.info(f"Vaqt chegarasi: {minutes_threshold} daqiqa ({stale_cutoff.isoformat()})")
 
     # Tozalash statistikasi
@@ -301,7 +302,7 @@ def cleanup_completed_files_task():
         doc_id = os.path.splitext(filename)[0]
         file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB da
         file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=timezone.utc)
-        time_diff = timezone.now() - file_mtime
+        time_diff = django_timezone.now() - file_mtime
         minutes_old = time_diff.total_seconds() / 60
 
         logger.info(f"FAYL: {filename} | {file_size:.2f} MB | {minutes_old:.1f} daqiqa oldin o'zgartirilgan")
