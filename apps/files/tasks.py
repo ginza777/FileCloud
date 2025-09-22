@@ -250,7 +250,7 @@ def process_document_pipeline(self, document_id):
             logger.error(f"[DELETE FAIL] Faylni o'chirishda xato: {document_id} - {delete_error}")
 
 
-@shared_task(name="cleanup_completed_files")
+@shared_task
 def cleanup_completed_files_task():
     """
     Har 10 daqiqada ishga tushib, 'media/downloads' papkasidagi ortiqcha fayllarni tozalaydi.
@@ -294,3 +294,4 @@ def cleanup_completed_files_task():
             logger.error(f"Faylni ({filename}) tekshirishda tizimli xatolik: {e}")
 
     logger.info(f"Rejali tozalash yakunlandi. {deleted_count} ta fayl o'chirildi.")
+

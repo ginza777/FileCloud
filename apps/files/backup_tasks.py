@@ -7,7 +7,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-@shared_task(name="create_database_backup")
+@shared_task
 def create_database_backup():
     """
     Creates a backup of the PostgreSQL database using pg_dump.
