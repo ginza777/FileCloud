@@ -327,13 +327,19 @@ def process_document_pipeline(self, document_id):
                     doc.telegram_status = 'processing'
                     doc.save(update_fields=['telegram_status'])
                 try:
-                    # Vaqtincha fayl yo'lini tekshirish
-                    if not temp_file_path or not os.path.exists(temp_file_path):
+                    # Fayl yo'lini tekshirish - avval temp_file_path, keyin doc.file_path
+                    file_to_send = None
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        file_to_send = temp_file_path
+                    elif doc.file_path and os.path.exists(doc.file_path):
+                        file_to_send = doc.file_path
+                    
+                    if not file_to_send:
                         doc.telegram_status = 'skipped'
                         doc.save(update_fields=['telegram_status'])
-                        logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: {temp_file_path}")
+                        logger.warning(f"[4. Telegram] Fayl yo'q, o'tkazildi: temp={temp_file_path}, file_path={doc.file_path}")
                     else:
-                        file_size = os.path.getsize(temp_file_path)
+                        file_size = os.path.getsize(file_to_send)
                         if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
                             doc.telegram_status = 'skipped'
                             doc.save(update_fields=['telegram_status'])
@@ -364,8 +370,8 @@ def process_document_pipeline(self, document_id):
                             url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
                             max_telegram_retries = 5
                             for attempt in range(max_telegram_retries):
-                                with open(temp_file_path, "rb") as f:
-                                    files = {"document": (Path(temp_file_path).name, f)}
+                                with open(file_to_send, "rb") as f:
+                                    files = {"document": (Path(file_to_send).name, f)}
                                     data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
                                     response = make_retry_session().post(url, files=files, data=data, timeout=180)
                                 resp_data = response.json()
