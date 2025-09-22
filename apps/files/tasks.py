@@ -57,8 +57,8 @@ def wait_for_telegram_rate_limit():
     with telegram_lock:
         if last_telegram_send is not None:
             time_since_last = datetime.now() - last_telegram_send
-            # Telegram uchun minimal 1 soniya oraliq
-            min_interval = timedelta(seconds=1)
+            # Telegram uchun minimal 5 soniya oraliq (rate limit uchun)
+            min_interval = timedelta(seconds=5)
             if time_since_last < min_interval:
                 wait_time = (min_interval - time_since_last).total_seconds()
                 logger.info(f"Telegram rate limit uchun {wait_time:.2f} soniya kutamiz...")
