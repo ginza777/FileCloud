@@ -63,7 +63,7 @@ docker exec -it filefinder_web python manage.py clean --fix-urls
 
 
 `##clear celery
-docker-compose stop celery celery-beat
+docker-compose restart celery celery-beat
 docker exec -it filefinder_redis redis-cli FLUSHALL
 docker-compose up -d celery celery-beat
 

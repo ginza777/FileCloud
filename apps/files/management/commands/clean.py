@@ -45,7 +45,7 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write(self.style.WARNING("⚠️  DRY RUN rejimi yoqilgan. Hech qanday o'zgarishlar saqlanmaydi."))
 
-        if options['all'] or options['cancel_tasks']:
+        if options['all'] or options['cancel-tasks']:
             self.run_cancel_tasks(options['force'], options['dry_run'])
         if options['all'] or options['cleanup_data']:
             self.run_cleanup_data(options['dry_run'])
@@ -137,75 +137,98 @@ class Command(BaseCommand):
     def run_fix_states(self, dry_run):
         self.stdout.write(self.style.HTTP_INFO("\n[4] Hujjatlar holatini yagona qoida asosida to'g'rilash..."))
 
-        fixed_to_completed = 0
-        reset_to_pending = 0
+        total_docs = Document.objects.count()
+        if total_docs == 0:
+            self.stdout.write("   Hujjatlar topilmadi.")
+            return
 
-        # Ommaviy yangilash uchun obyektlarni saqlaydigan ro'yxatlar
+        self.stdout.write(f"   🔄 Jami {total_docs} ta hujjat tekshirilmoqda...")
+
+        fixed_to_completed_total = 0
+        reset_to_pending_total = 0
+        processed_count = 0
+        BATCH_SIZE = 1000
+
         docs_to_set_completed = []
         docs_to_set_pending = []
 
-        try:
-            with transaction.atomic():
-                self.stdout.write("   🔄 Barcha hujjatlar holati tekshirilmoqda (bu vaqt olishi mumkin)...")
+        update_fields = [
+            'download_status', 'parse_status', 'index_status', 'telegram_status',
+            'delete_status', 'completed', 'pipeline_running'
+        ]
 
-                # Tranzaksiya davomida qatorlarni bloklash uchun select_for_update() ishlatamiz
-                for doc in Document.objects.select_for_update().all():
-                    # 1-shart: To'g'ri, yakuniy holat
-                    is_final_state = (
-                            doc.parse_status == 'completed' and
-                            doc.index_status == 'completed' and
-                            doc.telegram_file_id is not None and
-                            doc.telegram_file_id.strip() != ''
-                    )
+        def process_batch():
+            nonlocal fixed_to_completed_total, reset_to_pending_total
 
-                    if is_final_state:
-                        # Barcha nomuvofiqliklarni tuzatish uchun holatni majburan to'g'rilaymiz
-                        doc.download_status = 'completed'
-                        doc.parse_status = 'completed'
-                        doc.index_status = 'completed'
-                        doc.telegram_status = 'completed'
-                        doc.delete_status = 'completed'
-                        doc.completed = True
-                        doc.pipeline_running = False
-                        docs_to_set_completed.append(doc)
-                        fixed_to_completed += 1
-                    else:
-                        # 2-shart: Boshqa har qanday holatda, boshlang'ich holatga qaytaramiz
-                        doc.download_status = 'pending'
-                        doc.parse_status = 'pending'
-                        doc.index_status = 'pending'
-                        doc.telegram_status = 'pending'
-                        doc.delete_status = 'pending'
-                        doc.completed = False
-                        doc.pipeline_running = False
-                        docs_to_set_pending.append(doc)
-                        reset_to_pending += 1
-
-                # Agar dry-run bo'lmasa, ma'lumotlar bazasidagi o'zgarishlarni bajaramiz
-                if not dry_run:
-                    update_fields = [
-                        'download_status', 'parse_status', 'index_status', 'telegram_status',
-                        'delete_status', 'completed', 'pipeline_running'
-                    ]
-
+            try:
+                with transaction.atomic():
                     if docs_to_set_completed:
                         Document.objects.bulk_update(docs_to_set_completed, update_fields)
+                        fixed_to_completed_total += len(docs_to_set_completed)
 
                     if docs_to_set_pending:
                         Document.objects.bulk_update(docs_to_set_pending, update_fields)
+                        reset_to_pending_total += len(docs_to_set_pending)
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"\n   ❌ Batchni saqlashda tranzaksiya xatosi: {e}"))
 
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"   ❌ Holatlarni tuzatishda tranzaksiya xatosi: {e}"))
+            docs_to_set_completed.clear()
+            docs_to_set_pending.clear()
 
-        if fixed_to_completed > 0:
+        for doc in Document.objects.iterator():
+            is_final_state = (
+                    doc.parse_status == 'completed' and
+                    doc.index_status == 'completed' and
+                    doc.telegram_file_id is not None and
+                    doc.telegram_file_id.strip() != ''
+            )
+
+            if is_final_state:
+                doc.download_status = 'completed'
+                doc.parse_status = 'completed'
+                doc.index_status = 'completed'
+                doc.telegram_status = 'completed'
+                doc.delete_status = 'completed'
+                doc.completed = True
+                doc.pipeline_running = False
+                docs_to_set_completed.append(doc)
+            else:
+                doc.download_status = 'pending'
+                doc.parse_status = 'pending'
+                doc.index_status = 'pending'
+                doc.telegram_status = 'pending'
+                doc.delete_status = 'pending'
+                doc.completed = False
+                doc.pipeline_running = False
+                docs_to_set_pending.append(doc)
+
+            processed_count += 1
+
+            if processed_count % BATCH_SIZE == 0:
+                self.stdout.write(f"   🔄 Tekshirildi: {processed_count}/{total_docs}...")
+                if not dry_run:
+                    process_batch()
+
+        if not dry_run and (docs_to_set_completed or docs_to_set_pending):
+            self.stdout.write("   🔄 Oxirgi qism saqlanmoqda...")
+            process_batch()
+
+        self.stdout.write(f"   ✅ Tekshiruv yakunlandi. Jami tekshirildi: {processed_count}.")
+
+        if dry_run:
+            fixed_to_completed_total = len(docs_to_set_completed)
+            reset_to_pending_total = len(docs_to_set_pending)
+
+        if fixed_to_completed_total > 0:
             action = "to'g'rilanadi" if dry_run else "to'g'rilandi"
             self.stdout.write(
-                self.style.SUCCESS(f"   ✅ {fixed_to_completed} ta hujjat 'completed=True' holatiga {action}."))
-        if reset_to_pending > 0:
+                self.style.SUCCESS(
+                    f"   ✅ Jami {fixed_to_completed_total} ta hujjat 'completed=True' holatiga {action}."))
+        if reset_to_pending_total > 0:
             action = "o'tkaziladi" if dry_run else "o'tkazildi"
             self.stdout.write(
                 self.style.WARNING(
-                    f"   ⚠️  {reset_to_pending} ta nomuvofiq holatdagi hujjat qayta ishlash uchun 'pending' holatiga {action}."))
+                    f"   ⚠️  Jami {reset_to_pending_total} ta nomuvofiq hujjat 'pending' holatiga {action}."))
 
     def _parse_file_size_to_bytes(self, file_size_str):
         if not file_size_str: return 0
