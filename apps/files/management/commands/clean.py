@@ -152,42 +152,39 @@ class Command(BaseCommand):
                 docs_to_reset = []
 
                 for doc in Document.objects.select_for_update().all():
-                    # "Yagona to'g'ri holat"ni tekshirish
-                    is_perfectly_completed = all([
-                        doc.download_status == 'completed',
-                        doc.parse_status == 'completed',
-                        doc.index_status == 'completed',
-                        doc.telegram_status == 'completed',
-                        doc.telegram_file_id is not None and doc.telegram_file_id.strip() != ''
-                    ])
-
-                    if is_perfectly_completed:
-                        # Agar hujjat to'g'ri holatda bo'lsa, lekin bazada xato yozilgan bo'lsa
-                        if not doc.completed or doc.pipeline_running:
-                            doc.completed = True
-                            doc.pipeline_running = False
-                            docs_to_update.append(doc)
-                            fixed_to_true += 1
+                    # Yangi mantiq: telegram_file_id bor bo'lsa completed=True, yo'q bo'lsa pending
+                    if doc.telegram_file_id is not None and doc.telegram_file_id.strip() != '':
+                        # telegram_file_id bor, demak hujjat muvaffaqiyatli yuborilgan
+                        # Barcha statuslarni completed qilamiz
+                        doc.download_status = 'completed'
+                        doc.parse_status = 'completed'
+                        doc.index_status = 'completed'
+                        doc.telegram_status = 'completed'
+                        doc.delete_status = 'completed'
+                        doc.pipeline_running = False
+                        # completed maydoni save() metodi orqali avtomatik True bo'ladi
+                        docs_to_update.append(doc)
+                        fixed_to_true += 1
                     else:
-                        # Agar hujjat "yagona to'g'ri holat"da BO'LMASA, uni to'liq reset qilamiz
+                        # telegram_file_id yo'q, barcha statuslarni pending qilamiz
                         doc.download_status = 'pending'
                         doc.parse_status = 'pending'
                         doc.index_status = 'pending'
                         doc.telegram_status = 'pending'
                         doc.delete_status = 'pending'
-                        doc.completed = False
                         doc.pipeline_running = False
+                        # completed maydoni save() metodi orqali avtomatik False bo'ladi
                         docs_to_reset.append(doc)
                         reset_to_pending += 1
 
                 # O'zgarishlarni bazaga yozish (agar dry_run bo'lmasa)
                 if not dry_run:
                     if docs_to_update:
-                        Document.objects.bulk_update(docs_to_update, ['completed', 'pipeline_running'])
+                        Document.objects.bulk_update(docs_to_update, ['download_status', 'parse_status', 'index_status',
+                                                                     'telegram_status', 'delete_status', 'pipeline_running'])
                     if docs_to_reset:
                         Document.objects.bulk_update(docs_to_reset, ['download_status', 'parse_status', 'index_status',
-                                                                     'telegram_status', 'delete_status', 'completed',
-                                                                     'pipeline_running'])
+                                                                     'telegram_status', 'delete_status', 'pipeline_running'])
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"   ❌ Holatlarni tuzatishda tranzaksiya xatosi: {e}"))
