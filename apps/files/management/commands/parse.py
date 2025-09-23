@@ -48,9 +48,9 @@ class Command(BaseCommand):
     help = 'Soff.uz saytidan ma\'lumotlarni oladi, mavjudlarini yangilaydi va yangilarini qo\'shadi.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--start-page', type=int, default=None,
+        parser.add_argument('--start-page', type=int, default=1,
                             help='Boshlanadigan sahifa (standart: oxirgi to`xtagan joydan)')
-        parser.add_argument('--end-page', type=int, default=None, help='Tugaydigan sahifa (standart: cheksiz)')
+        parser.add_argument('--end-page', type=int, default=10000, help='Tugaydigan sahifa (standart: cheksiz)')
         parser.add_argument('--reset-progress', action='store_true', help='Parsing jarayonini 1-sahifadan boshlash')
 
     def handle(self, *args, **options):

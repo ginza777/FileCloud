@@ -6,7 +6,6 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import pytz
 import requests
 from celery import shared_task
 from django.conf import settings
@@ -23,7 +22,7 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from .models import Document, DocumentError, Product
+from .models import Document, DocumentError
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -241,17 +240,18 @@ def process_document_pipeline(self, document_id):
 
                 # Check if document is now in ideal state and set completed=True
                 is_ideal_state = (
-                    doc.parse_status == 'completed' and
-                    doc.index_status == 'completed' and
-                    doc.telegram_file_id is not None and
-                    doc.telegram_file_id.strip() != ''
+                        doc.parse_status == 'completed' and
+                        doc.index_status == 'completed' and
+                        doc.telegram_file_id is not None and
+                        doc.telegram_file_id.strip() != ''
                 )
-                
+
                 if is_ideal_state:
                     doc.completed = True
                     doc.download_status = 'completed'
                     doc.delete_status = 'completed'
-                    doc.save(update_fields=['telegram_file_id', 'telegram_status', 'completed', 'download_status', 'delete_status'])
+                    doc.save(update_fields=['telegram_file_id', 'telegram_status', 'completed', 'download_status',
+                                            'delete_status'])
                     logger.info(f"[PIPELINE COMPLETED] ✅ Hujjat yakunlandi: {document_id}")
                 else:
                     doc.save(update_fields=['telegram_file_id', 'telegram_status'])
@@ -398,33 +398,33 @@ def soft_uz_process_documents():
     Bu task dparse komandasining funksiyasini bajaradi.
     """
     logger.info("========= SOFT_UZ_PROCESS_DOCUMENTS TASK BOSHLANDI =========")
-    
+
     # Qayta ishlash uchun nomzodlarni topamiz: hozirda ishlamayotgan barcha hujjatlar
     candidate_docs = Document.objects.filter(pipeline_running=False).order_by('created_at')
-    
+
     total_candidates = candidate_docs.count()
     logger.info(f"Jami {total_candidates} ta nomzod topildi.")
-    
+
     # Statistika uchun hisoblagichlar
     updated_as_completed_count = 0
     queued_for_processing_count = 0
     skipped_as_locked_count = 0
-    
+
     # Xotirani tejash uchun .iterator() dan foydalanamiz
     for doc in candidate_docs.iterator():
         try:
             with transaction.atomic():
                 # Poyga holatini oldini olish uchun qatorni qulflaymiz
                 locked_doc = Document.objects.select_for_update(nowait=True).get(pk=doc.pk)
-                
+
                 # 1-shart: To'g'ri, yakuniy holat (ideal holat)
                 is_ideal_state = (
-                    locked_doc.parse_status == 'completed' and
-                    locked_doc.index_status == 'completed' and
-                    locked_doc.telegram_file_id is not None and
-                    locked_doc.telegram_file_id.strip() != ''
+                        locked_doc.parse_status == 'completed' and
+                        locked_doc.index_status == 'completed' and
+                        locked_doc.telegram_file_id is not None and
+                        locked_doc.telegram_file_id.strip() != ''
                 )
-                
+
                 if is_ideal_state:
                     # Hujjat allaqachon yakunlangan, shunchaki holatini to'g'rilab qo'yamiz
                     locked_doc.download_status = 'completed'
@@ -432,7 +432,7 @@ def soft_uz_process_documents():
                     locked_doc.delete_status = 'completed'
                     locked_doc.completed = True
                     locked_doc.save()
-                    
+
                     logger.info(f"✅ Holati to'g'rilandi (yakunlangan): {locked_doc.id}")
                     updated_as_completed_count += 1
                 else:
@@ -445,13 +445,13 @@ def soft_uz_process_documents():
                     locked_doc.completed = False
                     # pipeline_running ni Celery task o'zi True qiladi, biz False holatda saqlaymiz
                     locked_doc.save()
-                    
+
                     # Tozalangan hujjatni navbatga qo'shamiz
                     process_document_pipeline.apply_async(args=[locked_doc.id])
-                    
+
                     logger.info(f"➡️  Navbatga qo'shildi (pending): {locked_doc.id}")
                     queued_for_processing_count += 1
-                    
+
         except DatabaseError:
             # Agar `nowait=True` tufayli qator qulflangan bo'lsa, bu xato keladi.
             # Bu normal holat, boshqa bir jarayon bu hujjat ustida ishlayotgan bo'lishi mumkin.
@@ -460,7 +460,7 @@ def soft_uz_process_documents():
             continue
         except Exception as e:
             logger.error(f"❌ Hujjatni ({doc.id}) navbatga qo'shishda kutilmagan xato: {e}")
-    
+
     logger.info("--- SOFT_UZ_PROCESS_DOCUMENTS STATISTIKASI ---")
     logger.info(f"✅ Yakunlangan deb topilib, holati yangilanganlar: {updated_as_completed_count} ta")
     logger.info(f"➡️  Qayta ishlash uchun navbatga qo'shilganlar: {queued_for_processing_count} ta")
@@ -480,13 +480,13 @@ def soft_uz_parse():
     from django.db import transaction
     from .models import Document, Product, SiteToken, ParseProgress
     from .utils import get_valid_soff_token
-    
+
     logger.info("========= SOFT_UZ_PARSE TASK BOSHLANDI =========")
-    
+
     # Configuration
     SOFF_BUILD_ID_HOLDER = "{build_id}"
     BASE_API_URL_TEMPLATE = f"https://soff.uz/_next/data/{SOFF_BUILD_ID_HOLDER}/scientific-resources/all.json"
-    
+
     def parse_file_size(file_size_str):
         """Convert file size string (e.g., '3.49 MB') to bytes"""
         if not file_size_str:
@@ -510,40 +510,42 @@ def soft_uz_parse():
         match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)
         if match:
             file_id = match.group(1)
-            file_ext_match = re.search(r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|PPT|DOC|DOCX|PPTX|PDF|XLS|XLSX|odt|ods|odp)(?:_page|$)', poster_url,
-                                       re.IGNORECASE)
+            file_ext_match = re.search(
+                r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|PPT|DOC|DOCX|PPTX|PDF|XLS|XLSX|odt|ods|odp)(?:_page|$)',
+                poster_url,
+                re.IGNORECASE)
             if file_ext_match:
                 file_extension = file_ext_match.group(1)  # Preserve original case
                 return f"https://d2co7bxjtnp5o.cloudfront.net/media/documents/{file_id}.{file_extension}"
         return None
-    
+
     try:
         # Reset progress to start from page 1
         progress = ParseProgress.get_current_progress()
         progress.last_page = 0
         progress.save()
         logger.info("Parsing jarayoni 1-sahifaga qaytarildi.")
-        
+
         page = 1
         total_created = 0
         total_updated = 0
         total_skipped = 0
-        
+
         while True:
             logger.info(f"{'=' * 20} Sahifa: {page} {'=' * 20}")
-            
+
             token = get_valid_soff_token()
             if not token:
                 logger.error("Yaroqli token olinmadi. 5 soniyadan so'ng qayta uriniladi...")
                 time.sleep(5)
                 continue
-            
+
             base_api_url = BASE_API_URL_TEMPLATE.replace(SOFF_BUILD_ID_HOLDER, token)
             site_token = SiteToken.objects.filter(name='soff').first()
-            
+
             headers = {"accept": "*/*", "user-agent": "Mozilla/5.0"}
             cookies = {"token": site_token.auth_token if site_token else None}
-            
+
             try:
                 response = requests.get(f"{base_api_url}?page={page}", headers=headers, cookies=cookies, timeout=30)
                 response.raise_for_status()
@@ -565,31 +567,31 @@ def soft_uz_parse():
                 logger.warning(f"Sahifa {page} dan JSON javob o'qilmadi. Qayta urinilmoqda...")
                 time.sleep(2)
                 continue
-            
+
             if not items:
                 logger.info(f"Sahifa {page} da ma'lumot topilmadi. Parsing yakunlandi.")
                 break
-            
+
             # --- Sahifadagi ma'lumotlarni qayta ishlash ---
             created_count = 0
             updated_count = 0
             invalid_url_count = 0
             skipped_large_file_count = 0
-            
+
             # Yangilash va yaratish uchun listlar
             docs_to_create, products_to_create = [], []
             docs_to_update, products_to_update = [], []
-            
+
             # Sahifadagi mavjud mahsulotlarni bir so'rovda olish
             item_ids = [item['id'] for item in items if 'id' in item]
             existing_products = Product.objects.filter(id__in=item_ids).select_related('document')
             existing_products_map = {p.id: p for p in existing_products}
-            
+
             for item in items:
                 item_id = item.get("id")
                 file_url = extract_file_url(item.get("poster_url"))
                 file_size_str = item.get("document", {}).get("file_size")
-                
+
                 # Skip if file size > 50MB or no file URL
                 if not file_url:
                     invalid_url_count += 1
@@ -600,29 +602,29 @@ def soft_uz_parse():
                         skipped_large_file_count += 1
                         logger.warning(f"Skipped item {item_id}: File size {file_size_str} exceeds 50MB")
                         continue
-                
+
                 # Agar mahsulot mavjud bo'lsa -> YANGILASH
                 if item_id in existing_products_map:
                     product = existing_products_map[item_id]
                     doc = product.document
-                    
+
                     # Ma'lumotlarni yangilash
                     product.title = item.get("title", "")
                     product.slug = item.get("slug", "")
                     doc.json_data = item
                     doc.parse_file_url = file_url  # URL ham yangilanishi mumkin
-                    
+
                     products_to_update.append(product)
                     docs_to_update.append(doc)
-                
+
                 # Agar mahsulot mavjud bo'lmasa -> YARATISH
                 else:
                     doc = Document(parse_file_url=file_url, json_data=item)
                     prod = Product(id=item_id, title=item.get("title", ""), slug=item.get("slug", ""), document=doc)
-                    
+
                     docs_to_create.append(doc)
                     products_to_create.append(prod)
-            
+
             # --- Ma'lumotlar bazasi amaliyotlari ---
             with transaction.atomic():
                 # Yaratish
@@ -631,14 +633,14 @@ def soft_uz_parse():
                     Product.objects.bulk_create(products_to_create, batch_size=100)
                     created_count = len(products_to_create)
                     total_created += created_count
-                
+
                 # Yangilash
                 if products_to_update:
                     Product.objects.bulk_update(products_to_update, ['title', 'slug'], batch_size=100)
                     Document.objects.bulk_update(docs_to_update, ['json_data', 'parse_file_url'], batch_size=100)
                     updated_count = len(products_to_update)
                     total_updated += updated_count
-            
+
             # --- Sahifa Statistikasi ---
             logger.info(f"--- Sahifa {page} Statistikasi ---")
             logger.info(f"  - Jami elementlar: {len(items)}")
@@ -646,11 +648,11 @@ def soft_uz_parse():
             logger.info(f"  - Yangilanganlar: {updated_count}")
             logger.info(f"  - O'tkazib yuborildi (yaroqsiz URL): {invalid_url_count}")
             logger.info(f"  - O'tkazib yuborildi (fayl hajmi > 50MB): {skipped_large_file_count}")
-            
+
             progress.update_progress(page)
             page += 1
             time.sleep(0.02)
-            
+
     except Exception as e:
         logger.error(f"Parsing jarayonida xato: {e}")
         raise
@@ -658,6 +660,9 @@ def soft_uz_parse():
         logger.info(f"{'=' * 20} PARSING YAKUNLANDI {'=' * 20}")
         logger.info(f"Jami qo'shildi: {total_created}")
         logger.info(f"Jami yangilandi: {total_updated}")
-        logger.info(f"Jami o'tkazib yuborildi (fayl hajmi > 50MB yoki yaroqsiz URL): {invalid_url_count + skipped_large_file_count}")
+        logger.info(
+            f"Jami o'tkazib yuborildi (fayl hajmi > 50MB yoki yaroqsiz URL): {invalid_url_count + skipped_large_file_count}")
         logger.info(f"Oxirgi muvaffaqiyatli sahifa: {progress.last_page}")
         logger.info("========= SOFT_UZ_PARSE TASK TUGADI =========")
+
+
