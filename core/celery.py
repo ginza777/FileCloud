@@ -32,24 +32,24 @@ app.autodiscover_tasks()
 from apps.files import backup_tasks
 
 # Periodic tasks configuration
-app.conf.beat_schedule = {
-    'File System Cleanup Every 20 Minutes': {
-        'task': 'apps.files.tasks.cleanup_files_task',
-        'schedule': 20 * 60,  # 20 minutes in seconds
-    },
-    'Database Backup Every 5 Hours': {
-        'task': 'apps.files.backup_tasks.create_database_backup',
-        'schedule': 5 * 60 * 60,  # 5 hours in seconds
-    },
-    'Document Processing Every 3 Hours': {
-        'task': 'apps.files.tasks.soft_uz_process_documents',
-        'schedule': 3 * 60 * 60,  # 3 hours in seconds
-    },
-    'Soff.uz Data Parsing Weekly': {
-        'task': 'apps.files.tasks.soft_uz_parse',
-        'schedule': 7 * 24 * 60 * 60,  # 7 days (1 week) in seconds
-    },
-}
+# app.conf.beat_schedule = {
+#     'File System Cleanup Every 20 Minutes': {
+#         'task': 'apps.files.tasks.cleanup_files_task',
+#         'schedule': 20 * 60,  # 20 minutes in seconds
+#     },
+#     'Database Backup Every 5 Hours': {
+#         'task': 'apps.files.backup_tasks.create_database_backup',
+#         'schedule': 5 * 60 * 60,  # 5 hours in seconds
+#     },
+#     'Document Processing Every 3 Hours': {
+#         'task': 'apps.files.tasks.soft_uz_process_documents',
+#         'schedule': 3 * 60 * 60,  # 3 hours in seconds
+#     },
+#     'Soff.uz Data Parsing Weekly': {
+#         'task': 'apps.files.tasks.soft_uz_parse',
+#         'schedule': 7 * 24 * 60 * 60,  # 7 days (1 week) in seconds
+#     },
+# }
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
