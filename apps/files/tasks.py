@@ -247,7 +247,11 @@ def process_document_pipeline(self, document_id):
     finally:
         try:
             doc.refresh_from_db()
-            is_final_state = doc.completed or (self.request.retries >= self.max_retries)
+            # Telegram'ga yuborilgan yoki maksimal urinishlar tugagan bo'lsa faylni o'chiramiz
+            is_final_state = (
+                (doc.telegram_status == 'completed' and doc.telegram_file_id) or 
+                (self.request.retries >= self.max_retries)
+            )
 
             if is_final_state and file_path and os.path.exists(file_path):
                 os.remove(file_path)
