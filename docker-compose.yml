@@ -9,6 +9,7 @@ services:
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&
              python manage.py collectstatic --no-input &&
+             python manage.py clean --cancel-tasks --force &&
              python manage.py elasticsearch_index --rebuild --force &&
              uvicorn core.asgi:application --host 0.0.0.0 --workers 4 --timeout-keep-alive 120"
     volumes:
@@ -34,7 +35,7 @@ services:
   celery:
     build: .
     container_name: filefinder_celery
-    command: celery -A core worker --loglevel=info --concurrency=8
+    command: celery -A core worker --loglevel=info --concurrency=2
     volumes:
       - .:/app
       - ./media:/app/media
@@ -53,6 +54,7 @@ services:
     container_name: filefinder_celery_beat
     command: >
       sh -c "python manage.py wait_for_db &&
+             python manage.py clean --cancel-tasks --force &&
              celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/app
