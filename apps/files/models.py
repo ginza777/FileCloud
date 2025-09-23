@@ -129,6 +129,32 @@ class SiteToken(models.Model):
         return self.name
 
 
+class DocumentError(models.Model):
+    """Model to store errors that occur during document processing (download, telegram sending, etc.)"""
+    ERROR_TYPE_CHOICES = [
+        ('download', 'Yuklab olish xatoligi'),
+        ('telegram_send', 'Telegramga yuborish xatoligi'),
+        ('telegram_download', 'Telegramdan yuklab olish xatoligi'),
+        ('parse', 'Parse qilish xatoligi'),
+        ('index', 'Indekslash xatoligi'),
+        ('other', 'Boshqa xatolik'),
+    ]
+    
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='errors', verbose_name="Document")
+    error_type = models.CharField(max_length=20, choices=ERROR_TYPE_CHOICES, verbose_name="Xatolik turi")
+    error_message = models.TextField(verbose_name="Xatolik xabari")
+    celery_attempt = models.PositiveIntegerField(default=1, verbose_name="Celery urinish raqami", help_text="Bu xatolik qaysi urinishda yuz bergani")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqt")
+    
+    class Meta:
+        verbose_name = "Document Error"
+        verbose_name_plural = "Document Errors"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.get_error_type_display()} - {self.document.id} (urinish: {self.celery_attempt})"
+
+
 class SearchQuery(models.Model):
     user = models.ForeignKey('bot.User', on_delete=models.CASCADE, related_name='search_queries')
     query_text = models.CharField(max_length=500)

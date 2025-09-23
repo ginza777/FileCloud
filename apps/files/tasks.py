@@ -2,21 +2,19 @@
 
 import logging
 import os
-import tempfile
+import time
+from datetime import datetime
 from pathlib import Path
+
+import pytz
 import requests
 from celery import shared_task
 from django.conf import settings
 from django.db import transaction
 from elasticsearch import Elasticsearch
-from tika import parser as tika_parser
 from requests.adapters import HTTPAdapter
+from tika import parser as tika_parser
 from urllib3.util.retry import Retry
-import json
-import time
-from datetime import datetime, timezone
-from django.utils import timezone as django_timezone
-import pytz
 
 # YECHIM UCHUN: Redis'ni import qilamiz
 try:
@@ -26,7 +24,9 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from .models import Document
+from datetime import timedelta
+
+from .models import Document, DocumentError
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -36,6 +36,22 @@ tika_parser.TikaClientOnly = True
 tika_parser.TikaServerEndpoint = getattr(settings, 'TIKA_URL', 'http://tika:9998')
 
 TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
+
+
+def log_document_error(document, error_type, error_message, celery_attempt=1):
+    """
+    DocumentError modeliga xatolik yozuvini qo'shadi
+    """
+    try:
+        DocumentError.objects.create(
+            document=document,
+            error_type=error_type,
+            error_message=str(error_message),
+            celery_attempt=celery_attempt
+        )
+        logger.info(f"[ERROR LOGGED] {document.id} - {error_type} (urinish: {celery_attempt}): {error_message}")
+    except Exception as e:
+        logger.error(f"[ERROR LOGGING FAILED] {document.id} - {e}")
 
 
 def make_retry_session():
@@ -135,6 +151,7 @@ def process_document_pipeline(self, document_id):
             except Exception as e:
                 doc.download_status = 'failed'
                 doc.save(update_fields=['download_status'])
+                log_document_error(doc, 'download', str(e), self.request.retries + 1)
                 logger.error(f"[PIPELINE FAIL - Yuklash] {document_id}: {e}")
                 raise
 
@@ -162,6 +179,7 @@ def process_document_pipeline(self, document_id):
             except Exception as e:
                 doc.parse_status = 'failed'
                 doc.save(update_fields=['parse_status'])
+                log_document_error(doc, 'parse', str(e), self.request.retries + 1)
                 logger.error(f"[PIPELINE FAIL - Parse] {document_id}: {e}")
                 raise
 
@@ -183,6 +201,7 @@ def process_document_pipeline(self, document_id):
             except Exception as e:
                 doc.index_status = 'failed'
                 doc.save(update_fields=['index_status'])
+                log_document_error(doc, 'index', str(e), self.request.retries + 1)
                 logger.error(f"[PIPELINE FAIL - Indekslash] {document_id}: {e}")
                 raise
 
@@ -222,15 +241,16 @@ def process_document_pipeline(self, document_id):
                     else:
                         raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
                 doc.save(update_fields=['telegram_file_id', 'telegram_status'])
-                
+
                 # Telegram'ga yuborilgach pipeline_running=False qilamiz
                 doc.pipeline_running = False
                 doc.save(update_fields=['pipeline_running'])
                 logger.info(f"[PIPELINE UNLOCK] {document_id} pipeline'dan qulf olindi")
-                
+
             except Exception as e:
                 doc.telegram_status = 'failed'
                 doc.save(update_fields=['telegram_status'])
+                log_document_error(doc, 'telegram_send', str(e), self.request.retries + 1)
                 logger.error(f"[PIPELINE FAIL - Telegram] {document_id}: {e}")
                 raise
 
@@ -241,6 +261,12 @@ def process_document_pipeline(self, document_id):
     except Exception as pipeline_error:
         if self.request.retries >= self.max_retries:
             Document.objects.filter(id=document_id).update(pipeline_running=False)
+            # Final fail holatida ham xatolikni loglaymiz
+            try:
+                doc = Document.objects.get(id=document_id)
+                log_document_error(doc, 'other', f"Pipeline final fail: {str(pipeline_error)}", self.request.retries + 1)
+            except:
+                pass
             logger.error(f"[PIPELINE FINAL FAIL] {document_id}: {pipeline_error}")
         raise
 
@@ -249,8 +275,8 @@ def process_document_pipeline(self, document_id):
             doc.refresh_from_db()
             # Telegram'ga yuborilgan yoki maksimal urinishlar tugagan bo'lsa faylni o'chiramiz
             is_final_state = (
-                (doc.telegram_status == 'completed' and doc.telegram_file_id) or 
-                (self.request.retries >= self.max_retries)
+                    (doc.telegram_status == 'completed' and doc.telegram_file_id) or
+                    (self.request.retries >= self.max_retries)
             )
 
             if is_final_state and file_path and os.path.exists(file_path):
@@ -260,14 +286,12 @@ def process_document_pipeline(self, document_id):
                 logger.info(f"[DELETE] Fayl o'chirildi: {file_path}")
         except Exception as delete_error:
             logger.error(f"[DELETE FAIL] Faylni o'chirishda xato: {document_id} - {delete_error}")
-
-
-from django.utils import timezone
-from datetime import timedelta
-
-
-
-
+            # Fayl o'chirishda xatolik bo'lsa ham loglaymiz
+            try:
+                doc = Document.objects.get(id=document_id)
+                log_document_error(doc, 'other', f"File deletion failed: {str(delete_error)}", self.request.retries + 1)
+            except:
+                pass
 
 
 @shared_task(name="apps.files.tasks.cleanup_completed_files_task")
@@ -317,9 +341,9 @@ def cleanup_completed_files_task():
 
             # Hujjat holatini log qilamiz
             logger.info(f"HUJJAT #{doc_id}: download={doc.download_status}, parse={doc.parse_status}, "
-                       f"index={doc.index_status}, telegram={doc.telegram_status}, "
-                       f"telegram_file_id={doc.telegram_file_id is not None}, "
-                       f"completed={doc.completed}, pipeline_running={doc.pipeline_running}")
+                        f"index={doc.index_status}, telegram={doc.telegram_status}, "
+                        f"telegram_file_id={doc.telegram_file_id is not None}, "
+                        f"completed={doc.completed}, pipeline_running={doc.pipeline_running}")
 
             # 1-Qoida: Hujjat hozirda pipeline'da ishlayaptimi?
             if doc.pipeline_running:
@@ -334,6 +358,15 @@ def cleanup_completed_files_task():
                     doc.telegram_file_id.strip() != ''
             )
 
+            # 2.1-Qoida: Hujjat telegram'ga yuborishda xatolik bo'ldimi? (download, parse, index completed, lekin telegram failed)
+            is_telegram_failed = (
+                    doc.download_status == 'completed' and
+                    doc.parse_status == 'completed' and
+                    doc.index_status == 'completed' and
+                    doc.telegram_status == 'failed' and
+                    doc.telegram_file_id is None
+            )
+
             if is_perfectly_completed:
                 # Ha, mukammal tugallangan. Demak fayl ortiqcha.
                 logger.info(f"✅ HIMOYALANGAN: Muvaffaqiyatli hujjatning ortiqcha fayli o'chirilmoqda: {filename}")
@@ -346,9 +379,32 @@ def cleanup_completed_files_task():
                 # Hujjatning o'ziga tegmaymiz, u to'g'ri holatda.
                 continue
 
+            elif is_telegram_failed:
+                # Telegram'ga yuborishda xatolik bo'lgan hujjat. Faylni o'chiramiz va hujjatni qayta tiklaymiz.
+                logger.info(f"🔴 TELEGRAM XATOLIK: Telegram'ga yuborishda xatolik bo'lgan hujjat: {doc_id}")
+                
+                # Faylni o'chiramiz
+                try:
+                    os.remove(file_path)
+                    logger.info(f"🗑️ FAYL O'CHIRILDI: {filename}")
+                    deleted_files += 1
+                except Exception as e:
+                    logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
+
+                # Hujjatni qayta tiklaymiz (telegram_status'ni pending qilamiz)
+                old_status = f"download={doc.download_status}, parse={doc.parse_status}, index={doc.index_status}, telegram={doc.telegram_status}"
+                doc.telegram_status = 'pending'
+                doc.delete_status = 'pending'
+                doc.completed = False
+                doc.pipeline_running = False
+                doc.save()
+                logger.info(f"🔄 TELEGRAM QAYTA TIKLANDI: ID {doc_id}, eski holat: {old_status}")
+                reset_docs += 1
+                continue
+
             # 3-Qoida: Hujjat mukammal EMAS. Faylni o'chiramiz va hujjatni pending qilamiz
             logger.info(f"🔶 TUGALLANMAGAN: Hujjat mukammal tugallanmagan, fayl o'chirilmoqda: {doc_id}")
-            
+
             # Faylni o'chiramiz
             try:
                 os.remove(file_path)

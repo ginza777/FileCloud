@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ParseProgress, Document, Product, SiteToken
+from .models import ParseProgress, Document, Product, SiteToken, DocumentError
 
 
 class ProductInline(admin.StackedInline):
@@ -7,6 +7,14 @@ class ProductInline(admin.StackedInline):
     extra = 0
     can_delete = False
     show_change_link = True
+
+
+class DocumentErrorInline(admin.TabularInline):
+    model = DocumentError
+    extra = 0
+    can_delete = False
+    readonly_fields = ('created_at',)
+    fields = ('error_type', 'error_message', 'celery_attempt', 'created_at')
 
 
 @admin.register(ParseProgress)
@@ -23,7 +31,7 @@ class DocumentAdmin(admin.ModelAdmin):
         'telegram_status', 'delete_status','pipeline_running','completed','telegram_file_id', 'created_at', 'updated_at'
     )
     ordering = ('-created_at',)
-    inlines = [ProductInline]
+    inlines = [ProductInline, DocumentErrorInline]
     search_fields = (
         'id', 'parse_file_url', 'telegram_file_id',
     )
@@ -44,6 +52,15 @@ class ProductAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     search_fields = ('id', 'title', 'slug', 'parsed_content', 'document__id')
     list_filter = ('created_at', 'updated_at', 'document','document__completed')
+
+
+@admin.register(DocumentError)
+class DocumentErrorAdmin(admin.ModelAdmin):
+    list_display = ('id', 'document', 'error_type', 'celery_attempt', 'error_message', 'created_at')
+    ordering = ('-created_at',)
+    search_fields = ('document__id', 'error_message', 'error_type')
+    list_filter = ('error_type', 'celery_attempt', 'created_at')
+    readonly_fields = ('created_at',)
 
 
 @admin.register(SiteToken)
