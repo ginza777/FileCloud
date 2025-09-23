@@ -149,13 +149,16 @@ class Command(BaseCommand):
             if doc.telegram_file_id:
                 doc.telegram_file_id = doc.telegram_file_id.strip()
 
+            # Check if document meets the completion criteria from Document model save() method
             is_final_state = (
                     doc.parse_status == 'completed' and
                     doc.index_status == 'completed' and
-                    doc.telegram_file_id
+                    doc.telegram_file_id is not None and
+                    doc.telegram_file_id.strip() != ''
             )
 
             if is_final_state:
+                # For documents that meet the core completion criteria, check if all statuses are properly set
                 is_already_perfect = (
                         doc.download_status == 'completed' and
                         doc.telegram_status == 'completed' and
@@ -166,6 +169,7 @@ class Command(BaseCommand):
                 if is_already_perfect:
                     batch_unchanged_count += 1
                 else:
+                    # Set all statuses to completed and mark as completed
                     doc.download_status = 'completed'
                     doc.telegram_status = 'completed'
                     doc.delete_status = 'completed'
