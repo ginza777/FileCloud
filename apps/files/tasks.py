@@ -286,10 +286,16 @@ def process_document_pipeline(self, document_id):
             doc = Document.objects.get(id=document_id)
 
             # Agar hujjat ideal holatga kelgan bo'lsa, faylni o'chiramiz
+            has_parsed_content = (
+                hasattr(doc, 'product') and 
+                doc.product is not None and 
+                doc.product.parsed_content is not None and 
+                doc.product.parsed_content.strip() != ''
+            )
+            
             is_ideal_state = (
-                    doc.parse_status == 'completed' and
-                    doc.index_status == 'completed' and
-                    doc.telegram_file_id is not None and doc.telegram_file_id.strip() != ''
+                    doc.telegram_file_id is not None and doc.telegram_file_id.strip() != '' and
+                    has_parsed_content
             )
 
             # Agar fayl mavjud bo'lsa va...
