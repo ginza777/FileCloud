@@ -378,59 +378,31 @@ def cleanup_completed_files_task():
                 protected_files += 1
                 continue
 
-            # 2-Qoida: Hujjat mukammal tugallanganmi? (completed=True va telegram_file_id bor)
-            is_perfectly_completed = (
-                    doc.completed and
-                    doc.telegram_file_id is not None and
-                    doc.telegram_file_id.strip() != ''
-            )
-
-            # 2.1-Qoida: Hujjat telegram'ga yuborishda xatolik bo'ldimi? (download, parse, index completed, lekin telegram failed)
-            is_telegram_failed = (
-                    doc.download_status == 'completed' and
-                    doc.parse_status == 'completed' and
-                    doc.index_status == 'completed' and
-                    doc.telegram_status == 'failed' and
-                    doc.telegram_file_id is None
-            )
-
-            if is_perfectly_completed:
-                # Ha, mukammal tugallangan. Demak fayl ortiqcha.
-                logger.info(f"✅ HIMOYALANGAN: Muvaffaqiyatli hujjatning ortiqcha fayli o'chirilmoqda: {filename}")
+            # 2-Qoida: telegram_file_id bor bo'lsa, completed=True qilamiz
+            if doc.telegram_file_id is not None and doc.telegram_file_id.strip() != '':
+                # telegram_file_id bor, demak hujjat muvaffaqiyatli yuborilgan
+                logger.info(f"✅ TELEGRAM FILE ID BOR: Hujjat muvaffaqiyatli yuborilgan, fayl o'chirilmoqda: {filename}")
                 try:
                     os.remove(file_path)
                     logger.info(f"✅ FAYL O'CHIRILDI: {filename}")
                     deleted_files += 1
                 except Exception as e:
                     logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
-                # Hujjatning o'ziga tegmaymiz, u to'g'ri holatda.
-                continue
-
-            elif is_telegram_failed:
-                # Telegram'ga yuborishda xatolik bo'lgan hujjat. Faylni o'chiramiz va hujjatni qayta tiklaymiz.
-                logger.info(f"🔴 TELEGRAM XATOLIK: Telegram'ga yuborishda xatolik bo'lgan hujjat: {doc_id}")
                 
-                # Faylni o'chiramiz
-                try:
-                    os.remove(file_path)
-                    logger.info(f"🗑️ FAYL O'CHIRILDI: {filename}")
-                    deleted_files += 1
-                except Exception as e:
-                    logger.error(f"❌ XATO: Faylni o'chirishda xatolik: {e}")
-
-                # Hujjatni qayta tiklaymiz (telegram_status'ni pending qilamiz)
+                # Hujjatni completed=True qilamiz (save() metodi avtomatik boshqaradi)
                 old_status = f"download={doc.download_status}, parse={doc.parse_status}, index={doc.index_status}, telegram={doc.telegram_status}"
-                doc.telegram_status = 'pending'
-                doc.delete_status = 'pending'
-                doc.completed = False
+                doc.download_status = 'completed'
+                doc.parse_status = 'completed'
+                doc.index_status = 'completed'
+                doc.telegram_status = 'completed'
+                doc.delete_status = 'completed'
                 doc.pipeline_running = False
                 doc.save()
-                logger.info(f"🔄 TELEGRAM QAYTA TIKLANDI: ID {doc_id}, eski holat: {old_status}")
-                reset_docs += 1
+                logger.info(f"✅ HUJJAT COMPLETED QILINDI: ID {doc_id}, eski holat: {old_status}")
                 continue
 
-            # 3-Qoida: Hujjat mukammal EMAS. Faylni o'chiramiz va hujjatni pending qilamiz
-            logger.info(f"🔶 TUGALLANMAGAN: Hujjat mukammal tugallanmagan, fayl o'chirilmoqda: {doc_id}")
+            # 3-Qoida: telegram_file_id yo'q bo'lsa, barcha statuslarni pending qilamiz
+            logger.info(f"🔶 TELEGRAM FILE ID YO'Q: Hujjatni qayta tiklaymiz, fayl o'chirilmoqda: {doc_id}")
 
             # Faylni o'chiramiz
             try:
@@ -447,7 +419,6 @@ def cleanup_completed_files_task():
             doc.index_status = 'pending'
             doc.telegram_status = 'pending'
             doc.delete_status = 'pending'
-            doc.completed = False
             doc.pipeline_running = False
             doc.save()
             logger.info(f"🔄 HUJJAT QAYTA TIKLANDI: ID {doc_id}, eski holat: {old_status}")

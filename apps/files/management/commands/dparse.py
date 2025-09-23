@@ -75,6 +75,7 @@ class Command(BaseCommand):
                     locked_doc.telegram_status = 'pending'
                     locked_doc.delete_status = 'pending'
                     locked_doc.completed = False
+
                     # pipeline_running ni Celery task o'zi qiladi
                     locked_doc.save()
 
