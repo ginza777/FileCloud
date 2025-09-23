@@ -79,23 +79,22 @@ class Document(models.Model):
         ordering = ['-created_at']
 
     def save(self, *args, **kwargs):
-        done_states = {'completed', 'skipped'}
+        # Yangi mantiq: faqat telegram_file_id va parsed_content ikkalasi ham bo'sh bo'lmasligi kerak
+        has_parsed_content = (
+            hasattr(self, 'product') and 
+            self.product is not None and 
+            self.product.parsed_content is not None and 
+            self.product.parsed_content.strip() != ''
+        )
         
-        # Yangi mantiq: agar index_status=completed va telegram_file_id bor va parse_status=completed bo'lsa
-        if (self.index_status == 'completed' and 
-            self.telegram_file_id is not None and 
-            self.telegram_file_id.strip() != '' and 
-            self.parse_status == 'completed'):
+        if (self.telegram_file_id is not None and 
+            self.telegram_file_id.strip() != '' and
+            has_parsed_content):
             self.completed = True
             self.pipeline_running = False
         else:
-            # Eski mantiq: barcha statuslar completed yoki skipped bo'lsa
-            self.completed = (
-                self.download_status in done_states and
-                self.parse_status in done_states and
-                self.index_status in done_states and
-                self.telegram_status in done_states
-            )
+            # Agar shartlar bajarilmagan bo'lsa, completed=False qilamiz
+            self.completed = False
         
         super().save(*args, **kwargs)
 

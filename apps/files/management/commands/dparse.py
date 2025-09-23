@@ -47,12 +47,18 @@ class Command(BaseCommand):
                     # Poyga holatini oldini olish uchun qatorni qulflaymiz
                     locked_doc = Document.objects.select_for_update(nowait=True).get(pk=doc.pk)
 
-                    # 1-shart: To'g'ri, yakuniy holat (ideal holat)
+                    # 1-shart: To'g'ri, yakuniy holat (ideal holat) - faqat telegram_file_id va parsed_content ikkalasi ham bo'sh bo'lmasligi kerak
+                    has_parsed_content = (
+                        hasattr(locked_doc, 'product') and 
+                        locked_doc.product is not None and 
+                        locked_doc.product.parsed_content is not None and 
+                        locked_doc.product.parsed_content.strip() != ''
+                    )
+                    
                     is_ideal_state = (
-                        locked_doc.parse_status == 'completed' and
-                        locked_doc.index_status == 'completed' and
                         locked_doc.telegram_file_id is not None and
-                        locked_doc.telegram_file_id.strip() != ''
+                        locked_doc.telegram_file_id.strip() != '' and
+                        has_parsed_content
                     )
 
                     if is_ideal_state:

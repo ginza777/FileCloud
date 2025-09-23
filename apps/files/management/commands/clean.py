@@ -165,17 +165,23 @@ class Command(BaseCommand):
                     doc.telegram_file_id.strip() != ''
             )
             
-            is_final_state = (
-                    doc.parse_status == 'completed' and
-                    doc.index_status == 'completed' and
-                    has_telegram_file_id
+            has_parsed_content = (
+                hasattr(doc, 'product') and 
+                doc.product is not None and 
+                doc.product.parsed_content is not None and 
+                doc.product.parsed_content.strip() != ''
             )
             
-            # Check if document has completed parse and index but no telegram_file_id
+            is_final_state = (
+                    has_telegram_file_id and
+                    has_parsed_content
+            )
+            
+            # Check if document has completed parse and index but missing telegram_file_id or parsed_content
             is_partially_completed = (
                     doc.parse_status == 'completed' and
                     doc.index_status == 'completed' and
-                    not has_telegram_file_id
+                    (not has_telegram_file_id or not has_parsed_content)
             )
 
             if is_final_state:
@@ -199,7 +205,7 @@ class Command(BaseCommand):
                     docs_to_set_completed.append(doc)
                     batch_completed_count += 1
             elif is_partially_completed:
-                # For documents with completed parse and index but no telegram_file_id
+                # For documents with completed parse and index but missing telegram_file_id or parsed_content
                 # Keep parse and index as completed, but set others to pending for reprocessing
                 is_already_correct = (
                         doc.download_status == 'completed' and
