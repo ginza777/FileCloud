@@ -101,9 +101,11 @@ def process_document_pipeline(self, document_id):
     try:
         doc = Document.objects.select_related('product').get(id=document_id)
 
+        # Pipeline boshida pipeline_running=True qilamiz
         if not doc.pipeline_running:
-            logger.warning(f"[PIPELINE SKIP] {document_id} lock yo'q.")
-            return
+            doc.pipeline_running = True
+            doc.save(update_fields=['pipeline_running'])
+            logger.info(f"[PIPELINE LOCK] {document_id} pipeline'ga qulflandi")
 
         if doc.completed:
             logger.info(f"[PIPELINE ALREADY COMPLETED] {document_id}")
@@ -220,6 +222,12 @@ def process_document_pipeline(self, document_id):
                     else:
                         raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
                 doc.save(update_fields=['telegram_file_id', 'telegram_status'])
+                
+                # Telegram'ga yuborilgach pipeline_running=False qilamiz
+                doc.pipeline_running = False
+                doc.save(update_fields=['pipeline_running'])
+                logger.info(f"[PIPELINE UNLOCK] {document_id} pipeline'dan qulf olindi")
+                
             except Exception as e:
                 doc.telegram_status = 'failed'
                 doc.save(update_fields=['telegram_status'])
@@ -228,8 +236,6 @@ def process_document_pipeline(self, document_id):
 
         # Pipeline muvaffaqiyatli tugadi
         doc.refresh_from_db()
-        doc.pipeline_running = False
-        doc.save()
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
 
     except Exception as pipeline_error:

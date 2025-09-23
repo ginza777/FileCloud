@@ -75,7 +75,7 @@ class Command(BaseCommand):
                     locked_doc.telegram_status = 'pending'
                     locked_doc.delete_status = 'pending'
                     locked_doc.completed = False
-                    locked_doc.pipeline_running = True  # Jarayon uchun band qilamiz
+                    # pipeline_running ni Celery task o'zi qiladi
                     locked_doc.save()
 
                     # 4. Tozalangan hujjatni navbatga qo'shamiz
