@@ -363,6 +363,9 @@ def cleanup_files_task():
                     if doc.pipeline_running:
                         logger.info(f"🔄 FAYL HIMOYALANGAN (pipeline ishlayapti): {filename}")
                         continue
+                    
+                    # Debug: hujjat holatini ko'rsatish
+                    logger.info(f"🔍 HUJJAT HOLATI: {filename} - parse:{doc.parse_status}, index:{doc.index_status}, telegram_id:{bool(doc.telegram_file_id)}, pipeline:{doc.pipeline_running}")
 
                     # Ideal holatni tekshirish
                     is_ideal_state = (
@@ -392,7 +395,7 @@ def cleanup_files_task():
                         logger.warning(f"⚠️  HUJJAT QAYTA TIKLANDI: {doc.id} holati 'pending' ga o'rnatildi.")
                         reset_docs_count += 1
 
-                    # Ikkala holatda ham faylni o'chiramiz
+                    # Ikkala holatda ham faylni o'chiramiz (ideal yoki pending)
                     try:
                         if os.path.exists(file_path):
                             os.remove(file_path)
