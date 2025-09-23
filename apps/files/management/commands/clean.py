@@ -150,11 +150,22 @@ class Command(BaseCommand):
                 doc.telegram_file_id = doc.telegram_file_id.strip()
 
             # Check if document meets the completion criteria from Document model save() method
+            has_telegram_file_id = (
+                    doc.telegram_file_id is not None and
+                    doc.telegram_file_id.strip() != ''
+            )
+            
             is_final_state = (
                     doc.parse_status == 'completed' and
                     doc.index_status == 'completed' and
-                    doc.telegram_file_id is not None and
-                    doc.telegram_file_id.strip() != ''
+                    has_telegram_file_id
+            )
+            
+            # Check if document has completed parse and index but no telegram_file_id
+            is_partially_completed = (
+                    doc.parse_status == 'completed' and
+                    doc.index_status == 'completed' and
+                    not has_telegram_file_id
             )
 
             if is_final_state:
@@ -177,7 +188,29 @@ class Command(BaseCommand):
                     doc.pipeline_running = False
                     docs_to_set_completed.append(doc)
                     batch_completed_count += 1
+            elif is_partially_completed:
+                # For documents with completed parse and index but no telegram_file_id
+                # Keep parse and index as completed, but set others to pending for reprocessing
+                is_already_correct = (
+                        doc.download_status == 'completed' and
+                        doc.telegram_status == 'pending' and
+                        doc.delete_status == 'pending' and
+                        doc.completed is False and
+                        doc.pipeline_running is False
+                )
+                if is_already_correct:
+                    batch_unchanged_count += 1
+                else:
+                    # Keep parse and index completed, set others to pending
+                    doc.download_status = 'completed'
+                    doc.telegram_status = 'pending'
+                    doc.delete_status = 'pending'
+                    doc.completed = False
+                    doc.pipeline_running = False
+                    docs_to_set_completed.append(doc)
+                    batch_completed_count += 1
             else:
+                # For all other documents, reset to pending
                 doc.download_status = 'pending'
                 doc.parse_status = 'pending'
                 doc.index_status = 'pending'

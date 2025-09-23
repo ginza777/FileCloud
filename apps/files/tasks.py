@@ -239,7 +239,22 @@ def process_document_pipeline(self, document_id):
                     else:
                         raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
 
-                doc.save(update_fields=['telegram_file_id', 'telegram_status'])
+                # Check if document is now in ideal state and set completed=True
+                is_ideal_state = (
+                    doc.parse_status == 'completed' and
+                    doc.index_status == 'completed' and
+                    doc.telegram_file_id is not None and
+                    doc.telegram_file_id.strip() != ''
+                )
+                
+                if is_ideal_state:
+                    doc.completed = True
+                    doc.download_status = 'completed'
+                    doc.delete_status = 'completed'
+                    doc.save(update_fields=['telegram_file_id', 'telegram_status', 'completed', 'download_status', 'delete_status'])
+                    logger.info(f"[PIPELINE COMPLETED] ✅ Hujjat yakunlandi: {document_id}")
+                else:
+                    doc.save(update_fields=['telegram_file_id', 'telegram_status'])
 
             except Exception as e:
                 doc.telegram_status = 'failed'
