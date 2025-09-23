@@ -301,8 +301,15 @@ def process_document_pipeline(self, document_id):
             # Agar fayl mavjud bo'lsa va...
             if file_path_str and os.path.exists(file_path_str):
                 # ...hujjat ideal holatga kelgan bo'lsa YOKI...
-                # ...vazifa barcha qayta urinishlardan so'ng ham muvaffaqiyatsiz bo'lsa
-                if is_ideal_state or (self.request.retries >= self.max_retries):
+                # ...vazifa barcha qayta urinishlardan so'ng ham muvaffaqiyatsiz bo'lsa YOKI...
+                # ...hujjat bajarilmay qolgan bo'lsa (pending holatda)
+                should_delete = (
+                    is_ideal_state or 
+                    (self.request.retries >= self.max_retries) or
+                    (doc.parse_status == 'pending' and doc.index_status == 'pending' and doc.telegram_status == 'pending')
+                )
+                
+                if should_delete:
                     os.remove(file_path_str)
                     doc.delete_status = 'completed'
                     logger.info(f"[DELETE] Fayl o'chirildi: {file_path_str}")
