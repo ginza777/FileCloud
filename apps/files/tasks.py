@@ -117,7 +117,7 @@ def process_document_pipeline(self, document_id):
 
     try:
         with transaction.atomic():
-            doc = Document.objects.select_for_update().select_related('product').get(id=document_id)
+            doc = Document.objects.select_for_update().get(id=document_id)
 
             if doc.completed:
                 logger.info(f"[PIPELINE SKIPPED] Hujjat allaqachon yakunlangan: {document_id}")
