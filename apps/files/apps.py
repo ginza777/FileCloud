@@ -3,9 +3,10 @@ from django.db.models.signals import post_migrate
 
 
 def setup_backup_schedule(sender, **kwargs):
-    from .backup_tasks import create_backup_schedule
+    from .backup_tasks import create_backup_schedule, create_cleanup_schedule
 
     create_backup_schedule()
+    create_cleanup_schedule()
 
 
 class FilesConfig(AppConfig):

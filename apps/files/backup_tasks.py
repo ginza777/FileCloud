@@ -93,3 +93,32 @@ def create_backup_schedule():
         logger.info("Database backup schedule ensured (sync)")
     except Exception as e:
         logger.error(f"Error ensuring backup schedule: {e}")
+
+
+def create_cleanup_schedule():
+    """Synchronously ensure 20-minute cleanup periodic task exists (idempotent)."""
+    try:
+        from django_celery_beat.models import PeriodicTask, IntervalSchedule
+        
+        schedule_qs = IntervalSchedule.objects.filter(every=20, period=IntervalSchedule.MINUTES)
+        if schedule_qs.count() > 1:
+            logger.warning(f"Multiple IntervalSchedule objects found for every=20, period=MINUTES. Keeping the first, please clean up duplicates.")
+        schedule = schedule_qs.first()
+        if not schedule:
+            schedule = IntervalSchedule.objects.create(every=20, period=IntervalSchedule.MINUTES)
+        task_name = 'File System Cleanup Every 20 Minutes'
+        task_kwargs = {
+            'task': 'apps.files.tasks.cleanup_files_task',
+            'interval': schedule,
+            'enabled': True,
+            'description': 'Cleans up files and fixes document states every 20 minutes'
+        }
+        periodic_task, created = PeriodicTask.objects.get_or_create(name=task_name, defaults=task_kwargs)
+        if not created:
+            # Update the existing task if needed
+            for key, value in task_kwargs.items():
+                setattr(periodic_task, key, value)
+            periodic_task.save()
+        logger.info("File cleanup schedule ensured (sync)")
+    except Exception as e:
+        logger.error(f"Error ensuring cleanup schedule: {e}")
