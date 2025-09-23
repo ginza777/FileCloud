@@ -416,8 +416,26 @@ def cleanup_files_task():
                         logger.warning(f"⚠️  HUJJAT QAYTA TIKLANDI: {doc.id} holati 'pending' ga o'rnatildi.")
                         reset_docs_count += 1
                         
-                        # Pending holatda faylni o'chirmaymiz (pipeline ishlashi mumkin)
-                        logger.info(f"🔄 FAYL SAQLANDI (pending holat): {filename}")
+                        # Pending holatda ham faylni o'chiramiz (pipeline ishlamayapti)
+                        try:
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                                logger.info(f"🗑️  FAYL O'CHIRILDI (pending): {filename}")
+                                deleted_files_count += 1
+                            else:
+                                logger.warning(f"⚠️  FAYL MAVJUD EMAS: {filename}")
+                        except PermissionError as e:
+                            error_msg = f"Fayl o'chirishda ruxsat xatosi: {filename} - {e}"
+                            logger.error(f"❌ RUHSAT XATOSI: {error_msg}")
+                            log_document_error(doc, 'other', error_msg, 1)
+                        except OSError as e:
+                            error_msg = f"Fayl o'chirishda tizim xatosi: {filename} - {e}"
+                            logger.error(f"❌ FAYL O'CHIRISH XATOSI: {error_msg}")
+                            log_document_error(doc, 'other', error_msg, 1)
+                        except Exception as e:
+                            error_msg = f"Fayl o'chirishda kutilmagan xato: {filename} - {e}"
+                            logger.error(f"❌ KUTILMAGAN XATO: {error_msg}")
+                            log_document_error(doc, 'other', error_msg, 1)
 
             except Document.DoesNotExist:
                 logger.warning(f"👻 YETIM FAYL (bazada yozuvi yo'q): {filename}. O'chirilmoqda...")
