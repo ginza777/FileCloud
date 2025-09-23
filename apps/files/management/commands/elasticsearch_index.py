@@ -22,7 +22,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch-size',
             type=int,
-            default=2000,
+            default=1000,
             help='Batch hajmi (standart 200)'
         )
         parser.add_argument(

@@ -80,12 +80,23 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         done_states = {'completed', 'skipped'}
-        self.completed = (
-            self.download_status in done_states and
-            self.parse_status in done_states and
-            self.index_status in done_states and
-            self.telegram_status in done_states
-        )
+        
+        # Yangi mantiq: agar index_status=completed va telegram_file_id bor va parse_status=completed bo'lsa
+        if (self.index_status == 'completed' and 
+            self.telegram_file_id is not None and 
+            self.telegram_file_id.strip() != '' and 
+            self.parse_status == 'completed'):
+            self.completed = True
+            self.pipeline_running = False
+        else:
+            # Eski mantiq: barcha statuslar completed yoki skipped bo'lsa
+            self.completed = (
+                self.download_status in done_states and
+                self.parse_status in done_states and
+                self.index_status in done_states and
+                self.telegram_status in done_states
+            )
+        
         super().save(*args, **kwargs)
 
     def __str__(self):
