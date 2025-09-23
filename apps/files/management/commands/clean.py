@@ -87,9 +87,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"   ❌ Redis tozalashda xato: {e}"))
 
     def run_cleanup_data(self, dry_run):
-        # ... (Bu funksiya o'zgarishsiz qoladi) ...
         self.stdout.write(self.style.HTTP_INFO("\n[2] Keraksiz ma'lumotlar va fayllarni tozalash..."))
-        # (Implementation is omitted for brevity as it's unchanged)
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING("   DRY RUN: Fayl tozalash simulyatsiya qilinmoqda."))
+            return
+            
+        try:
+            # Call the cleanup_files_task directly
+            from apps.files.tasks import cleanup_files_task
+            cleanup_files_task()
+            self.stdout.write(self.style.SUCCESS("   ✅ Fayl tozalash yakunlandi."))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"   ❌ Fayl tozalashda xato: {e}"))
 
     def run_fix_urls(self, dry_run):
         # ... (Bu funksiya o'zgarishsiz qoladi) ...

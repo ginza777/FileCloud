@@ -319,70 +319,125 @@ def cleanup_files_task():
     hujjatlarni tozalaydi.
     """
     logger.info("========= FAYL TIZIMINI REJALI TOZALASH BOSHLANDI =========")
+    
+    # Check both 'downloads' and 'download' directories
     downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
-
-    if not os.path.exists(downloads_dir):
-        logger.warning(f"Tozalash uchun 'downloads' papkasi topilmadi: {downloads_dir}")
+    download_dir = os.path.join(settings.MEDIA_ROOT, 'download')
+    
+    directories_to_scan = []
+    if os.path.exists(downloads_dir):
+        directories_to_scan.append(downloads_dir)
+        logger.info(f"📁 'downloads' papkasi topildi: {downloads_dir}")
+    else:
+        logger.warning(f"⚠️  'downloads' papkasi topilmadi: {downloads_dir}")
+    
+    if os.path.exists(download_dir):
+        directories_to_scan.append(download_dir)
+        logger.info(f"📁 'download' papkasi topildi: {download_dir}")
+    else:
+        logger.warning(f"⚠️  'download' papkasi topilmadi: {download_dir}")
+    
+    if not directories_to_scan:
+        logger.warning("❌ Hech qanday tozalash papkasi topilmadi!")
         return
 
     deleted_files_count = 0
     updated_docs_count = 0
     reset_docs_count = 0
 
-    for filename in os.listdir(downloads_dir):
-        file_path = os.path.join(downloads_dir, filename)
-        if not os.path.isfile(file_path): continue
+    # Process each directory
+    for current_dir in directories_to_scan:
+        logger.info(f"🔍 Papka skanerlanyapti: {current_dir}")
+        
+        for filename in os.listdir(current_dir):
+            file_path = os.path.join(current_dir, filename)
+            if not os.path.isfile(file_path): continue
 
-        doc_id = os.path.splitext(filename)[0]
+            doc_id = os.path.splitext(filename)[0]
 
-        try:
-            with transaction.atomic():
-                doc = Document.objects.select_for_update().get(id=doc_id)
+            try:
+                with transaction.atomic():
+                    doc = Document.objects.select_for_update().get(id=doc_id)
 
-                # Agar pipeline ishlayotgan bo'lsa, bu faylga tegmaymiz
-                if doc.pipeline_running:
-                    logger.info(f"🔄 FAYL HIMOYALANGAN (pipeline ishlayapti): {filename}")
-                    continue
+                    # Agar pipeline ishlayotgan bo'lsa, bu faylga tegmaymiz
+                    if doc.pipeline_running:
+                        logger.info(f"🔄 FAYL HIMOYALANGAN (pipeline ishlayapti): {filename}")
+                        continue
 
-                # Ideal holatni tekshirish
-                is_ideal_state = (
-                        doc.parse_status == 'completed' and
-                        doc.index_status == 'completed' and
-                        doc.telegram_file_id is not None and doc.telegram_file_id.strip() != ''
-                )
+                    # Ideal holatni tekshirish
+                    is_ideal_state = (
+                            doc.parse_status == 'completed' and
+                            doc.index_status == 'completed' and
+                            doc.telegram_file_id is not None and doc.telegram_file_id.strip() != ''
+                    )
 
-                if is_ideal_state:
-                    # Hujjat ideal holatda, statuslarni to'liq 'completed' qilamiz
-                    doc.download_status = 'completed'
-                    doc.telegram_status = 'completed'
-                    doc.delete_status = 'completed'
-                    doc.completed = True
-                    doc.save()
-                    logger.info(f"✅ HUJJAT YAKUNLANDI: {doc.id} holati 'completed' ga o'rnatildi.")
-                    updated_docs_count += 1
-                else:
-                    # Hujjat ideal holatda emas, statuslarni 'pending' qilamiz
-                    doc.download_status = 'pending'
-                    doc.parse_status = 'pending'
-                    doc.index_status = 'pending'
-                    doc.telegram_status = 'pending'
-                    doc.delete_status = 'pending'
-                    doc.completed = False
-                    doc.save()
-                    logger.warning(f"⚠️  HUJJAT QAYTA TIKLANDI: {doc.id} holati 'pending' ga o'rnatildi.")
-                    reset_docs_count += 1
+                    if is_ideal_state:
+                        # Hujjat ideal holatda, statuslarni to'liq 'completed' qilamiz
+                        doc.download_status = 'completed'
+                        doc.telegram_status = 'completed'
+                        doc.delete_status = 'completed'
+                        doc.completed = True
+                        doc.save()
+                        logger.info(f"✅ HUJJAT YAKUNLANDI: {doc.id} holati 'completed' ga o'rnatildi.")
+                        updated_docs_count += 1
+                    else:
+                        # Hujjat ideal holatda emas, statuslarni 'pending' qilamiz
+                        doc.download_status = 'pending'
+                        doc.parse_status = 'pending'
+                        doc.index_status = 'pending'
+                        doc.telegram_status = 'pending'
+                        doc.delete_status = 'pending'
+                        doc.completed = False
+                        doc.save()
+                        logger.warning(f"⚠️  HUJJAT QAYTA TIKLANDI: {doc.id} holati 'pending' ga o'rnatildi.")
+                        reset_docs_count += 1
 
-                # Ikkala holatda ham faylni o'chiramiz
-                os.remove(file_path)
-                logger.info(f"🗑️  FAYL O'CHIRILDI: {filename}")
-                deleted_files_count += 1
+                    # Ikkala holatda ham faylni o'chiramiz
+                    try:
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            logger.info(f"🗑️  FAYL O'CHIRILDI: {filename}")
+                            deleted_files_count += 1
+                        else:
+                            logger.warning(f"⚠️  FAYL MAVJUD EMAS: {filename}")
+                    except PermissionError as e:
+                        error_msg = f"Fayl o'chirishda ruxsat xatosi: {filename} - {e}"
+                        logger.error(f"❌ RUHSAT XATOSI: {error_msg}")
+                        log_document_error(doc, 'other', error_msg, 1)
+                    except OSError as e:
+                        error_msg = f"Fayl o'chirishda tizim xatosi: {filename} - {e}"
+                        logger.error(f"❌ FAYL O'CHIRISH XATOSI: {error_msg}")
+                        log_document_error(doc, 'other', error_msg, 1)
+                    except Exception as e:
+                        error_msg = f"Fayl o'chirishda kutilmagan xato: {filename} - {e}"
+                        logger.error(f"❌ KUTILMAGAN XATO: {error_msg}")
+                        log_document_error(doc, 'other', error_msg, 1)
 
-        except Document.DoesNotExist:
-            logger.warning(f"👻 YETIM FAYL (bazada yozuvi yo'q): {filename}. O'chirilmoqda...")
-            os.remove(file_path)
-            deleted_files_count += 1
-        except Exception as e:
-            logger.error(f"❌ Tozalashda kutilmagan xato ({filename}): {e}")
+            except Document.DoesNotExist:
+                logger.warning(f"👻 YETIM FAYL (bazada yozuvi yo'q): {filename}. O'chirilmoqda...")
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        logger.info(f"🗑️  YETIM FAYL O'CHIRILDI: {filename}")
+                        deleted_files_count += 1
+                    else:
+                        logger.warning(f"⚠️  YETIM FAYL MAVJUD EMAS: {filename}")
+                except PermissionError:
+                    logger.error(f"❌ YETIM FAYL RUHSAT XATOSI: {filename} o'chirishga ruxsat yo'q")
+                except OSError as e:
+                    logger.error(f"❌ YETIM FAYL O'CHIRISH XATOSI: {filename} - {e}")
+                except Exception as e:
+                    logger.error(f"❌ YETIM FAYL KUTILMAGAN XATO: {filename} - {e}")
+            except Exception as e:
+                error_msg = f"Tozalashda kutilmagan xato: {filename} - {e}"
+                logger.error(f"❌ {error_msg}")
+                # Try to log to DocumentError if we can get the document
+                try:
+                    doc = Document.objects.get(id=doc_id)
+                    log_document_error(doc, 'other', error_msg, 1)
+                except Document.DoesNotExist:
+                    # Document doesn't exist, can't log to DocumentError
+                    pass
 
     logger.info("--- TOZALASH STATISTIKASI ---")
     logger.info(f"O'chirilgan fayllar: {deleted_files_count}")
