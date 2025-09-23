@@ -219,27 +219,54 @@ def process_document_pipeline(self, document_id):
                     doc.telegram_status = 'skipped'
                     logger.warning(f"[4. Telegram] Fayl hajmi katta, o'tkazib yuborildi: {doc.id}")
                 else:
-                    wait_for_telegram_rate_limit()
-                    caption = f"*{doc.product.title}*\n\nID: `{doc.id}`"
-                    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
-                    with open(file_path, "rb") as f:
-                        files = {"document": (Path(file_path).name, f)}
-                        data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
-                        response = make_retry_session().post(url, files=files, data=data, timeout=180)
-                    resp_data = response.json()
-                    if resp_data.get("ok"):
-                        doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
-                        doc.telegram_status = 'completed'
-                        logger.info(f"[4. Telegram] Muvaffaqiyatli: {document_id}")
-                    # Telegram API dan kelgan rate limit xatosini alohida ushlaymiz
-                    elif resp_data.get("error_code") == 429 and "retry_after" in resp_data:
-                        retry_after = int(resp_data["retry_after"])
-                        logger.warning(f"[4. Telegram] API dan Rate limit {document_id}, {retry_after}s kutyapmiz...")
-                        time.sleep(retry_after)
-                        # Qayta urinish uchun xatolik chaqiramiz
-                        raise Exception(f"Telegram API rate limit: retry after {retry_after}")
-                    else:
-                        raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
+                    # YECHIM: Rate limit xatoligini vazifani to'xtatmasdan hal qilish uchun
+                    # ichki urinishlar siklini qo'shamiz.
+                    max_telegram_attempts = 4  # Ichki sikl uchun maksimal urinishlar soni
+
+                    for attempt in range(max_telegram_attempts):
+                        wait_for_telegram_rate_limit()  # Har urinishdan oldin proaktiv kutish
+
+                        caption = f"*{doc.product.title}*\n\nID: `{doc.id}`"
+                        url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
+
+                        try:
+                            with open(file_path, "rb") as f:
+                                files = {"document": (Path(file_path).name, f)}
+                                data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
+                                response = make_retry_session().post(url, files=files, data=data, timeout=180)
+
+                            resp_data = response.json()
+
+                            if resp_data.get("ok"):
+                                doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
+                                doc.telegram_status = 'completed'
+                                logger.info(f"[4. Telegram] Muvaffaqiyatli: {document_id}")
+                                break  # Muvaffaqiyatli bo'lsa, sikldan chiqamiz
+
+                            elif resp_data.get("error_code") == 429:
+                                # Telegram'dan kelgan rate limit xatosi
+                                retry_after = int(
+                                    resp_data.get("retry_after", 5))  # Agar "retry_after" kelmasa, 5 soniya kutamiz
+                                logger.warning(
+                                    f"[4. Telegram] API dan Rate limit {document_id}, {retry_after} soniya kutamiz... (Urinish {attempt + 1}/{max_telegram_attempts})")
+                                time.sleep(retry_after)  # Telegram aytgan vaqt qadar kutamiz
+
+                                # Agar bu oxirgi urinish bo'lsa, xatolikni Celery'ga yuboramiz
+                                if attempt + 1 >= max_telegram_attempts:
+                                    logger.error(
+                                        f"[4. Telegram] Rate limit xatosi {max_telegram_attempts} urinishdan so'ng ham davom etdi. Vazifa qayta urinishga yuboriladi.")
+                                    raise Exception(f"Telegram API rate limit: {resp_data.get('description')}")
+
+                            else:
+                                # Boshqa turdagi Telegram API xatoliklari
+                                logger.error(f"[4. Telegram] API dan kutilmagan xato: {resp_data.get('description')}")
+                                raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
+
+                        except requests.exceptions.RequestException as req_exc:
+                            logger.error(
+                                f"[4. Telegram] Tarmoq xatoligi yuz berdi: {req_exc}. Vazifa qayta urinishga yuboriladi.")
+                            raise  # Tarmoq xatolarida Celery'ning qayta urinish mexanizmini ishga solamiz
+
                 doc.save(update_fields=['telegram_file_id', 'telegram_status'])
 
                 # Telegram'ga yuborilgach pipeline_running=False qilamiz
