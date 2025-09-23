@@ -14,7 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import json
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from django.utils import timezone as django_timezone
 import pytz
 
@@ -275,11 +275,8 @@ def cleanup_completed_files_task():
         logger.warning(f"Tozalash uchun 'downloads' papkasi topilmadi: {downloads_dir}")
         return
 
-    # Aniqlash uchun vaqt chegaralari
-    minutes_threshold = 5
+    # Tashkent vaqt mintaqasi
     tashkent_tz = pytz.timezone('Asia/Tashkent')
-    stale_cutoff = django_timezone.now() - timedelta(minutes=minutes_threshold)
-    logger.info(f"Vaqt chegarasi: {minutes_threshold} daqiqa ({stale_cutoff.isoformat()})")
 
     # Tozalash statistikasi
     found_files = 0
@@ -303,13 +300,7 @@ def cleanup_completed_files_task():
         found_files += 1
         doc_id = os.path.splitext(filename)[0]
         file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB da
-        # Tashkent vaqt mintaqasi
-        tashkent_tz = pytz.timezone('Asia/Tashkent')
-        file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=tashkent_tz)
-        time_diff = django_timezone.now() - file_mtime
-        minutes_old = time_diff.total_seconds() / 60
-
-        logger.info(f"FAYL: {filename} | {file_size:.2f} MB | {minutes_old:.1f} daqiqa oldin o'zgartirilgan")
+        logger.info(f"FAYL: {filename} | {file_size:.2f} MB")
 
         try:
             doc = Document.objects.get(id=doc_id)
@@ -372,16 +363,13 @@ def cleanup_completed_files_task():
         except Document.DoesNotExist:
             # Fayl bor, lekin bazada unga mos yozuv yo'q ("yetim" fayl)
             logger.warning(f"👻 YETIM FAYL: Bazada yozuvi yo'q fayl topildi: {filename}")
-            if file_mtime < stale_cutoff:
-                logger.warning(f"🗑️ O'CHIRILMOQDA: Eskirgan yetim fayl o'chirilmoqda: {filename}")
-                try:
-                    os.remove(file_path)
-                    logger.info(f"✅ YETIM FAYL O'CHIRILDI: {filename}")
-                    deleted_files += 1
-                except Exception as e:
-                    logger.error(f"❌ XATO: Yetim faylni o'chirishda xatolik: {e}")
-            else:
-                logger.info(f"⏳ YANGI YETIM FAYL: Fayl hali eskirmagan ({minutes_old:.1f} daqiqa < {minutes_threshold} daqiqa)")
+            logger.warning(f"🗑️ O'CHIRILMOQDA: Yetim fayl o'chirilmoqda: {filename}")
+            try:
+                os.remove(file_path)
+                logger.info(f"✅ YETIM FAYL O'CHIRILDI: {filename}")
+                deleted_files += 1
+            except Exception as e:
+                logger.error(f"❌ XATO: Yetim faylni o'chirishda xatolik: {e}")
         except Exception as e:
             logger.error(f"❌ XATO: Faylni ({filename}) tozalashda kutilmagan xato: {e}")
 
@@ -389,5 +377,5 @@ def cleanup_completed_files_task():
     logger.info(f"Jami ko'rib chiqilgan fayllar: {found_files}")
     logger.info(f"O'chirilgan fayllar: {deleted_files}")
     logger.info(f"Tozalangan hujjatlar: {reset_docs}")
-    logger.info(f"Himoyalangan yangi fayllar: {protected_files}")
+    logger.info(f"Himoyalangan fayllar: {protected_files}")
     logger.info(f"========= FAYL TIZIMI TOZALASH TUGADI =========")
