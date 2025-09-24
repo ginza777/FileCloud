@@ -33,7 +33,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--include-partial',
             action='store_true',
-            help='To\'liq tugallanmagan hujjatlarni ham indekslash (parse_status=completed)'
+            help='To\'liq tugallanmagan hujjatlarni ham indekslash (parse_status=completed YOKI parsed_content mavjud)'
         )
 
     def handle(self, *args, **options):
@@ -55,20 +55,22 @@ class Command(BaseCommand):
 
             # Filter logic based on options
             if options.get('include_partial', False):
-                # Include partially completed documents (parse_status=completed)
+                # Include partially completed documents (parse_status=completed OR parsed_content exists)
+                from django.db.models import Q
                 documents = Document.objects.filter(
-                    product__isnull=False,
-                    parse_status='completed'
+                    Q(parse_status='completed') | Q(product__parsed_content__isnull=False),
+                    product__isnull=False
                 ).select_related('product')
                 self.stdout.write("⚠️  To'liq tugallanmagan hujjatlarni ham indekslash rejimi faollashtirildi")
             else:
-                # Parse completed va Telegram ga yuborilgan hujjatlarni indekslash
+                # Telegram ga yuborilgan va (parse completed YOKI parsed_content mavjud) hujjatlarni indekslash
+                from django.db.models import Q
                 documents = Document.objects.filter(
+                    Q(parse_status='completed') | Q(product__parsed_content__isnull=False),
                     product__isnull=False,
-                    parse_status='completed',
                     telegram_file_id__isnull=False
                 ).select_related('product')
-                self.stdout.write("✅ Parse tugallangan va Telegram ga yuborilgan hujjatlarni indekslash rejimi")
+                self.stdout.write("✅ Telegram ga yuborilgan va (parse tugallangan YOKI kontent mavjud) hujjatlarni indekslash rejimi")
 
             total_docs = documents.count()
             indexed_count = 0
