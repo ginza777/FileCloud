@@ -15,12 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Asosiy URL'lar (API uchun /uz/ siz)
 BASE_URLS = [
-    "https://arxiv.uz/documents/dars-ishlanmalar/",
-    "https://arxiv.uz/documents/diplom-ishlar/",
-    "https://arxiv.uz/documents/darsliklar/",
-    "https://arxiv.uz/documents/slaydlar/",
-    "https://arxiv.uz/documents/referatlar/",
-    "https://arxiv.uz/documents/kurs-ishlari/",
+    "https://arxiv.uz/documents/all/"
+    
 ]
 
 # Sub-kataloglar
@@ -139,145 +135,163 @@ class Command(BaseCommand):
                     api_url = f"{base_url}{sub_category}?page={page}&pageSize={page_size}"
                     total_urls_processed += 1
                     
-                    try:
-                        self.stdout.write(f"    📄 Sahifa {page}: {api_url}")
-                        # Serverga yukni kamaytirish uchun qo'shimcha pauza
-                        time.sleep(2)  # Sahifalar orasida 2 soniya kutish
-                        response = requests.get(api_url, headers=headers, cookies=cookies, timeout=15)
-                        response.raise_for_status()
-
+                    # Retry mantiqi
+                    max_retries = 3
+                    retry_count = 0
+                    request_success = False
+                    
+                    while retry_count < max_retries and not request_success:
                         try:
-                            data = response.json()
-                        except ValueError as e:
-                            self.stdout.write(self.style.ERROR(f"    ❌ JSON xatosi: {e}"))
-                            failed_urls += 1
-                            url_success = False
-                            break
+                            self.stdout.write(f"    📄 Sahifa {page}: {api_url} (urinish {retry_count + 1}/{max_retries})")
+                            # Serverga yukni kamaytirish uchun qo'shimcha pauza
+                            time.sleep(0.5)  # Sahifalar orasida 0.5 soniya kutish
+                            response = requests.get(api_url, headers=headers, cookies=cookies, timeout=15)
+                            response.raise_for_status()
+                            request_success = True
+                            
+                        except requests.RequestException as e:
+                            retry_count += 1
+                            self.stdout.write(self.style.WARNING(f"    ⚠️  So'rov xatosi (urinish {retry_count}/{max_retries}): {e}"))
+                            
+                            if retry_count < max_retries:
+                                self.stdout.write(f"    🔄 5 soniya kutib, qayta uriniladi...")
+                                time.sleep(5)  # Xato bo'lsa 5 soniya kutish va qayta urinish
+                            else:
+                                self.stdout.write(self.style.ERROR(f"    ❌ Barcha urinishlar muvaffaqiyatsiz: {api_url}"))
+                                failed_urls += 1
+                                url_success = False
+                                break
+                    
+                    if not request_success:
+                        continue
 
-                        documents = data.get("documents", [])
-                        if not documents:
-                            self.stdout.write(f"    ℹ️  Hujjatlar yo'q: {api_url}")
-                            successful_urls += 1
-                            total_pages_processed += 1
-                            pages_processed += 1
-                            break
+                    try:
+                        data = response.json()
+                    except ValueError as e:
+                        self.stdout.write(self.style.ERROR(f"    ❌ JSON xatosi: {e}"))
+                        self.stdout.write(f"    📄 Response status: {response.status_code}")
+                        self.stdout.write(f"    📄 Content-Type: {response.headers.get('Content-Type', 'N/A')}")
+                        self.stdout.write(f"    📄 Response text (first 200 chars): {response.text[:200]}")
+                        failed_urls += 1
+                        url_success = False
+                        break
 
-                        # Har bir hujjatni qayta ishlash
-                        for doc_data in documents:
-                            try:
-                                with transaction.atomic():
-                                    # Hujjat ma'lumotlarini olish
-                                    doc_id = doc_data.get("id")
-                                    slug = doc_data.get("slug")
-                                    title = doc_data.get("title", slug)
-                                    uploaded_at = doc_data.get("uploadedAt")
-                                    
-                                    # Metadata
-                                    metadata = doc_data.get("metadata", {})
-                                    file_info = metadata.get("file", {})
-                                    file_size = file_info.get("size", 0)
-                                    file_extension = file_info.get("extension", "")
-                                    
-                                    # Category va Subject
-                                    category_info = doc_data.get("category", {})
-                                    subject_info = doc_data.get("subject", {})
-                                    
-                                    # Download URL ni yaratish
-                                    category_slug = category_info.get("slug")
-                                    subject_slug = subject_info.get("slug")
-                                    
-                                    if slug and category_slug and subject_slug:
-                                        download_url = f"https://arxiv.uz/uz/download/{category_slug}/{subject_slug}/{slug}"
-                                    else:
-                                        download_url = None
+                    documents = data.get("documents", [])
+                    if not documents:
+                        self.stdout.write(f"    ℹ️  Hujjatlar yo'q: {api_url}")
+                        successful_urls += 1
+                        total_pages_processed += 1
+                        pages_processed += 1
+                        break
 
-                                    # Mavjud hujjatni tekshirish
-                                    existing_doc = None
+                    # Har bir hujjatni qayta ishlash
+                    for doc_data in documents:
+                        try:
+                            with transaction.atomic():
+                                # Hujjat ma'lumotlarini olish
+                                doc_id = doc_data.get("id")
+                                slug = doc_data.get("slug")
+                                title = doc_data.get("title", slug)
+                                uploaded_at = doc_data.get("uploadedAt")
+                                
+                                # Metadata
+                                metadata = doc_data.get("metadata", {})
+                                file_info = metadata.get("file", {})
+                                file_size = file_info.get("size", 0)
+                                file_extension = file_info.get("extension", "")
+                                
+                                # Category va Subject
+                                category_info = doc_data.get("category", {})
+                                subject_info = doc_data.get("subject", {})
+                                
+                                # Download URL ni yaratish
+                                category_slug = category_info.get("slug")
+                                subject_slug = subject_info.get("slug")
+                                
+                                if slug and category_slug and subject_slug:
+                                    download_url = f"https://arxiv.uz/uz/download/{category_slug}/{subject_slug}/{slug}"
+                                else:
+                                    download_url = None
+
+                                # Mavjud hujjatni tekshirish
+                                existing_doc = None
+                                try:
+                                    # Slug orqali qidirish
+                                    existing_doc = Document.objects.get(json_data__slug=slug)
+                                except Document.DoesNotExist:
+                                    pass
+
+                                if existing_doc:
+                                    # Mavjud hujjatni yangilash
+                                    existing_doc.json_data = doc_data
+                                    existing_doc.parse_file_url = download_url
+                                    existing_doc.save()
+                                    
+                                    # Product ni ham yangilash
                                     try:
-                                        # Slug orqali qidirish
-                                        existing_doc = Document.objects.get(json_data__slug=slug)
-                                    except Document.DoesNotExist:
-                                        pass
-
-                                    if existing_doc:
-                                        # Mavjud hujjatni yangilash
-                                        existing_doc.json_data = doc_data
-                                        existing_doc.parse_file_url = download_url
-                                        existing_doc.save()
-                                        
-                                        # Product ni ham yangilash
-                                        try:
-                                            product = existing_doc.product
-                                            product.title = title
-                                            product.slug = slug
-                                            product.save()
-                                        except Product.DoesNotExist:
-                                            # Agar Product yo'q bo'lsa, yaratamiz
-                                            Product.objects.create(
-                                                id=hash(slug) % (2**31),  # Integer ID uchun hash
-                                                title=title,
-                                                slug=slug,
-                                                document=existing_doc
-                                            )
-                                        
-                                        existing_documents_updated += 1
-                                        self.stdout.write(f"    ✅ Yangilandi: {title}")
-                                    else:
-                                        # Yangi hujjat yaratish
-                                        new_doc = Document.objects.create(
-                                            parse_file_url=download_url,
-                                            json_data=doc_data,
-                                            download_status='pending',
-                                            parse_status='pending',
-                                            index_status='pending',
-                                            telegram_status='pending',
-                                            delete_status='pending'
-                                        )
-                                        
-                                        # Yangi Product yaratish
+                                        product = existing_doc.product
+                                        product.title = title
+                                        product.slug = slug
+                                        product.save()
+                                    except Product.DoesNotExist:
+                                        # Agar Product yo'q bo'lsa, yaratamiz
                                         Product.objects.create(
                                             id=hash(slug) % (2**31),  # Integer ID uchun hash
                                             title=title,
                                             slug=slug,
-                                            document=new_doc
+                                            document=existing_doc
                                         )
-                                        
-                                        # Celery orqali qayta ishlash uchun navbatga qo'shish
-                                        process_document_pipeline.apply_async(args=[new_doc.id])
-                                        
-                                        new_documents_created += 1
-                                        documents_queued_for_processing += 1
-                                        self.stdout.write(f"    ➕ Yangi: {title} (ID: {new_doc.id})")
+                                    
+                                    existing_documents_updated += 1
+                                    self.stdout.write(f"    ✅ Yangilandi: {title}")
+                                else:
+                                    # Yangi hujjat yaratish
+                                    new_doc = Document.objects.create(
+                                        parse_file_url=download_url,
+                                        json_data=doc_data,
+                                        download_status='pending',
+                                        parse_status='pending',
+                                        index_status='pending',
+                                        telegram_status='pending',
+                                        delete_status='pending'
+                                    )
+                                    
+                                    # Yangi Product yaratish
+                                    Product.objects.create(
+                                        id=hash(slug) % (2**31),  # Integer ID uchun hash
+                                        title=title,
+                                        slug=slug,
+                                        document=new_doc
+                                    )
+                                    
+                                    # Celery orqali qayta ishlash uchun navbatga qo'shish
+                                    process_document_pipeline.apply_async(args=[new_doc.id])
+                                    
+                                    new_documents_created += 1
+                                    documents_queued_for_processing += 1
+                                    self.stdout.write(f"    ➕ Yangi: {title} (ID: {new_doc.id})")
 
-                                    total_documents_processed += 1
+                                total_documents_processed += 1
 
-                            except Exception as e:
-                                self.stdout.write(self.style.ERROR(f"    ❌ Hujjatni qayta ishlashda xato: {e}"))
-                                continue
+                        except Exception as e:
+                            self.stdout.write(self.style.ERROR(f"    ❌ Hujjatni qayta ishlashda xato: {e}"))
+                            continue
 
-                        # Sahifa ma'lumotlarini tekshirish
-                        total = data.get("total", 0)
-                        total_pages = ceil(total / page_size)
-                        self.stdout.write(f"    📊 Sahifa {page}/{total_pages}, Jami hujjatlar: {total}")
-                        
-                        successful_urls += 1
-                        total_pages_processed += 1
-                        pages_processed += 1
-                        
-                        if page >= total_pages:
-                            break
-
-                        page += 1
-                        # Har bir sahifa orasida qo'shimcha pauza
-                        time.sleep(3)  # Sahifalar orasida 3 soniya kutish
-
-                    except requests.RequestException as e:
-                        self.stdout.write(self.style.ERROR(f"    ❌ So'rov xatosi: {e}"))
-                        failed_urls += 1
-                        url_success = False
-                        # Xato bo'lsa ham qo'shimcha pauza
-                        time.sleep(5)  # Xato bo'lsa 5 soniya kutish
+                    # Sahifa ma'lumotlarini tekshirish
+                    total = data.get("total", 0)
+                    total_pages = ceil(total / page_size)
+                    self.stdout.write(f"    📊 Sahifa {page}/{total_pages}, Jami hujjatlar: {total}")
+                    
+                    successful_urls += 1
+                    total_pages_processed += 1
+                    pages_processed += 1
+                    
+                    if page >= total_pages:
                         break
+
+                    page += 1
+                    # Har bir sahifa orasida qo'shimcha pauza
+                    time.sleep(0.5)  # Sahifalar orasida 0.5 soniya kutish
 
                 # Progress ni yangilash
                 progress.update_progress(page)
@@ -287,7 +301,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"  ✅ Sub-kategoriya tugadi: {sub_category}")
                 else:
                     self.stdout.write(f"  ❌ Sub-kategoriyada xato: {sub_category}")
-                time.sleep(2)  # Sub-kategoriyalar orasida 2 soniya kutish
+                time.sleep(0.5)  # Sub-kategoriyalar orasida 0.5 soniya kutish
 
         self.stdout.write(self.style.SUCCESS("\n--- JARAYON YAKUNLANDI: STATISTIKA ---"))
         self.stdout.write(f"📊 Jami qayta ishlangan hujjatlar: {total_documents_processed}")
@@ -299,4 +313,5 @@ class Command(BaseCommand):
         self.stdout.write(f"✅ Muvaffaqiyatli URL'lar: {successful_urls}")
         self.stdout.write(f"❌ Xatolik bilan URL'lar: {failed_urls}")
         self.stdout.write(f"📈 Muvaffaqiyat foizi: {(successful_urls/total_urls_processed*100):.1f}%" if total_urls_processed > 0 else "📈 Muvaffaqiyat foizi: 0%")
+        self.stdout.write(f"📁 Jami fayllar parse qilish mumkin: {total_documents_processed}")
         self.stdout.write(self.style.SUCCESS("-----------------------------------------"))
