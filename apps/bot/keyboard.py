@@ -204,7 +204,7 @@ def default_keyboard(lang, admin=False) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(buttons, resize_keyboard=True, one_time_keyboard=False)
 
 
-def build_search_results_keyboard(products_on_page, page_obj, search_mode, language):
+def build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text=None):
     """
     Qidiruv natijalari va sahifalash tugmalarini yaratadi.
     callback_data uchun to'g'ri Document ID (UUID) ishlatiladi.
@@ -221,9 +221,14 @@ def build_search_results_keyboard(products_on_page, page_obj, search_mode, langu
     pagination_buttons = []
     if page_obj.has_previous():
         prev_page = page_obj.previous_page_number()
+        # Include query text in callback data to avoid context issues
+        if query_text:
+            callback_data = f"search_{search_mode}_{prev_page}_{query_text}"
+        else:
+            callback_data = f"search_{search_mode}_{prev_page}"
         pagination_buttons.append(
             InlineKeyboardButton(translation.pagination_prev[language],
-                                 callback_data=f"search_{search_mode}_{prev_page}")
+                                 callback_data=callback_data)
         )
 
     current_page_text = f"{page_obj.number}/{page_obj.paginator.num_pages}"
@@ -231,9 +236,14 @@ def build_search_results_keyboard(products_on_page, page_obj, search_mode, langu
 
     if page_obj.has_next():
         next_page = page_obj.next_page_number()
+        # Include query text in callback data to avoid context issues
+        if query_text:
+            callback_data = f"search_{search_mode}_{next_page}_{query_text}"
+        else:
+            callback_data = f"search_{search_mode}_{next_page}"
         pagination_buttons.append(
             InlineKeyboardButton(translation.pagination_next[language],
-                                 callback_data=f"search_{search_mode}_{next_page}")
+                                 callback_data=callback_data)
         )
 
     if pagination_buttons:

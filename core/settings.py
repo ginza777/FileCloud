@@ -183,9 +183,13 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'django-db')
 
+# Main URL configuration
+MAIN_URL = os.getenv('MAIN_URL', 'http://127.0.0.1:8000')
+
 ES_URL = os.getenv('ES_URL', 'http://localhost:9200')
 ES_INDEX = os.getenv('ES_INDEX', 'documents')
 TIKA_URL = os.getenv('TIKA_URL', 'http://tika:9998')
 BOT_TOKEN= os.getenv('BOT_TOKEN', '')
+BOT_USERNAME = os.getenv('BOT_USERNAME', '@fayltopbot')
 CHANNEL_ID= os.getenv('FORCE_CHANNEL_USERNAME', '')
 WEBHOOK_URL= os.getenv('WEBHOOK_URL', '')

@@ -227,7 +227,56 @@ async def share_bot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
     """
     /start buyrug'i uchun. Foydalanuvchini yaratadi yoki oxirgi faolligini yangilaydi.
+    Agar file_id parametri bilan kelgan bo'lsa, faylni yuboradi.
     """
+    logger.info(f"Start command received from user {user.telegram_id}, args: {context.args}")
+    print(f"DEBUG: Start command received from user {user.telegram_id}, args: {context.args}")
+    
+    # Always send a test message first
+    await update.message.reply_text(f"Start komandasi qabul qilindi! User: {user.telegram_id}, Args: {context.args}")
+    
+    # Check if there's a file ID parameter
+    if context.args and len(context.args) > 0:
+        file_id = context.args[0]
+        logger.info(f"Start command with file_id: {file_id}")
+        print(f"DEBUG: Processing file_id: {file_id}")
+        try:
+            # Try to find and send the file
+            document = await Document.objects.select_related('product').aget(id=file_id)
+            print(f"DEBUG: Document found: {document.id}, completed: {document.completed}, telegram_file_id: {bool(document.telegram_file_id)}")
+            logger.info(f"Document found: {document.id}, completed: {document.completed}, telegram_file_id: {bool(document.telegram_file_id)}")
+            
+            if document.completed and document.telegram_file_id:
+                print(f"DEBUG: Sending file to user {user.telegram_id}")
+                # Send a test message first
+                await update.message.reply_text(f"Fayl topildi: {document.product.title}")
+                
+                await context.bot.send_document(
+                    chat_id=user.telegram_id,
+                    document=document.telegram_file_id,
+                    caption=f"<b>{document.product.title}</b>\n\n{translation.file_sent_from_web[language]}",
+                    parse_mode=ParseMode.HTML
+                )
+                print(f"DEBUG: File sent successfully to user {user.telegram_id}")
+                logger.info(f"File sent successfully to user {user.telegram_id}")
+                return
+            else:
+                print(f"DEBUG: File not available: completed={document.completed}, telegram_file_id={bool(document.telegram_file_id)}")
+                logger.warning(f"File not available: completed={document.completed}, telegram_file_id={bool(document.telegram_file_id)}")
+                await update.message.reply_text(f"Fayl mavjud emas. Completed: {document.completed}, Telegram ID: {bool(document.telegram_file_id)}")
+                return
+        except Document.DoesNotExist:
+            print(f"DEBUG: Document not found: {file_id}")
+            logger.error(f"Document not found: {file_id}")
+            await update.message.reply_text(f"Fayl topilmadi: {file_id}")
+            return
+        except Exception as e:
+            print(f"DEBUG: Error sending file {file_id}: {e}")
+            logger.error(f"Error sending file {file_id}: {e}")
+            await update.message.reply_text(f"Xatolik: {str(e)}")
+            return
+
+    # Normal start command without file ID
     if not user.selected_language:
         await ask_language(update, context)
     else:
@@ -310,23 +359,41 @@ async def main_text_handler(update, context, user, language):
     s = DocumentIndex.search()
     if search_mode == 'deep':
         # Deep search: parsed_content, title va slug bilan qidirish va completed=true
-        final_query = Q(
+        # Use exact match with higher boost for better results
+        exact_query = Q(
             'multi_match',
             query=query_text,
-            fields=['parsed_content^1', 'title^2', 'slug^3'],
-            fuzziness='AUTO',
-            type='best_fields'
+            fields=['parsed_content^6', 'title^8', 'slug^10'],
+            type='phrase',
+            boost=5
         )
+        fuzzy_query = Q(
+            'multi_match',
+            query=query_text,
+            fields=['parsed_content^3', 'title^4', 'slug^5'],
+            fuzziness='AUTO',
+            boost=1
+        )
+        final_query = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
         s = s.highlight('parsed_content', fragment_size=100)
     else:
         # Normal search: faqat title va slug bilan qidirish va completed=true
-        final_query = Q(
+        # Use exact match with higher boost for better results
+        exact_query = Q(
             'multi_match',
             query=query_text,
-            fields=['title^2', 'slug^3'],
-            fuzziness='AUTO',
-            type='best_fields'
+            fields=['title^8', 'slug^10'],
+            type='phrase',
+            boost=5
         )
+        fuzzy_query = Q(
+            'multi_match',
+            query=query_text,
+            fields=['title^4', 'slug^5'],
+            fuzziness='AUTO',
+            boost=1
+        )
+        final_query = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
     s = s.query(final_query)
 
     # Filter only completed docs (field exists in index)
@@ -359,7 +426,7 @@ async def main_text_handler(update, context, user, language):
         paginator = Paginator(range(total_results), page_size)
         page_obj = paginator.page(page_number)
 
-        keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language)
+        keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
         await update.message.reply_text(
             translation.search_results_found[language].format(count=total_results, query=query_text),
             reply_markup=keyboard
@@ -373,27 +440,60 @@ async def handle_search_pagination(update, context, user, language):
     await query.answer()
     page_size = PAGE_SIZE
 
-    query_text = context.user_data.get('last_search_query')
+    # Parse callback data to get search mode, page number, and query text
+    callback_parts = query.data.split('_')
+    if len(callback_parts) >= 4:
+        # New format: search_{mode}_{page}_{query_text}
+        _, search_mode, page_number_str, query_text = callback_parts[0], callback_parts[1], callback_parts[2], '_'.join(callback_parts[3:])
+    elif len(callback_parts) == 3:
+        # Old format: search_{mode}_{page} - fallback to context
+        _, search_mode, page_number_str = callback_parts
+        query_text = context.user_data.get('last_search_query')
+    else:
+        await query.edit_message_text(translation.search_no_results[language].format(query=""))
+        return
+    
     if not query_text:
         await query.edit_message_text(translation.search_no_results[language].format(query=""))
         return
-
-    _, search_mode, page_number_str = query.data.split('_')
+        
     page_number = int(page_number_str)
 
-    # Build ES query using correct fields
+    # Build ES query using correct fields - same as main search for consistency
     if search_mode == 'deep':
         # Deep search: parsed_content, title va slug bilan qidirish va completed=true
-        exact_fields = ["parsed_content^6", "title^8", "slug^10"]
-        fuzzy_fields = ["parsed_content^3", "title^4", "slug^5"]
+        exact_query = Q(
+            'multi_match',
+            query=query_text,
+            fields=['parsed_content^6', 'title^8', 'slug^10'],
+            type='phrase',
+            boost=5
+        )
+        fuzzy_query = Q(
+            'multi_match',
+            query=query_text,
+            fields=['parsed_content^3', 'title^4', 'slug^5'],
+            fuzziness='AUTO',
+            boost=1
+        )
+        q = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
     else:
         # Normal search: faqat title va slug bilan qidirish va completed=true
-        exact_fields = ["title^8", "slug^10"]
-        fuzzy_fields = ["title^4", "slug^5"]
-
-    exact_clause = Q("multi_match", query=query_text, fields=exact_fields, type="phrase", boost=5)
-    fuzzy_clause = Q("multi_match", query=query_text, fields=fuzzy_fields, fuzziness="AUTO", boost=1)
-    q = Q('bool', should=[exact_clause, fuzzy_clause], minimum_should_match=1)
+        exact_query = Q(
+            'multi_match',
+            query=query_text,
+            fields=['title^8', 'slug^10'],
+            type='phrase',
+            boost=5
+        )
+        fuzzy_query = Q(
+            'multi_match',
+            query=query_text,
+            fields=['title^4', 'slug^5'],
+            fuzziness='AUTO',
+            boost=1
+        )
+        q = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
 
     s = DocumentIndex.search().query(q)
     s = s.filter(Q('term', completed=True))
@@ -416,7 +516,7 @@ async def handle_search_pagination(update, context, user, language):
     products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
 
     response_text = translation.search_results_found[language].format(query=query_text, count=total_results)
-    reply_markup = build_search_results_keyboard(products_on_page, page_obj, search_mode, language)
+    reply_markup = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
     await query.edit_message_text(text=response_text, reply_markup=reply_markup)
 
 @get_user

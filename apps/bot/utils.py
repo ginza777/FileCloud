@@ -101,7 +101,7 @@ def update_or_create_user(func: Callable):
                 "first_name": user_data.first_name or "",
                 "last_name": user_data.last_name or "",
                 "username": user_data.username,
-                "stock_language": user_data.language_code,
+                "stock_language": user_data.language_code or "uz",
             }
         )
         user_language = user.selected_language or user.stock_language

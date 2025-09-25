@@ -247,3 +247,31 @@ file_not_available_for_sending = {
     'ru': "К сожалению, этот файл невозможно отправить через бота. Возможные причины: размер файла превышает 50 МБ или произошла ошибка при отправке в канал.",
     'en': "Unfortunately, this file cannot be sent via the bot. Possible reasons: the file size is larger than 50MB or an error occurred while sending to the channel.",
 }
+
+file_sent_from_web = {
+    'uz': "🌐 Bu fayl veb-sayt orqali yuborildi",
+    'ru': "🌐 Этот файл отправлен через веб-сайт",
+    'en': "🌐 This file was sent from the website",
+    'tr': "🌐 Bu dosya web sitesinden gönderildi"
+}
+
+file_not_available = {
+    'uz': "❌ Bu fayl hozircha mavjud emas yoki hali tayyorlanmagan",
+    'ru': "❌ Этот файл недоступен или еще не готов",
+    'en': "❌ This file is not available or not ready yet",
+    'tr': "❌ Bu dosya mevcut değil veya henüz hazır değil"
+}
+
+file_not_found = {
+    'uz': "❌ Bunday fayl topilmadi",
+    'ru': "❌ Файл не найден",
+    'en': "❌ File not found",
+    'tr': "❌ Dosya bulunamadı"
+}
+
+file_send_error = {
+    'uz': "❌ Faylni yuborishda xatolik yuz berdi",
+    'ru': "❌ Ошибка при отправке файла",
+    'en': "❌ Error sending file",
+    'tr': "❌ Dosya gönderilirken hata oluştu"
+}

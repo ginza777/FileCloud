@@ -1,15 +1,15 @@
 JAZZMIN_SETTINGS = {
-    "site_title": "FileFinder",
-    "site_header": "FileFinder",
-    "site_brand": "FileFinder",
-    "welcome_sign": "Welcome to FileFinder Admin Panel",
+    "site_title": "FaylTop",
+    "site_header": "FaylTop",
+    "site_brand": "FaylTop Admin",
+    "welcome_sign": "FaylTop Admin Paneliga xush kelibsiz",
     # Copyright on the footer
-    "copyright": "FileFinder Team",
+    "copyright": "FaylTop Team",
     "user_avatar": None,
     # Logo
-    "site_logo": "admin/img/logo.svg",
+    "site_logo": "icon.png",
     "site_logo_classes": "img-circle",
-    "site_icon": "admin/img/logo.svg",
+    "site_icon": "icon.png",
     ############
     # Top Menu #
     ############

@@ -109,6 +109,9 @@ class Product(models.Model):
     parsed_content = models.TextField(blank=True, null=True, verbose_name="Parsed Content")
     slug = models.TextField(unique=True, verbose_name="Slug",db_index=True)
     document = models.OneToOneField(Document, on_delete=models.CASCADE, related_name='product', verbose_name="Document")
+    view_count = models.PositiveIntegerField(default=0, verbose_name="View Count", db_index=True)
+    download_count = models.PositiveIntegerField(default=0, verbose_name="Download Count", db_index=True)
+    file_size = models.PositiveBigIntegerField(default=0, verbose_name="File Size (bytes)")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At",db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
