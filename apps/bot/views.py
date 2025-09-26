@@ -230,51 +230,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
     Agar file_id parametri bilan kelgan bo'lsa, faylni yuboradi.
     """
     logger.info(f"Start command received from user {user.telegram_id}, args: {context.args}")
-    print(f"DEBUG: Start command received from user {user.telegram_id}, args: {context.args}")
-    
-    # Always send a test message first
-    await update.message.reply_text(f"Start komandasi qabul qilindi! User: {user.telegram_id}, Args: {context.args}")
-    
-    # Check if there's a file ID parameter
+
+    # Check if there's a file ID parameter (deep linking)
     if context.args and len(context.args) > 0:
         file_id = context.args[0]
         logger.info(f"Start command with file_id: {file_id}")
-        print(f"DEBUG: Processing file_id: {file_id}")
         try:
-            # Try to find and send the file
             document = await Document.objects.select_related('product').aget(id=file_id)
-            print(f"DEBUG: Document found: {document.id}, completed: {document.completed}, telegram_file_id: {bool(document.telegram_file_id)}")
-            logger.info(f"Document found: {document.id}, completed: {document.completed}, telegram_file_id: {bool(document.telegram_file_id)}")
-            
+
+            # Fayl tayyor va yuborish mumkin bo'lsa
             if document.completed and document.telegram_file_id:
-                print(f"DEBUG: Sending file to user {user.telegram_id}")
-                # Send a test message first
-                await update.message.reply_text(f"Fayl topildi: {document.product.title}")
-                
                 await context.bot.send_document(
                     chat_id=user.telegram_id,
                     document=document.telegram_file_id,
                     caption=f"<b>{document.product.title}</b>\n\n{translation.file_sent_from_web[language]}",
                     parse_mode=ParseMode.HTML
                 )
-                print(f"DEBUG: File sent successfully to user {user.telegram_id}")
                 logger.info(f"File sent successfully to user {user.telegram_id}")
-                return
             else:
-                print(f"DEBUG: File not available: completed={document.completed}, telegram_file_id={bool(document.telegram_file_id)}")
+                # Fayl hali tayyor emas yoki yuborib bo'lmaydi
                 logger.warning(f"File not available: completed={document.completed}, telegram_file_id={bool(document.telegram_file_id)}")
-                await update.message.reply_text(f"Fayl mavjud emas. Completed: {document.completed}, Telegram ID: {bool(document.telegram_file_id)}")
-                return
+                await update.message.reply_text(translation.file_not_found[language])
+
         except Document.DoesNotExist:
-            print(f"DEBUG: Document not found: {file_id}")
             logger.error(f"Document not found: {file_id}")
-            await update.message.reply_text(f"Fayl topilmadi: {file_id}")
-            return
+            await update.message.reply_text(translation.file_not_found[language])
         except Exception as e:
-            print(f"DEBUG: Error sending file {file_id}: {e}")
             logger.error(f"Error sending file {file_id}: {e}")
-            await update.message.reply_text(f"Xatolik: {str(e)}")
-            return
+            await update.message.reply_text(translation.error_occurred[language])
+
+        # Fayl bilan bog'liq amaldan so'ng funksiyani yakunlash
+        return
 
     # Normal start command without file ID
     if not user.selected_language:
