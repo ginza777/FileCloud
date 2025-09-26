@@ -172,9 +172,13 @@ class Command(BaseCommand):
                 doc.product.parsed_content.strip() != ''
             )
             
+            # IDEAL HOLAT QOIDASI (4 shart):
+            is_indexed = (doc.index_status == 'completed')
+            pipeline_not_running = (not doc.pipeline_running)
+            
             is_final_state = (
-                    has_telegram_file_id and
-                    has_parsed_content
+                has_parsed_content and has_telegram_file_id and 
+                is_indexed and pipeline_not_running
             )
             
             # Check if document has completed parse and index but missing telegram_file_id or parsed_content
@@ -188,6 +192,8 @@ class Command(BaseCommand):
                 # For documents that meet the core completion criteria, check if all statuses are properly set
                 is_already_perfect = (
                         doc.download_status == 'completed' and
+                        doc.parse_status == 'completed' and
+                        doc.index_status == 'completed' and
                         doc.telegram_status == 'completed' and
                         doc.delete_status == 'completed' and
                         doc.completed is True and
@@ -196,12 +202,14 @@ class Command(BaseCommand):
                 if is_already_perfect:
                     batch_unchanged_count += 1
                 else:
-                    # Set all statuses to completed and mark as completed
-                    doc.download_status = 'completed'
-                    doc.telegram_status = 'completed'
-                    doc.delete_status = 'completed'
+                    # IDEAL HOLAT: Barcha statuslarni completed qilamiz
                     doc.completed = True
                     doc.pipeline_running = False
+                    doc.download_status = 'completed'
+                    doc.parse_status = 'completed'
+                    doc.index_status = 'completed'
+                    doc.telegram_status = 'completed'
+                    doc.delete_status = 'completed'
                     docs_to_set_completed.append(doc)
                     batch_completed_count += 1
             elif is_partially_completed:

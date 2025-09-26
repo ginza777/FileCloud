@@ -106,14 +106,33 @@ movie_code = {
 }
 
 share_bot_text = {
-    "uz": "🍀",
-    # Hd ,4k kinolar 🎥\n🍀Saralangan top dagi kinolar🍿\n🍀Kino kodini yuboring va kinoni yuklab oling\n🍀Barcha kinolar saralangan ,trenddagi kinolar\n🍀Kino kodini yuboring va kinoni yuklab oling\n🍀Botni do'stlaringiz bilan ulashing\n🍀Bot uchun havola :@uzbek_kino_time_bot\n🍀Kanalimiz : @uzbek_kino_time\n",
-    "en": "🍀",
-    # Full Hd ,4k movies 🎥\n🍀Top rated movies🍿\n🍀Send movie code and download the movie\n🍀All movies are rated, trending movies\n🍀Send movie code and download the movie\n🍀Share the bot with your friends\n🍀Bot link :@uzbek_kino_time_bot\n🍀Our channel : @uzbek_kino_time\n",
-    "ru": "🍀",
-    # Full Hd ,4k фильмы 🎥\n🍀Лучшие фильмы🍿\n🍀Отправьте код фильма и загрузите фильм\n🍀Все фильмы оценены, трендовые фильмы\n🍀Отправьте код фильма и загрузите фильм\n🍀Поделитесь ботом с друзьями\n🍀Ссылка на бота :@uzbek_kino_time_bot\n🍀Наш канал : @uzbek_kino_time\n",
-    "tr": "🍀",
-    # Full Hd ,4k filmler 🎥\n🍀En değerli filmler🍿\n🍀Filmin kodunu gönderin ve filmi indirin\n🍀Tüm filmler değerlendirilmiş, trend filmler\n🍀Filmin kodunu gönderin ve filmi indirin\n🍀Botu arkadaşlarınızla paylaşın\n🍀Bot bağlantısı :@uzbek_kino_time_bot\n🍀Kanalımız : @uzbek_kino_time\n",
+    "uz": "📤 Botni do'stlaringiz bilan ulashing!\n\n"
+          "🔍 Bizning bot orqali minglab hujjatlarni qidira olasiz\n"
+          "📚 Ilmiy maqolalar, kurs ishlari, kitoblar va boshqalar\n"
+          "⚡ Tezkor qidiruv va yuklab olish\n"
+          "🌐 Rasmiy sayt: fayltop.cloud\n\n"
+          "@fayltopbot",
+    
+    "ru": "📤 Поделитесь ботом с друзьями!\n\n"
+          "🔍 Через наш бот вы можете найти тысячи документов\n"
+          "📚 Научные статьи, курсовые работы, книги и многое другое\n"
+          "⚡ Быстрый поиск и загрузка\n"
+          "🌐 Официальный сайт: fayltop.cloud\n\n"
+          "@fayltopbot",
+    
+    "en": "📤 Share the bot with your friends!\n\n"
+          "🔍 Through our bot you can find thousands of documents\n"
+          "📚 Scientific articles, coursework, books and more\n"
+          "⚡ Fast search and download\n"
+          "🌐 Official website: fayltop.cloud\n\n"
+          "@fayltopbot",
+    
+    "tr": "📤 Botu arkadaşlarınızla paylaşın!\n\n"
+          "🔍 Botumuz aracılığıyla binlerce belge bulabilirsiniz\n"
+          "📚 Bilimsel makaleler, kurs çalışmaları, kitaplar ve daha fazlası\n"
+          "⚡ Hızlı arama ve indirme\n"
+          "🌐 Resmi website: fayltop.cloud\n\n"
+          "@fayltopbot"
 }
 
 # languages

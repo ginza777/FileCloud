@@ -47,7 +47,12 @@ class Command(BaseCommand):
                     # Poyga holatini oldini olish uchun qatorni qulflaymiz
                     locked_doc = Document.objects.select_for_update(nowait=True).get(pk=doc.pk)
 
-                    # 1-shart: To'g'ri, yakuniy holat (ideal holat) - faqat telegram_file_id va parsed_content ikkalasi ham bo'sh bo'lmasligi kerak
+                    # IDEAL HOLAT QOIDASI (4 shart):
+                    # 1. parsed_content mavjud va bo'sh emas
+                    # 2. telegram_file_id mavjud va bo'sh emas
+                    # 3. pipeline_running = False
+                    # 4. index_status = 'completed'
+                    
                     has_parsed_content = (
                         hasattr(locked_doc, 'product') and 
                         locked_doc.product is not None and 
@@ -55,18 +60,28 @@ class Command(BaseCommand):
                         locked_doc.product.parsed_content.strip() != ''
                     )
                     
-                    is_ideal_state = (
+                    has_telegram_file = (
                         locked_doc.telegram_file_id is not None and
-                        locked_doc.telegram_file_id.strip() != '' and
-                        has_parsed_content
+                        locked_doc.telegram_file_id.strip() != ''
+                    )
+                    
+                    is_indexed = (locked_doc.index_status == 'completed')
+                    pipeline_not_running = (not locked_doc.pipeline_running)
+                    
+                    is_ideal_state = (
+                        has_parsed_content and has_telegram_file and 
+                        is_indexed and pipeline_not_running
                     )
 
                     if is_ideal_state:
-                        # Hujjat allaqachon yakunlangan, shunchaki holatini to'g'rilab qo'yamiz
-                        locked_doc.download_status = 'completed'
-                        locked_doc.telegram_status = 'completed'
-                        locked_doc.delete_status = 'completed'
+                        # IDEAL HOLAT: Barcha statuslarni completed qilamiz
                         locked_doc.completed = True
+                        locked_doc.pipeline_running = False
+                        locked_doc.download_status = 'completed'
+                        locked_doc.parse_status = 'completed'
+                        locked_doc.index_status = 'completed'
+                        locked_doc.telegram_status = 'completed' 
+                        locked_doc.delete_status = 'completed'
                         locked_doc.save()
 
                         self.stdout.write(self.style.SUCCESS(f"✅ Holati to'g'rilandi (yakunlangan): {locked_doc.id}"))

@@ -337,20 +337,38 @@ def process_document_pipeline(self, document_id):
                     else:
                         raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
 
-                # Check if document is now in ideal state and set completed=True
+                # IDEAL HOLAT TEKSHIRUVI (4 shart)
+                has_parsed_content = (
+                    hasattr(doc, 'product') and
+                    doc.product is not None and
+                    doc.product.parsed_content is not None and
+                    doc.product.parsed_content.strip() != ''
+                )
+                
+                has_telegram_file = (
+                    doc.telegram_file_id is not None and
+                    doc.telegram_file_id.strip() != ''
+                )
+                
+                is_indexed = (doc.index_status == 'completed')
+                pipeline_not_running = (not doc.pipeline_running)
+                
                 is_ideal_state = (
-                        doc.parse_status == 'completed' and
-                        doc.index_status == 'completed' and
-                        doc.telegram_file_id is not None and
-                        doc.telegram_file_id.strip() != ''
+                    has_parsed_content and has_telegram_file and 
+                    is_indexed and pipeline_not_running
                 )
 
                 if is_ideal_state:
+                    # IDEAL HOLAT: Barcha statuslarni completed qilamiz
                     doc.completed = True
+                    doc.pipeline_running = False
                     doc.download_status = 'completed'
+                    doc.parse_status = 'completed'
+                    doc.index_status = 'completed'
+                    doc.telegram_status = 'completed'
                     doc.delete_status = 'completed'
-                    doc.save(update_fields=['telegram_file_id', 'telegram_status', 'completed', 'download_status',
-                                            'delete_status'])
+                    doc.save(update_fields=['telegram_file_id', 'telegram_status', 'completed', 'pipeline_running',
+                                            'download_status', 'parse_status', 'index_status', 'delete_status'])
                     logger.info(f"[PIPELINE COMPLETED] ✅ Hujjat yakunlandi: {document_id}")
                 else:
                     doc.save(update_fields=['telegram_file_id', 'telegram_status'])
@@ -614,20 +632,41 @@ def soft_uz_process_documents():
                 # Poyga holatini oldini olish uchun qatorni qulflaymiz
                 locked_doc = Document.objects.select_for_update(nowait=True).get(pk=doc.pk)
 
-                # 1-shart: To'g'ri, yakuniy holat (ideal holat)
+                # IDEAL HOLAT QOIDASI (4 shart):
+                # 1. parsed_content mavjud va bo'sh emas
+                # 2. telegram_file_id mavjud va bo'sh emas
+                # 3. pipeline_running = False
+                # 4. index_status = 'completed'
+                
+                has_parsed_content = (
+                    hasattr(locked_doc, 'product') and
+                    locked_doc.product is not None and
+                    locked_doc.product.parsed_content is not None and
+                    locked_doc.product.parsed_content.strip() != ''
+                )
+                
+                has_telegram_file = (
+                    locked_doc.telegram_file_id is not None and
+                    locked_doc.telegram_file_id.strip() != ''
+                )
+                
+                is_indexed = (locked_doc.index_status == 'completed')
+                pipeline_not_running = (not locked_doc.pipeline_running)
+                
                 is_ideal_state = (
-                        locked_doc.parse_status == 'completed' and
-                        locked_doc.index_status == 'completed' and
-                        locked_doc.telegram_file_id is not None and
-                        locked_doc.telegram_file_id.strip() != ''
+                    has_parsed_content and has_telegram_file and 
+                    is_indexed and pipeline_not_running
                 )
 
                 if is_ideal_state:
-                    # Hujjat allaqachon yakunlangan, shunchaki holatini to'g'rilab qo'yamiz
+                    # IDEAL HOLAT: Barcha statuslarni completed qilamiz
+                    locked_doc.completed = True
+                    locked_doc.pipeline_running = False
                     locked_doc.download_status = 'completed'
+                    locked_doc.parse_status = 'completed'
+                    locked_doc.index_status = 'completed'
                     locked_doc.telegram_status = 'completed'
                     locked_doc.delete_status = 'completed'
-                    locked_doc.completed = True
                     locked_doc.save()
 
                     logger.info(f"✅ Holati to'g'rilandi (yakunlangan): {locked_doc.id}")

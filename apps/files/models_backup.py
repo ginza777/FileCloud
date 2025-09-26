@@ -79,12 +79,7 @@ class Document(models.Model):
         ordering = ['-created_at']
 
     def save(self, *args, **kwargs):
-        # IDEAL HOLAT QOIDASI: 
-        # 1. document.product.parsed_content mavjud va bo'sh emas
-        # 2. telegram_file_id mavjud va bo'sh emas  
-        # 3. pipeline_running = False
-        # 4. index_status = 'completed'
-        
+        # Yangi mantiq: faqat telegram_file_id va parsed_content ikkalasi ham bo'sh bo'lmasligi kerak
         has_parsed_content = (
             hasattr(self, 'product') and 
             self.product is not None and 
@@ -92,26 +87,13 @@ class Document(models.Model):
             self.product.parsed_content.strip() != ''
         )
         
-        has_telegram_file = (
-            self.telegram_file_id is not None and 
-            self.telegram_file_id.strip() != ''
-        )
-        
-        is_indexed = (self.index_status == 'completed')
-        pipeline_not_running = (not self.pipeline_running)
-        
-        # BARCHA 4 SHART bajarilgan bo'lsa - IDEAL HOLAT
-        if has_parsed_content and has_telegram_file and is_indexed and pipeline_not_running:
-            # Completed = True va barcha statuslarni completed qilish
+        if (self.telegram_file_id is not None and 
+            self.telegram_file_id.strip() != '' and
+            has_parsed_content):
             self.completed = True
             self.pipeline_running = False
-            self.download_status = 'completed'
-            self.parse_status = 'completed' 
-            self.index_status = 'completed'
-            self.telegram_status = 'completed'
-            self.delete_status = 'completed'
         else:
-            # Ideal holatda bo'lmasa, completed=False
+            # Agar shartlar bajarilmagan bo'lsa, completed=False qilamiz
             self.completed = False
         
         super().save(*args, **kwargs)
