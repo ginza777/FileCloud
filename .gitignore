@@ -1,13 +1,51 @@
-/media
-/static
+# Media (foydalanuvchi yuklagan fayllar)
+/media/
+
+# Static (collectstatic natijalari)
+/staticfiles/
+
+# Maxfiy ma'lumotlar
 .env
+*.env
+.env.*
+
+# Python generatsiya qiladigan fayllar
 *.pyc
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Baza fayllari
 db.sqlite3
 *.sqlite3
+
+# OS va redaktor fayllari
 *.swp
 *.DS_Store
-/venv
+.idea/
 .vscode/
+*.sublime-*
+
+# Virtual muhit
+/venv
+.virtualenv/
+.env/
+env/
+ENV/
+
+# Loglar va vaqtinchalik fayllar
 *.log
 *.sql
+temp/
+tmp/
+
+# Coverage va test fayllari
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Build va dist fayllari
+*.egg-info/
+dist/
+build/

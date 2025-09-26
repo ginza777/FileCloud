@@ -38,7 +38,6 @@ class ParseProgress(models.Model):
         self.save()
 
 
-
 class Document(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Kutilmoqda'),
@@ -48,11 +47,11 @@ class Document(models.Model):
         ('skipped', 'O`tkazib yuborildi'),
     ]
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,db_index=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_index=True)
 
     parse_file_url = models.TextField(blank=True, null=True, verbose_name="File URL",
-                                help_text="Direct link to the document file")
-    #status
+                                      help_text="Direct link to the document file")
+    # status
     download_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
                                        verbose_name="Yuklab olish holati", db_index=True)
     parse_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
@@ -64,14 +63,16 @@ class Document(models.Model):
     delete_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
                                      verbose_name="O'chirish holati", db_index=True)
 
-    completed = models.BooleanField(default=False, verbose_name="Barchasi tugatildimi?",db_index=True)
+    completed = models.BooleanField(default=False, verbose_name="Barchasi tugatildimi?", db_index=True)
 
     telegram_file_id = models.CharField(blank=True, null=True, verbose_name="Telegram File ID",
-                                        help_text="File ID after sending to Telegram channel",db_index=True,max_length=500)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At",db_index=True)
+                                        help_text="File ID after sending to Telegram channel", db_index=True,
+                                        max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At", db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At", db_index=True)
     json_data = models.JSONField(blank=True, null=True, verbose_name="JSON Data")
-    pipeline_running = models.BooleanField(default=False, db_index=True, help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi")
+    pipeline_running = models.BooleanField(default=False, db_index=True,
+                                           help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi")
 
     class Meta:
         verbose_name = "Document"
@@ -84,36 +85,36 @@ class Document(models.Model):
         # 2. telegram_file_id mavjud va bo'sh emas  
         # 3. pipeline_running = False
         # 4. index_status = 'completed'
-        
+
         has_parsed_content = (
-            hasattr(self, 'product') and 
-            self.product is not None and 
-            self.product.parsed_content is not None and 
-            self.product.parsed_content.strip() != ''
+                hasattr(self, 'product') and
+                self.product is not None and
+                self.product.parsed_content is not None and
+                self.product.parsed_content.strip() != ''
         )
-        
+
         has_telegram_file = (
-            self.telegram_file_id is not None and 
-            self.telegram_file_id.strip() != ''
+                self.telegram_file_id is not None and
+                self.telegram_file_id.strip() != ''
         )
-        
+
         is_indexed = (self.index_status == 'completed')
         pipeline_not_running = (not self.pipeline_running)
-        
+
         # BARCHA 4 SHART bajarilgan bo'lsa - IDEAL HOLAT
         if has_parsed_content and has_telegram_file and is_indexed and pipeline_not_running:
             # Completed = True va barcha statuslarni completed qilish
             self.completed = True
             self.pipeline_running = False
             self.download_status = 'completed'
-            self.parse_status = 'completed' 
+            self.parse_status = 'completed'
             self.index_status = 'completed'
             self.telegram_status = 'completed'
             self.delete_status = 'completed'
         else:
             # Ideal holatda bo'lmasa, completed=False
             self.completed = False
-        
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -123,16 +124,15 @@ class Document(models.Model):
 class Product(models.Model):
     """Product model for digital products"""
     id = models.IntegerField(primary_key=True, verbose_name="Product ID")
-    title = models.TextField(verbose_name="Title",db_index=True)
+    title = models.TextField(verbose_name="Title", db_index=True)
     parsed_content = models.TextField(blank=True, null=True, verbose_name="Parsed Content")
-    slug = models.TextField(unique=True, verbose_name="Slug",db_index=True)
+    slug = models.TextField(unique=True, verbose_name="Slug", db_index=True)
     document = models.OneToOneField(Document, on_delete=models.CASCADE, related_name='product', verbose_name="Document")
     view_count = models.PositiveIntegerField(default=0, verbose_name="View Count", db_index=True)
     download_count = models.PositiveIntegerField(default=0, verbose_name="Download Count", db_index=True)
     file_size = models.PositiveBigIntegerField(default=0, verbose_name="File Size (bytes)")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At",db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At", db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
-
 
     class Meta:
         verbose_name = "Product"
@@ -143,15 +143,14 @@ class Product(models.Model):
         return self.title
 
 
-
 class SiteToken(models.Model):
     NAME_CHOICES = [
         ('soff', 'soff'),
         ('arxiv', 'arxiv'),
     ]
 
-    name = models.CharField(choices=NAME_CHOICES, unique=True,max_length=100)
-    token = models.CharField(unique=True,max_length=300)
+    name = models.CharField(choices=NAME_CHOICES, unique=True, max_length=100)
+    token = models.CharField(unique=True, max_length=300)
     auth_token = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -170,18 +169,20 @@ class DocumentError(models.Model):
         ('index', 'Indekslash xatoligi'),
         ('other', 'Boshqa xatolik'),
     ]
-    
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='errors', verbose_name="Document", db_index=True)
+
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='errors', verbose_name="Document",
+                                 db_index=True)
     error_type = models.CharField(max_length=20, choices=ERROR_TYPE_CHOICES, verbose_name="Xatolik turi", db_index=True)
     error_message = models.TextField(verbose_name="Xatolik xabari")
-    celery_attempt = models.PositiveIntegerField(default=1, verbose_name="Celery urinish raqami", help_text="Bu xatolik qaysi urinishda yuz bergani")
+    celery_attempt = models.PositiveIntegerField(default=1, verbose_name="Celery urinish raqami",
+                                                 help_text="Bu xatolik qaysi urinishda yuz bergani")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqt", db_index=True)
 
     class Meta:
         verbose_name = "Document Error"
         verbose_name_plural = "Document Errors"
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.get_error_type_display()} - {self.document.id} (urinish: {self.celery_attempt})"
 
@@ -204,7 +205,7 @@ def document_image_upload_to(instance, filename):
 class DocumentImage(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='images')
     page_number = models.PositiveIntegerField()
-    image = models.ImageField(upload_to=document_image_upload_to)
+    image = models.ImageField(upload_to='images/')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

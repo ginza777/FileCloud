@@ -3,17 +3,21 @@
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 
 import requests
 from celery import shared_task
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db import transaction, DatabaseError
 from elasticsearch import Elasticsearch
 from requests.adapters import HTTPAdapter
 from tika import parser as tika_parser
 from urllib3.util.retry import Retry
+
+from .models import Document, DocumentImage
+from .utils import make_retry_session  # Agar make_retry_session boshqa faylda bo'lsa, import qiling
 
 try:
     import redis
@@ -21,8 +25,20 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
+# PIL, pdf2image va requests kutubxonalarini import qilish
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    from pdf2image import convert_from_path, convert_from_bytes
+    from pdf2image.exceptions import PDFPageCountError, PDFSyntaxError
+except ImportError as e:
+    # Bu kutubxonalar mavjud bo'lmasa, log yozish
+    import logging
 
-from .models import Document, DocumentError, DocumentImage
+    logger = logging.getLogger(__name__)
+    logger.error(f"Kerakli kutubxona topilmadi: {e}. 'pip install Pillow pdf2image' komandasini ishga tushiring.")
+    # Vazifani davom ettirmaslik uchun xatolikni ko'tarish
+    raise e
+from .models import DocumentError
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -80,128 +96,168 @@ def wait_for_telegram_rate_limit():
         logger.warning("Redis topilmadi, rate limit uchun 5 soniya kutamiz.")
         time.sleep(5)
         return
+    
+    try:
+        # Redis connection
+        r = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
+        
+        # Telegram rate limit key
+        lock_key = "telegram_rate_limit_lock"
+        last_send_key = "telegram_last_send_time"
+        
+        # 1 soniya kutish intervali
+        min_interval = 1.0
+        
+        while True:
+            # Lock olishga harakat qilamiz
+            if r.set(lock_key, "locked", nx=True, ex=30):  # 30 soniya timeout
+                try:
+                    # Oxirgi yuborish vaqtini olamiz
+                    last_send = r.get(last_send_key)
+                    current_time = time.time()
+                    
+                    if last_send:
+                        time_since_last = current_time - float(last_send)
+                        if time_since_last < min_interval:
+                            wait_time = min_interval - time_since_last
+                            logger.info(f"Rate limit: {wait_time:.2f} soniya kutamiz")
+                            time.sleep(wait_time)
+                    
+                    # Yuborish vaqtini yangilaymiz
+                    r.set(last_send_key, str(current_time))
+                    logger.info("Rate limit lock olindi, Telegram yuborish mumkin")
+                    break
+                    
+                finally:
+                    # Lock ni ochamiz
+                    r.delete(lock_key)
+            else:
+                # Boshqa worker ishlayapti, kichik kutamiz
+                time.sleep(0.1)
+                
+    except Exception as e:
+        logger.warning(f"Redis rate limiting xatosi: {e}, 5 soniya kutamiz")
+        time.sleep(5)
+
+
 def add_watermark_to_image(pil_image, text="fayltop.cloud"):
-    from PIL import ImageDraw, ImageFont, Image
+    """Rasmga takrorlanuvchi, xira suv belgisini qo'shadi."""
     image = pil_image.convert('RGBA')
     overlay = Image.new('RGBA', image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
     width, height = image.size
-    # Many faint diagonals
+
+    # Shriftni loyihadagi 'static/fonts' papkasidan ishonchli tarzda topish
     try:
-        font = ImageFont.truetype("DejaVuSans.ttf", max(14, width // 40))
+        font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'DejaVuSans.ttf')
+        if not os.path.exists(font_path):
+            font = ImageFont.load_default()
+        else:
+            font = ImageFont.truetype(font_path, max(14, width // 40))
     except Exception:
         font = ImageFont.load_default()
+
     step = max(120, width // 6)
-    alpha = 28  # very faint
+    alpha = 28  # Xira effekt uchun
+
+    # Matnni diagonal qilib joylashtirish
     for y in range(-height, height, step):
         draw.text((0, y), text, font=font, fill=(255, 255, 255, alpha))
-    # rotate overlay for diagonal effect
+
     overlay = overlay.rotate(30, expand=1)
-    overlay = overlay.crop(( (overlay.width - width)//2, (overlay.height - height)//2, (overlay.width + width)//2, (overlay.height + height)//2 ))
+    overlay = overlay.crop((
+        (overlay.width - width) // 2,
+        (overlay.height - height) // 2,
+        (overlay.width + width) // 2,
+        (overlay.height + height) // 2
+    ))
+
     combined = Image.alpha_composite(image, overlay)
     return combined.convert('RGB')
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=10, max_retries=3)
 def generate_document_images_task(self, document_id: str, max_pages: int = 5):
-    """Download the document to media/file/, render up to 5 pages to images with faint repeated watermark,
-    save images to DocumentImage, then delete the working file. Supports PDFs primarily; other formats will be
-    attempted via Tika preview text rendered as image fallback.
     """
-    import os
-    from pathlib import Path
-    from django.conf import settings
-    from PIL import Image, ImageDraw
-    from io import BytesIO
-    from pdf2image import convert_from_path, convert_from_bytes
-    import requests
-
+    Hujjatni yuklaydi, 5 tagacha sahifasini suv belgisi bilan rasmga aylantiradi,
+    rasmlarni DocumentImage modeliga saqlaydi va vaqtinchalik faylni o'chiradi.
+    """
     doc = Document.objects.get(id=document_id)
     if not doc.parse_file_url:
-        return
+        return f"Document {document_id} has no file URL. Skipping."
 
-    # Download to media/files/
-    work_dir = os.path.join(settings.MEDIA_ROOT, 'files', str(doc.id))
-    os.makedirs(work_dir, exist_ok=True)
+    # Vaqtinchalik faylni to'g'ridan-to'g'ri 'docpic_files' papkasiga yuklaymiz
     ext = Path(doc.parse_file_url).suffix or '.bin'
-    work_path = os.path.join(work_dir, f"source{ext}")
-
-    with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
-        r.raise_for_status()
-        with open(work_path, 'wb') as f:
-            for chunk in r.iter_content(8192):
-                f.write(chunk)
+    work_path = os.path.join(settings.DOCPIC_FILES_DIR, f"{doc.id}{ext}")
 
     images: list[Image.Image] = []
+
     try:
+        # 1. Faylni yuklab olish
+        with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
+            r.raise_for_status()
+            with open(work_path, 'wb') as f:
+                for chunk in r.iter_content(8192):
+                    f.write(chunk)
+
+        # 2. Faylni rasmga aylantirish
         if ext.lower() == '.pdf':
-            images = convert_from_path(work_path, dpi=150, first_page=1, last_page=max_pages)
-        else:
-            # Fallback: try bytes (some URLs might be pdf) else render simple text preview
+            try:
+                images = convert_from_path(work_path, dpi=150, first_page=1, last_page=max_pages)
+            except (PDFPageCountError, PDFSyntaxError) as e:
+                logger.warning(f"PDF konvertatsiya xatosi (DocID: {doc.id}): {e}")
+                pass
+
+        # Agar PDF bo'lmasa yoki PDF xato bo'lsa, boshqa usullarni sinab ko'rish
+        if not images:
             try:
                 with open(work_path, 'rb') as fb:
                     data = fb.read()
                 images = convert_from_bytes(data, dpi=150, first_page=1, last_page=max_pages)
-            except Exception:
+            except Exception as e:
+                # Barcha usullar ish bermasa, matnli rasm yaratish
                 img = Image.new('RGB', (1024, 1448), color=(245, 247, 250))
                 draw = ImageDraw.Draw(img)
-                preview = (doc.product.title or 'Document')[:120]
-                draw.text((40, 60), preview + "\nPreview not available", fill=(30, 41, 59))
+                preview_text = (getattr(doc, 'product', None) and doc.product.title or 'Hujjat')[:120]
+                draw.text((40, 60), f"{preview_text}\n\n(Rasmli ko'rinish mavjud emas)", fill=(30, 41, 59))
                 images = [img]
+                logger.warning(f"Bytes konvertatsiya xatosi (DocID: {doc.id}): {e}")
 
-        # Resize and watermark, then save to DocumentImage
+        # 3. Rasmlarni qayta ishlash va saqlash
         for idx, pil_img in enumerate(images[:max_pages], start=1):
+            # O'lchamini o'zgartirish (web uchun optimizatsiya)
             w = 1280
             ratio = w / pil_img.width
             h = int(pil_img.height * ratio)
-            pil_img = pil_img.resize((w, h))
+            pil_img = pil_img.resize((w, h), Image.Resampling.LANCZOS)
+
+            # Suv belgisini qo'shish
             wm = add_watermark_to_image(pil_img, text="fayltop.cloud")
 
-            # Save to file storage via ImageField
+            # Xotirada JPEG formatiga o'tkazish
             buf = BytesIO()
-            wm.save(buf, format='JPEG', quality=82)
+            wm.save(buf, format='JPEG', quality=82, progressive=True, optimize=True)
             buf.seek(0)
 
-            # Build filename
             filename = f"page_{idx}.jpg"
-            # Remove existing same page
+
+            # Shu sahifa uchun eski rasmni o'chirish (qayta ishlash holatlari uchun)
             DocumentImage.objects.filter(document=doc, page_number=idx).delete()
+
+            # Yangi rasmni model orqali saqlash
             di = DocumentImage(document=doc, page_number=idx)
-            from django.core.files.base import ContentFile
             di.image.save(filename, ContentFile(buf.read()), save=True)
 
     finally:
-        # Remove working file
+        # 4. Vaqtinchalik faylni o'chirish
         try:
             if os.path.exists(work_path):
                 os.remove(work_path)
         except Exception:
+            # Agar o'chirishda xato bo'lsa ham, vazifani to'xtatmaslik
             pass
 
-    return True
-
-    try:
-        redis_url = getattr(settings, 'CELERY_BROKER_URL', 'redis://redis:6379/0')
-        r = redis.from_url(redis_url)
-
-        with r.lock("telegram_api_lock", timeout=60, blocking_timeout=65):
-            last_send_time_str = r.get("last_telegram_send_time")
-            if last_send_time_str:
-                last_send_time = datetime.fromisoformat(last_send_time_str.decode('utf-8'))
-                time_since_last = datetime.now() - last_send_time
-                min_interval = timedelta(seconds=2)  # Telegram uchun 2 soniya oraliq
-
-                if time_since_last < min_interval:
-                    wait_time = (min_interval - time_since_last).total_seconds()
-                    if wait_time > 0:
-                        logger.info(f"Telegram rate limit uchun {wait_time:.2f} soniya kutamiz...")
-                        time.sleep(wait_time)
-
-            r.set("last_telegram_send_time", datetime.now().isoformat())
-
-    except Exception as e:
-        logger.error(f"Redis rate limit lock'da xato: {e}. 5 soniya kutamiz.")
-        time.sleep(5)
+    return f"Successfully generated {len(images)} images for document {document_id}."
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3)
@@ -230,9 +286,21 @@ def process_document_pipeline(self, document_id):
         try:
             file_extension = Path(doc.parse_file_url).suffix
             if not file_extension: raise ValueError("Fayl kengaytmasi topilmadi.")
+            
+            # Faqat /tmp papkasida fayl yaratamiz
+            temp_dir = '/tmp/filefinder_downloads'
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_file_path = os.path.join(temp_dir, f"{doc.id}{file_extension}")
+            
+            # Media papkasini ham yaratamiz (agar muvaffaqiyatli bo'lsa)
             media_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
-            os.makedirs(media_dir, exist_ok=True)
-            file_path_str = os.path.join(media_dir, f"{doc.id}{file_extension}")
+            try:
+                os.makedirs(media_dir, exist_ok=True)
+                file_path_str = os.path.join(media_dir, f"{doc.id}{file_extension}")
+            except:
+                # Agar media papkasida xato bo'lsa, faqat temp ishlatamiz
+                file_path_str = temp_file_path
+            
         except Exception as path_err:
             log_document_error(doc, 'other', f"Fayl yo'lini aniqlashda xato: {path_err}", self.request.retries + 1)
             doc.pipeline_running = False
@@ -247,10 +315,24 @@ def process_document_pipeline(self, document_id):
                 logger.info(f"[1. Yuklash] Boshlandi: {document_id}")
                 doc.download_status = 'processing'
                 doc.save(update_fields=['download_status'])
+                
+                # Faqat /tmp papkasida fayl yuklaymiz
                 with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                     r.raise_for_status()
-                    with open(file_path_str, "wb") as f:
+                    with open(temp_file_path, "wb") as f:
                         for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
+                
+                # Media papkasiga ko'chirishga harakat qilamiz
+                if file_path_str != temp_file_path:
+                    try:
+                        import shutil
+                        shutil.copy2(temp_file_path, file_path_str)
+                        logger.info(f"[1. Yuklash] Media papkasiga ko'chirildi: {file_path_str}")
+                    except Exception as copy_err:
+                        logger.warning(f"[1. Yuklash] Media papkasiga ko'chirishda xato: {copy_err}")
+                        # Agar ko'chirishda xato bo'lsa, temp faylni ishlatamiz
+                        file_path_str = temp_file_path
+                
                 doc.download_status = 'completed'
                 doc.save(update_fields=['download_status'])
                 logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
@@ -264,11 +346,17 @@ def process_document_pipeline(self, document_id):
         if doc.parse_status != 'completed':
             try:
                 logger.info(f"[2. Parse] Boshlandi: {document_id}")
-                if not os.path.exists(file_path_str):
-                    raise FileNotFoundError(f"Parse qilish uchun fayl topilmadi: {file_path_str}")
+                
+                # Avval media papkasidagi faylni tekshiramiz, keyin temp papkasidagini
+                parse_file_path = file_path_str
+                if not os.path.exists(parse_file_path):
+                    parse_file_path = temp_file_path
+                    if not os.path.exists(parse_file_path):
+                        raise FileNotFoundError(f"Parse qilish uchun fayl topilmadi: {file_path_str} va {temp_file_path}")
+                
                 doc.parse_status = 'processing'
                 doc.save(update_fields=['parse_status'])
-                parsed = tika_parser.from_file(file_path_str)
+                parsed = tika_parser.from_file(parse_file_path)
                 content = (parsed.get("content") or "").strip()
                 with transaction.atomic():
                     product = doc.product
@@ -307,21 +395,26 @@ def process_document_pipeline(self, document_id):
         if doc.telegram_status != 'completed':
             try:
                 logger.info(f"[4. Telegram] Boshlandi: {document_id}")
-                if not os.path.exists(file_path_str):
-                    raise FileNotFoundError(f"Telegramga yuborish uchun fayl topilmadi: {file_path_str}")
+                
+                # Avval media papkasidagi faylni tekshiramiz, keyin temp papkasidagini
+                telegram_file_path = file_path_str
+                if not os.path.exists(telegram_file_path):
+                    telegram_file_path = temp_file_path
+                    if not os.path.exists(telegram_file_path):
+                        raise FileNotFoundError(f"Telegramga yuborish uchun fayl topilmadi: {file_path_str} va {temp_file_path}")
 
                 doc.telegram_status = 'processing'
                 doc.save(update_fields=['telegram_status'])
 
-                if os.path.getsize(file_path_str) > TELEGRAM_MAX_FILE_SIZE_BYTES:
+                if os.path.getsize(telegram_file_path) > TELEGRAM_MAX_FILE_SIZE_BYTES:
                     doc.telegram_status = 'skipped'
                     logger.warning(f"[4. Telegram] Fayl hajmi katta (>49MB), o'tkazib yuborildi: {doc.id}")
                 else:
                     wait_for_telegram_rate_limit()
                     caption = f"*{doc.product.title}*\n\nID: `{doc.id}`"
                     url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
-                    with open(file_path_str, "rb") as f:
-                        files = {"document": (Path(file_path_str).name, f)}
+                    with open(telegram_file_path, "rb") as f:
+                        files = {"document": (Path(telegram_file_path).name, f)}
                         data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
                         response = make_retry_session().post(url, files=files, data=data, timeout=180)
                     resp_data = response.json()
@@ -339,23 +432,23 @@ def process_document_pipeline(self, document_id):
 
                 # IDEAL HOLAT TEKSHIRUVI (4 shart)
                 has_parsed_content = (
-                    hasattr(doc, 'product') and
-                    doc.product is not None and
-                    doc.product.parsed_content is not None and
-                    doc.product.parsed_content.strip() != ''
+                        hasattr(doc, 'product') and
+                        doc.product is not None and
+                        doc.product.parsed_content is not None and
+                        doc.product.parsed_content.strip() != ''
                 )
-                
+
                 has_telegram_file = (
-                    doc.telegram_file_id is not None and
-                    doc.telegram_file_id.strip() != ''
+                        doc.telegram_file_id is not None and
+                        doc.telegram_file_id.strip() != ''
                 )
-                
+
                 is_indexed = (doc.index_status == 'completed')
                 pipeline_not_running = (not doc.pipeline_running)
-                
+
                 is_ideal_state = (
-                    has_parsed_content and has_telegram_file and 
-                    is_indexed and pipeline_not_running
+                        has_parsed_content and has_telegram_file and
+                        is_indexed and pipeline_not_running
                 )
 
                 if is_ideal_state:
@@ -367,8 +460,7 @@ def process_document_pipeline(self, document_id):
                     doc.index_status = 'completed'
                     doc.telegram_status = 'completed'
                     doc.delete_status = 'completed'
-                    doc.save(update_fields=['telegram_file_id', 'telegram_status', 'completed', 'pipeline_running',
-                                            'download_status', 'parse_status', 'index_status', 'delete_status'])
+                    doc.save()  # Barcha fieldlarni saqlash uchun update_fields ni olib tashlaymiz
                     logger.info(f"[PIPELINE COMPLETED] ✅ Hujjat yakunlandi: {document_id}")
                 else:
                     doc.save(update_fields=['telegram_file_id', 'telegram_status'])
@@ -380,6 +472,9 @@ def process_document_pipeline(self, document_id):
                 raise
 
         # Barcha bosqichlar muvaffaqiyatli o'tdi
+        # Oxirgi save - completed statusini tekshirish uchun
+        doc = Document.objects.get(id=document_id)
+        doc.save()  # Model save metodini chaqiramiz
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
 
     except Exception as pipeline_error:
@@ -404,12 +499,12 @@ def process_document_pipeline(self, document_id):
 
             # Agar hujjat ideal holatga kelgan bo'lsa, faylni o'chiramiz
             has_parsed_content = (
-                hasattr(doc, 'product') and 
-                doc.product is not None and 
-                doc.product.parsed_content is not None and 
-                doc.product.parsed_content.strip() != ''
+                    hasattr(doc, 'product') and
+                    doc.product is not None and
+                    doc.product.parsed_content is not None and
+                    doc.product.parsed_content.strip() != ''
             )
-            
+
             is_ideal_state = (
                     doc.telegram_file_id is not None and doc.telegram_file_id.strip() != '' and
                     has_parsed_content
@@ -421,15 +516,30 @@ def process_document_pipeline(self, document_id):
                 # ...vazifa barcha qayta urinishlardan so'ng ham muvaffaqiyatsiz bo'lsa YOKI...
                 # ...hujjat bajarilmay qolgan bo'lsa (pending holatda)
                 should_delete = (
-                    is_ideal_state or 
-                    (self.request.retries >= self.max_retries) or
-                    (doc.parse_status == 'pending' and doc.index_status == 'pending' and doc.telegram_status == 'pending')
+                        is_ideal_state or
+                        (self.request.retries >= self.max_retries) or
+                        (
+                                doc.parse_status == 'pending' and doc.index_status == 'pending' and doc.telegram_status == 'pending')
                 )
-                
+
                 if should_delete:
-                    os.remove(file_path_str)
+                    # Avval media papkasidagi faylni o'chiramiz
+                    if os.path.exists(file_path_str):
+                        try:
+                            os.remove(file_path_str)
+                            logger.info(f"[DELETE] Media fayl o'chirildi: {file_path_str}")
+                        except:
+                            pass
+                    
+                    # Keyin temp papkasidagi faylni ham o'chiramiz
+                    if os.path.exists(temp_file_path):
+                        try:
+                            os.remove(temp_file_path)
+                            logger.info(f"[DELETE] Temp fayl o'chirildi: {temp_file_path}")
+                        except:
+                            pass
+                    
                     doc.delete_status = 'completed'
-                    logger.info(f"[DELETE] Fayl o'chirildi: {file_path_str}")
 
             # Pipeline'ni yakunlaymiz (qulfni ochamiz)
             doc.pipeline_running = False
@@ -496,10 +606,10 @@ def cleanup_files_task():
 
                     # Debug: hujjat holatini ko'rsatish
                     has_parsed_content = (
-                        hasattr(doc, 'product') and 
-                        doc.product is not None and 
-                        doc.product.parsed_content is not None and 
-                        doc.product.parsed_content.strip() != ''
+                            hasattr(doc, 'product') and
+                            doc.product is not None and
+                            doc.product.parsed_content is not None and
+                            doc.product.parsed_content.strip() != ''
                     )
                     logger.info(
                         f"🔍 HUJJAT HOLATI: {filename} - parse:{doc.parse_status}, index:{doc.index_status}, telegram_id:{bool(doc.telegram_file_id)}, parsed_content:{has_parsed_content}, pipeline:{doc.pipeline_running}")
@@ -637,25 +747,25 @@ def soft_uz_process_documents():
                 # 2. telegram_file_id mavjud va bo'sh emas
                 # 3. pipeline_running = False
                 # 4. index_status = 'completed'
-                
+
                 has_parsed_content = (
-                    hasattr(locked_doc, 'product') and
-                    locked_doc.product is not None and
-                    locked_doc.product.parsed_content is not None and
-                    locked_doc.product.parsed_content.strip() != ''
+                        hasattr(locked_doc, 'product') and
+                        locked_doc.product is not None and
+                        locked_doc.product.parsed_content is not None and
+                        locked_doc.product.parsed_content.strip() != ''
                 )
-                
+
                 has_telegram_file = (
-                    locked_doc.telegram_file_id is not None and
-                    locked_doc.telegram_file_id.strip() != ''
+                        locked_doc.telegram_file_id is not None and
+                        locked_doc.telegram_file_id.strip() != ''
                 )
-                
+
                 is_indexed = (locked_doc.index_status == 'completed')
                 pipeline_not_running = (not locked_doc.pipeline_running)
-                
+
                 is_ideal_state = (
-                    has_parsed_content and has_telegram_file and 
-                    is_indexed and pipeline_not_running
+                        has_parsed_content and has_telegram_file and
+                        is_indexed and pipeline_not_running
                 )
 
                 if is_ideal_state:

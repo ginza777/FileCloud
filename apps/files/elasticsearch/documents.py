@@ -163,28 +163,44 @@ class DocumentIndex(Document):
             return 0
 
     @classmethod
-    def search_documents(cls, query=None, completed=None):
-        """Search documents with optional filters."""
+    def search_documents(cls, query=None, completed=None, deep=False):
+        """
+        Search for documents with configurable deep search option.
+
+        Args:
+            query (str): Search query
+            completed (bool): Filter by completed status
+            deep (bool): If True, search in both title and parsed_content
+        """
         if not connections.get_connection():
             if not configure_elasticsearch():
                 logger.error("Cannot search documents: No Elasticsearch connection")
                 return None
 
-        try:
-            s = cls.search()
+        search = cls.search()
 
-            if query:
-                s = s.query('multi_match',
-                           query=query,
-                           fields=['title^3', 'parsed_content', 'slug'])
+        if completed is not None:
+            search = search.filter('term', completed=completed)
 
-            if completed is not None:
-                s = s.filter('term', completed=completed)
+        if query:
+            if deep:
+                # Deep search: Search in both title and parsed_content
+                search = search.query('multi_match',
+                    query=query,
+                    fields=['title', 'parsed_content'],
+                    operator='and'
+                )
+            else:
+                # Regular search: Search in title and slug
+                search = search.query('bool',
+                    should=[
+                        {'match': {'title': query}},
+                        {'match': {'slug': query}}
+                    ],
+                    minimum_should_match=1
+                )
 
-            return s.execute()
-        except Exception as e:
-            logger.error(f"Search failed: {e}")
-            return None
+        return search.execute()
 
 # Initialize the index
 DocumentIndex.init_index()

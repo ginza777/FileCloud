@@ -1,10 +1,46 @@
-import re
-import requests
-from django.conf import settings
-from apps.files.models import SiteToken
 import logging
+import re
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from apps.files.models import SiteToken
 
 logger = logging.getLogger(__name__)
+
+
+def make_retry_session(
+        retries=3,
+        backoff_factor=0.3,
+        status_forcelist=(500, 502, 504),
+        session=None,
+):
+    """
+    Create a requests session with retry capabilities.
+
+    Args:
+        retries (int): Number of retries
+        backoff_factor (float): Backoff factor between retries
+        status_forcelist (tuple): HTTP status codes to retry on
+        session (requests.Session, optional): Existing session to add retry to
+
+    Returns:
+        requests.Session: Session with retry capability
+    """
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
 
 def refresh_soff_token():
     """
@@ -47,6 +83,7 @@ def refresh_soff_token():
     except Exception as e:
         logger.error(f"Unexpected error while refreshing SOFF token: {str(e)}")
         return None
+
 
 def get_valid_soff_token():
     """

@@ -49,13 +49,13 @@ def search_documents(request):
     try:
         # Try Elasticsearch first
         try:
-            if is_deep_search:
-                # Deep search: search in both title and parsed_content
-                search_results = DocumentIndex.search_documents(query=query, completed=True, deep=True)
-            else:
-                # Regular search: search only in title
-                search_results = DocumentIndex.search_documents(query=query, completed=True, deep=False)
-            
+            # Both regular and deep search now handle completed=True by default
+            search_results = DocumentIndex.search_documents(
+                query=query,
+                completed=True,  # Always filter for completed=True
+                deep=is_deep_search
+            )
+
             if search_results and hasattr(search_results, 'hits'):
                 # Get total count
                 total_count = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
@@ -68,7 +68,6 @@ def search_documents(request):
                 results_data = []
                 for hit in paginated_hits:
                     try:
-                        # Get the product to include view/download counts
                         product = Product.objects.get(id=hit.meta.id)
                         results_data.append({
                             'id': product.id,
@@ -274,4 +273,3 @@ def increment_download_count(request, product_id):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
