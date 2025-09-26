@@ -6,7 +6,7 @@ from ...tasks import process_document_pipeline
 
 
 class Command(BaseCommand):
-    help = "Hujjatlarni holatini tekshirib, kerak bo'lsa tozalab, qayta ishlash uchun pipeline'ga yuboradi."
+    help = "Completed=False va pipeline_running=False bo'lgan barcha hujjatlarni pipeline'ga yuboradi."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -26,17 +26,19 @@ class Command(BaseCommand):
         else:
             self.stdout.write("Limit belgilanmagan, barcha nomzodlar tekshiriladi.")
 
-        # Qayta ishlash uchun nomzodlarni topamiz: hozirda ishlamayotgan barcha hujjatlar
-        candidate_docs = Document.objects.filter(pipeline_running=False).order_by('created_at')
+        # Completed=False va pipeline_running=False bo'lgan barcha hujjatlarni topamiz
+        candidate_docs = Document.objects.filter(
+            completed=False,
+            pipeline_running=False
+        ).order_by('created_at')
 
         total_candidates = candidate_docs.count()
-        self.stdout.write(f"Jami {total_candidates} ta nomzod topildi.")
+        self.stdout.write(f"Jami {total_candidates} ta nomzod topildi (completed=False, pipeline_running=False).")
 
         if limit:
             candidate_docs = candidate_docs[:limit]
 
         # Statistika uchun hisoblagichlar
-        updated_as_completed_count = 0
         queued_for_processing_count = 0
         skipped_as_locked_count = 0
 
@@ -47,61 +49,21 @@ class Command(BaseCommand):
                     # Poyga holatini oldini olish uchun qatorni qulflaymiz
                     locked_doc = Document.objects.select_for_update(nowait=True).get(pk=doc.pk)
 
-                    # IDEAL HOLAT QOIDASI (4 shart):
-                    # 1. parsed_content mavjud va bo'sh emas
-                    # 2. telegram_file_id mavjud va bo'sh emas
-                    # 3. pipeline_running = False
-                    # 4. index_status = 'completed'
-                    
-                    has_parsed_content = (
-                        hasattr(locked_doc, 'product') and 
-                        locked_doc.product is not None and 
-                        locked_doc.product.parsed_content is not None and 
-                        locked_doc.product.parsed_content.strip() != ''
-                    )
-                    
-                    has_telegram_file = (
-                        locked_doc.telegram_file_id is not None and
-                        locked_doc.telegram_file_id.strip() != ''
-                    )
-                    
-                    is_indexed = (locked_doc.index_status == 'completed')
-                    pipeline_not_running = (not locked_doc.pipeline_running)
-                    
-                    is_ideal_state = (
-                        has_parsed_content and has_telegram_file and 
-                        is_indexed and pipeline_not_running
-                    )
+                    # Barcha statuslarni pending qilib, navbatga qo'shamiz
+                    locked_doc.download_status = 'pending'
+                    locked_doc.parse_status = 'pending'
+                    locked_doc.index_status = 'pending'
+                    locked_doc.telegram_status = 'pending'
+                    locked_doc.delete_status = 'pending'
+                    locked_doc.completed = False
+                    locked_doc.pipeline_running = False
+                    locked_doc.save()
 
-                    if is_ideal_state:
-                        # IDEAL HOLAT: Barcha statuslarni completed qilamiz
-                        locked_doc.completed = True
-                        locked_doc.pipeline_running = False
-                        locked_doc.download_status = 'completed'
-                        locked_doc.parse_status = 'completed'
-                        locked_doc.index_status = 'completed'
-                        locked_doc.telegram_status = 'completed' 
-                        locked_doc.delete_status = 'completed'
-                        locked_doc.save()
+                    # Hujjatni navbatga qo'shamiz
+                    process_document_pipeline.apply_async(args=[locked_doc.id])
 
-                        self.stdout.write(self.style.SUCCESS(f"✅ Holati to'g'rilandi (yakunlangan): {locked_doc.id}"))
-                        updated_as_completed_count += 1
-                    else:
-                        # Hujjat ideal holatda emas, uni tozalab, navbatga qo'shamiz
-                        locked_doc.download_status = 'pending'
-                        locked_doc.parse_status = 'pending'
-                        locked_doc.index_status = 'pending'
-                        locked_doc.telegram_status = 'pending'
-                        locked_doc.delete_status = 'pending'
-                        locked_doc.completed = False
-                        # pipeline_running ni Celery task o'zi True qiladi, biz False holatda saqlaymiz
-                        locked_doc.save()
-
-                        # Tozalangan hujjatni navbatga qo'shamiz
-                        process_document_pipeline.apply_async(args=[locked_doc.id])
-
-                        self.stdout.write(self.style.HTTP_INFO(f"➡️  Navbatga qo'shildi (pending): {locked_doc.id}"))
-                        queued_for_processing_count += 1
+                    self.stdout.write(self.style.HTTP_INFO(f"➡️  Navbatga qo'shildi: {locked_doc.id}"))
+                    queued_for_processing_count += 1
 
             except DatabaseError:
                 # Agar `nowait=True` tufayli qator qulflangan bo'lsa, bu xato keladi.
@@ -114,7 +76,6 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"❌ Hujjatni ({doc.id}) navbatga qo'shishda kutilmagan xato: {e}"))
 
         self.stdout.write(self.style.SUCCESS("\n--- JARAYON YAKUNLANDI: STATISTIKA ---"))
-        self.stdout.write(f"✅ Yakunlangan deb topilib, holati yangilanganlar: {updated_as_completed_count} ta")
-        self.stdout.write(f"➡️  Qayta ishlash uchun navbatga qo'shilganlar: {queued_for_processing_count} ta")
+        self.stdout.write(f"➡️  Navbatga qo'shilganlar: {queued_for_processing_count} ta")
         self.stdout.write(f"⚠️  Boshqa jarayon band qilgani uchun o'tkazib yuborilganlar: {skipped_as_locked_count} ta")
         self.stdout.write(self.style.SUCCESS("-----------------------------------------"))
