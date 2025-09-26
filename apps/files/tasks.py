@@ -120,8 +120,8 @@ def generate_document_images_task(self, document_id: str, max_pages: int = 5):
     if not doc.parse_file_url:
         return
 
-    # Download to media/file/
-    work_dir = os.path.join(settings.MEDIA_ROOT, 'file', str(doc.id))
+    # Download to media/files/
+    work_dir = os.path.join(settings.MEDIA_ROOT, 'files', str(doc.id))
     os.makedirs(work_dir, exist_ok=True)
     ext = Path(doc.parse_file_url).suffix or '.bin'
     work_path = os.path.join(work_dir, f"source{ext}")
