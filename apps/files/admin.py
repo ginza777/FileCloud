@@ -83,3 +83,12 @@ class DocumentImageAdmin(admin.ModelAdmin):
     list_display = ('document', 'page_number', 'created_at')
     search_fields = ('document__id',)
     list_filter = ('document',)
+
+    # Optimizing the admin panel for better performance
+    list_select_related = ('document',)  # Use select_related for foreign key optimization
+    raw_id_fields = ('document',)  # Use raw_id_fields for large foreign key dropdowns
+
+    def get_queryset(self, request):
+        # Use only() to limit the fields fetched from the database
+        queryset = super().get_queryset(request)
+        return queryset.only('document', 'page_number', 'created_at')
