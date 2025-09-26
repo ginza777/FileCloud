@@ -308,7 +308,7 @@
         let currentPage = 1;
         let totalPages = 1;
         let allFiles = [];
-        let filesPerPage = 9;
+        let filesPerPage = 12;
         let isSportMode = false;
         let isDeepMode = false;
 
@@ -488,7 +488,7 @@
                 indicator.className = 'mt-4 text-center';
                 indicator.innerHTML = `
                     <p class="text-sm ${isDeepMode ? 'text-red-400' : 'text-blue-600'} font-medium">
-                        ${isDeepMode ? 'Chuqurlashtirilgan Qidiruv' : 'Oddiy Qidiruv'} - ${allFiles.length} ta natija topildi
+                        ${isDeepMode ? '剥 Chuqurlashtirilgan Qidiruv' : '博 Oddiy Qidiruv'} - ${allFiles.length} ta natija topildi
                     </p>
                 `;
 

@@ -32,9 +32,13 @@ def index(request):
 
 @api_view(['GET'])
 def search_documents(request):
-    """API endpoint for searching documents"""
+    """API endpoint for searching documents with pagination"""
     query = request.GET.get('q', '')
     is_deep_search = request.GET.get('deep', 'false').lower() == 'true'
+    
+    # Get pagination parameters
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 9))
     
     if not query:
         return Response(
@@ -53,9 +57,16 @@ def search_documents(request):
                 search_results = DocumentIndex.search_documents(query=query, completed=True, deep=False)
             
             if search_results and hasattr(search_results, 'hits'):
+                # Get total count
+                total_count = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
+                
+                # Calculate pagination
+                offset = (page - 1) * page_size
+                paginated_hits = search_results.hits[offset:offset + page_size]
+                
                 # Serialize the results from Elasticsearch
                 results_data = []
-                for hit in search_results.hits:
+                for hit in paginated_hits:
                     try:
                         # Get the product to include view/download counts
                         product = Product.objects.get(id=hit.meta.id)
@@ -72,10 +83,18 @@ def search_documents(request):
                         })
                     except Product.DoesNotExist:
                         continue
+                
+                # Calculate pagination info
+                total_pages = (total_count + page_size - 1) // page_size
                         
                 return Response({
                     'results': results_data,
-                    'total': search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(results_data),
+                    'total': total_count,
+                    'page': page,
+                    'page_size': page_size,
+                    'total_pages': total_pages,
+                    'has_next': page < total_pages,
+                    'has_previous': page > 1,
                     'search_type': 'deep' if is_deep_search else 'regular'
                 })
         except Exception as es_error:
@@ -84,18 +103,27 @@ def search_documents(request):
         # Fallback to database search if Elasticsearch fails
         if is_deep_search:
             # Deep search: search in both title and parsed_content
-            products = Product.objects.filter(
+            products_query = Product.objects.filter(
                 document__completed=True
             ).filter(
                 Q(title__icontains=query) | 
                 Q(parsed_content__icontains=query)
-            ).select_related('document')[:20]
+            ).select_related('document')
         else:
-            # Regular search: search only in title
-            products = Product.objects.filter(
-                document__completed=True,
-                title__icontains=query
-            ).select_related('document')[:20]
+            # Regular search: search in title and slug
+            products_query = Product.objects.filter(
+                document__completed=True
+            ).filter(
+                Q(title__icontains=query) | 
+                Q(slug__icontains=query)
+            ).select_related('document')
+        
+        # Get total count
+        total_count = products_query.count()
+        
+        # Calculate pagination
+        offset = (page - 1) * page_size
+        products = products_query[offset:offset + page_size]
         
         results_data = []
         for product in products:
@@ -109,10 +137,18 @@ def search_documents(request):
                 'document_id': str(product.document.id),
                 'telegram_file_id': product.document.telegram_file_id
             })
+        
+        # Calculate pagination info
+        total_pages = (total_count + page_size - 1) // page_size
             
         return Response({
             'results': results_data,
-            'total': len(results_data),
+            'total': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages,
+            'has_next': page < total_pages,
+            'has_previous': page > 1,
             'search_type': 'deep' if is_deep_search else 'regular'
         })
     except Exception as e:
@@ -133,11 +169,24 @@ def recent_documents(request):
 
 @api_view(['GET'])
 def top_downloads(request):
-    """API endpoint for getting top 9 most downloaded files"""
+    """API endpoint for getting top downloaded files with pagination"""
     try:
+        # Get pagination parameters
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 9))
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Get total count
+        total_count = Product.objects.filter(
+            document__completed=True
+        ).count()
+        
+        # Get paginated results
         products = Product.objects.filter(
             document__completed=True
-        ).select_related('document').order_by('-download_count')[:9]
+        ).select_related('document').order_by('-download_count')[offset:offset + page_size]
         
         results = []
         for product in products:
@@ -152,9 +201,17 @@ def top_downloads(request):
                 'telegram_file_id': product.document.telegram_file_id
             })
         
+        # Calculate pagination info
+        total_pages = (total_count + page_size - 1) // page_size
+        
         return Response({
             'results': results,
-            'total': len(results)
+            'total': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages,
+            'has_next': page < total_pages,
+            'has_previous': page > 1
         })
     except Exception as e:
         return Response(

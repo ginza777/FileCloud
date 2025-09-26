@@ -21,3 +21,4 @@ tika==2.6.0
 whitenoise
 django-cacheops==7.2
 Pillow
+pdf2image==1.17.0
