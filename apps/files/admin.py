@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ParseProgress, Document, Product, SiteToken, DocumentError
+from .models import ParseProgress, Document, Product, SiteToken, DocumentError, DocumentImage
 
 
 class ProductInline(admin.StackedInline):
@@ -17,6 +17,13 @@ class DocumentErrorInline(admin.TabularInline):
     fields = ('error_type', 'error_message', 'celery_attempt', 'created_at')
 
 
+class DocumentImageInline(admin.TabularInline):
+    model = DocumentImage
+    extra = 1
+    fields = ('page_number', 'image', 'created_at')
+    readonly_fields = ('created_at',)
+
+
 @admin.register(ParseProgress)
 class ParseProgressAdmin(admin.ModelAdmin):
     list_display = ('id', 'last_page', 'total_pages_parsed', 'last_run_at', 'created_at')
@@ -31,7 +38,7 @@ class DocumentAdmin(admin.ModelAdmin):
         'telegram_status', 'delete_status','pipeline_running','completed','telegram_file_id', 'created_at', 'updated_at'
     )
     ordering = ('-created_at',)
-    inlines = [ProductInline, DocumentErrorInline]
+    inlines = [ProductInline, DocumentErrorInline, DocumentImageInline]
     search_fields = (
         'id', 'parse_file_url', 'telegram_file_id',
     )
@@ -69,3 +76,10 @@ class SiteTokenAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     search_fields = ('id', 'name', 'token', 'auth_token')
     list_filter = ('created_at', 'updated_at')
+
+
+@admin.register(DocumentImage)
+class DocumentImageAdmin(admin.ModelAdmin):
+    list_display = ('document', 'page_number', 'created_at')
+    search_fields = ('document__id',)
+    list_filter = ('document',)

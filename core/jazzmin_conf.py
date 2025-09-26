@@ -7,9 +7,9 @@ JAZZMIN_SETTINGS = {
     "copyright": "FaylTop Team",
     "user_avatar": None,
     # Logo
-    "site_logo": "icon.png",
+    "site_logo": "fayltop_transparent.svg",
     "site_logo_classes": "img-circle",
-    "site_icon": "icon.png",
+    "site_icon": "fayltop_transparent.svg",
     ############
     # Top Menu #
     ############
@@ -55,6 +55,7 @@ JAZZMIN_SETTINGS = {
         "django_celery_beat.intervalschedule": "fas fa-stopwatch",
         "django_celery_beat.solarschedule": "fas fa-sun",
         "django_celery_beat.clockedschedule": "fas fa-clock",
+        "files.documentimage": "fas fa-image",
     },
     # # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",
