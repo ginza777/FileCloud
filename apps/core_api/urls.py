@@ -50,4 +50,7 @@ urlpatterns = [
     
     path('files/parse-progress/', views.ParseProgressListCreateView.as_view(), name='parse-progress-list-create'),
     path('files/parse-progress/<int:pk>/', views.ParseProgressDetailView.as_view(), name='parse-progress-detail'),
+    
+    # Feedback
+    path('feedback/', views.FeedbackCreateView.as_view(), name='feedback-create'),
 ]

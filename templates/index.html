@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FaylTop - O'zbek Fayl Qidiruvi</title>
+    <title>FayltopAi fayl qidiruv</title>
     <link rel="icon" type="image/x-icon" href="{% static 'icon.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/feather-icons"></script>
@@ -25,7 +25,7 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; color: #0f172a; background: #f8fafc; }
         
         /* Custom animations and effects */
         @keyframes fadeInUp {
@@ -166,11 +166,86 @@
             box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
         }
         
+        /* Modern hover effects */
+        .hover-bloom {
+            transition: filter 0.35s ease, box-shadow 0.35s ease;
+        }
+        .hover-bloom:hover {
+            filter: saturate(1.15) contrast(1.03);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+        }
+        .hover-shadow-xl {
+            transition: box-shadow 0.35s ease, transform 0.2s ease;
+        }
+        .hover-shadow-xl:hover {
+            box-shadow: 0 18px 55px rgba(0,0,0,0.22);
+            transform: translateY(-2px);
+        }
+        .hover-glass-pop {
+            transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+        .hover-glass-pop:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.28);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 10px 30px rgba(0,0,0,0.16);
+        }
+        .hover-underline-slide {
+            position: relative;
+        }
+        .hover-underline-slide::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: -2px;
+            width: 0;
+            height: 2px;
+            background: currentColor;
+            transition: width 0.3s ease, left 0.3s ease;
+        }
+        .hover-underline-slide:hover::after {
+            width: 100%;
+            left: 0;
+        }
+        
         /* Gradient animations */
         .gradient-animated {
-            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+            background: linear-gradient(-45deg, #4f46e5, #0ea5e9, #14b8a6, #60a5fa);
             background-size: 400% 400%;
             animation: gradientShift 8s ease infinite;
+        }
+
+        /* Hero animated background (video/image) */
+        .hero-bg-container {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .hero-bg-video,
+        .hero-bg-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+            filter: saturate(1.1) contrast(1.05) brightness(0.9);
+        }
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(1200px 600px at 10% -10%, rgba(0,0,0,0.25), transparent 60%),
+                        linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 100%);
+            z-index: 1;
+        }
+        .ignite-mode .hero-overlay {
+            background: radial-gradient(1200px 600px at 10% -10%, rgba(249, 115, 22, 0.20), transparent 60%),
+                        linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%);
         }
         
         /* Loading shimmer effect */
@@ -178,6 +253,28 @@
             background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
             background-size: 200px 100%;
             animation: shimmer 1.5s infinite;
+        }
+
+        /* iOS-like modal/backdrop transitions */
+        .ios-modal {
+            opacity: 0;
+            backdrop-filter: blur(0px);
+            transition: opacity 420ms ease, backdrop-filter 420ms ease;
+        }
+        .ios-modal.open {
+            opacity: 1;
+            backdrop-filter: blur(8px);
+        }
+        .ios-sheet {
+            transform: translateY(24px) scale(0.98);
+            opacity: 0;
+            transition: transform 520ms cubic-bezier(.22,.61,.36,1), opacity 380ms ease, box-shadow 380ms ease;
+            will-change: transform, opacity;
+        }
+        .ios-modal.open .ios-sheet {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.25);
         }
         
         /* Staggered animations */
@@ -206,73 +303,79 @@
             background: linear-gradient(45deg, #5a67d8, #6b46c1);
         }
         
-        /* Sport Mode Effects */
-        .sport-mode {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%) !important;
-            animation: sportModePulse 0.5s ease-in-out;
+        /* Ignite Mode (fiery orange, glass, 3D) */
+        :root {
+            --fire-50: #fff7ed;
+            --fire-100: #ffedd5;
+            --fire-200: #fed7aa;
+            --fire-300: #fdba74;
+            --fire-400: #fb923c;
+            --fire-500: #f97316;
+            --fire-600: #ea580c;
+            --fire-700: #c2410c;
+            --fire-800: #9a3412;
+            --fire-900: #7c2d12;
         }
         
-        .sport-mode .gradient-animated {
-            background: linear-gradient(-45deg, #dc2626, #b91c1c, #991b1b, #7f1d1d) !important;
-            background-size: 400% 400% !important;
-            animation: sportModeShift 2s ease infinite !important;
+        .ignite-mode {
+            background: radial-gradient(1200px 600px at 20% -10%, rgba(249, 115, 22, 0.35), transparent 60%),
+                        radial-gradient(900px 500px at 110% 10%, rgba(251, 146, 60, 0.25), transparent 60%),
+                        linear-gradient(135deg, var(--fire-600) 0%, var(--fire-700) 40%, var(--fire-800) 100%) !important;
+            position: relative;
+            isolation: isolate;
+            transition: background 900ms ease, box-shadow 900ms ease;
         }
         
-        @keyframes sportModePulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
+        .ignite-mode::before {
+            content: '';
+            position: absolute;
+            inset: -10% -10% -10% -10%;
+            background: conic-gradient(from 180deg at 50% 50%, rgba(255,255,255,0.08), rgba(255,255,255,0.02), rgba(255,255,255,0.08));
+            filter: blur(40px);
+            pointer-events: none;
+            z-index: -1;
         }
         
-        @keyframes sportModeShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .ignite-mode .gradient-animated {
+            background: linear-gradient(-45deg, #ffedd5, #fb923c, #f97316, #ea580c);
+            background-size: 400% 400%;
+            animation: gradientShift 6s ease infinite;
         }
         
-        .sport-mode h1,
-        .sport-mode p {
-            color: #fef2f2 !important;
-            text-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+        .ignite-glass {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
         }
         
-        .sport-mode .search-shadow {
-            box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3) !important;
+        .ignite-glow {
+            box-shadow: 0 10px 40px rgba(249, 115, 22, 0.35), 0 0 0 1px rgba(249, 115, 22, 0.2);
         }
         
-        .sport-mode #searchBtn {
-            background: #dc2626 !important;
-            box-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+        .ignite-btn {
+            background: linear-gradient(135deg, var(--fire-500), var(--fire-700));
+            color: white !important;
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 600ms ease;
         }
         
-        .sport-mode #searchBtn:hover {
-            background: #b91c1c !important;
-            box-shadow: 0 0 30px rgba(220, 38, 38, 0.7);
+        .ignite-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 40px rgba(249, 115, 22, 0.45);
+            background: linear-gradient(135deg, var(--fire-400), var(--fire-600));
         }
         
-        .sport-mode #deepSearchBtn {
-            background: #991b1b !important;
-            box-shadow: 0 0 20px rgba(153, 27, 27, 0.5);
-            animation: sportModeGlow 1s ease-in-out infinite alternate;
+        .ignite-text-strong { color: #fff7ed !important; text-shadow: 0 8px 30px rgba(249, 115, 22, 0.35); }
+        
+        /* 3D tilt helper */
+        .tilt-3d {
+            transform-style: preserve-3d;
+            transition: transform 200ms ease, box-shadow 200ms ease;
+            will-change: transform;
         }
         
-        .sport-mode #deepSearchBtn:hover {
-            background: #7f1d1d !important;
-            box-shadow: 0 0 30px rgba(127, 29, 29, 0.7);
-        }
-        
-        @keyframes sportModeGlow {
-            from { box-shadow: 0 0 20px rgba(153, 27, 27, 0.5); }
-            to { box-shadow: 0 0 40px rgba(153, 27, 27, 0.8); }
-        }
-        
-        .sport-mode .text-blue-300 {
-            color: #fca5a5 !important;
-        }
-        
-        .sport-mode .text-green-300 {
-            color: #fca5a5 !important;
-        }
+        .tilt-3d > * { transform: translateZ(20px); }
         
         /* Search Mode Toggle Effects */
         .search-mode-toggle {
@@ -325,7 +428,8 @@
         
         .search-btn-deep {
             background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
-            animation: searchBtnDeepGlow 1.5s ease-in-out infinite alternate;
+            /* Combine glow and heartbeat-like pulsing without transform conflicts */
+            animation: searchBtnDeepGlow 1.5s ease-in-out infinite alternate, heartbeatGlow 2.2s ease-in-out infinite;
         }
         
         .search-btn-deep:hover {
@@ -339,6 +443,15 @@
             to { 
                 box-shadow: 0 0 30px rgba(220, 38, 38, 0.8);
             }
+        }
+        
+        /* Heartbeat-like effect via shadow + brightness (no transform) */
+        @keyframes heartbeatGlow {
+            0% { filter: brightness(1); box-shadow: 0 0 18px rgba(249, 115, 22, 0.45); }
+            14% { filter: brightness(1.06); box-shadow: 0 0 28px rgba(249, 115, 22, 0.55); }
+            28% { filter: brightness(1); box-shadow: 0 0 18px rgba(249, 115, 22, 0.45); }
+            42% { filter: brightness(1.06); box-shadow: 0 0 32px rgba(249, 115, 22, 0.6); }
+            70%, 100% { filter: brightness(1); box-shadow: 0 0 18px rgba(249, 115, 22, 0.45); }
         }
         
         /* Search Info Color Transitions */
@@ -371,8 +484,8 @@
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-white shadow-sm">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="#" class="text-primary font-bold text-2xl flex items-center">
-                <img src="{% static 'icon.png' %}" alt="FaylTop Logo" class="mr-2 w-8 h-8">
+            <a href="#" class="text-primary font-bold text-xl sm:text-2xl flex items-center">
+                <img src="{% static 'icon.png' %}" alt="FaylTop Logo" class="mr-2 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12">
                 FaylTop.Cloud
             </a>
             <div class="flex items-center space-x-4">
@@ -387,30 +500,46 @@
     </header>
 
     <!-- Hero Section -->
-    <section id="heroSection" class="gradient-bg gradient-animated text-white py-16 md:py-24 sport-mode-transition">
-        <div class="container mx-auto px-4 text-center">
-            <h1 class="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 animate-fadeInUp">O'zbek Fayl Qidiruvi</h1>
+    <section id="heroSection" class="relative gradient-bg gradient-animated text-white py-16 md:py-24 overflow-hidden">
+        <div class="hero-bg-container" aria-hidden="true">
+            <video class="hero-bg-video" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1920&auto=format&fit=crop" preload="metadata">
+                <source src="https://cdn.coverr.co/videos/coverr-aerial-clouds-6305/1080p.mp4" type="video/mp4">
+            </video>
+            <div class="hero-overlay"></div>
+        </div>
+        <div class="container mx-auto px-4 text-center relative z-10">
+            <h1 class="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 animate-fadeInUp">FayltopAi fayl qidiruv</h1>
             <p class="text-lg sm:text-xl md:text-2xl mb-6 sm:mb-10 max-w-3xl mx-auto animate-fadeInUp stagger-1">Sifatli va tayyor ishlardan foydalaning, vaqt va kuchingizni tejang.</p>
             
             <!-- Search Bar -->
-            <div class="max-w-4xl mx-auto bg-white rounded-full p-2 search-shadow animate-fadeInUp stagger-2">
+            <div class="max-w-4xl mx-auto bg-white rounded-full p-2 search-shadow animate-fadeInUp stagger-2 ignite-glass hover-glass-pop relative z-10">
                 <div class="flex flex-col sm:flex-row gap-2 items-center">
-                    <input id="searchInput" type="text" placeholder="Qaysi turdagi tayyor mahsulot qidirmoqdasiz?" class="w-full sm:flex-1 px-4 sm:px-6 py-3 rounded-full text-dark focus:outline-none text-sm sm:text-base hover-glow">
-                    <button id="searchBtn" class="flex-1 sm:flex-none bg-primary text-white px-4 sm:px-6 py-3 rounded-full hover:bg-blue-600 transition relative group text-sm sm:text-base ripple hover-scale" title="Qidirish">
+                    <div class="flex items-center gap-2 sm:gap-3 w-full sm:flex-1">
+                        <input id="searchInput" type="text" placeholder="Qaysi turdagi tayyor mahsulot qidirmoqdasiz?" class="w-full sm:flex-1 px-4 sm:px-6 py-3 rounded-full text-dark focus:outline-none text-sm sm:text-base hover-glow">
+                        <label class="hidden sm:flex items-center gap-2 text-xs text-gray-600 px-2 py-1 rounded-full bg-gray-100 border">
+                            <input id="deepToggleInline" type="checkbox" class="sr-only">
+                            <span class="relative inline-flex w-10 h-5 bg-gray-300 rounded-full transition-all duration-500">
+                                <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-500" id="deepKnob"></span>
+                            </span>
+                            <span>Chuqur</span>
+                        </label>
+                    </div>
+                    <button id="searchBtn" class="flex-1 sm:flex-none bg-primary text-white px-4 sm:px-6 py-3 rounded-full hover:bg-blue-600 transition relative group text-sm sm:text-base ripple hover-scale tilt-3d hover-bloom hover-shadow-xl" title="Qidirish">
                         <span>Qidirish</span>
                     </button>
                 </div>
             </div>
             
-            <!-- Search Mode Toggle -->
+            <!-- Deep Search Switch (ON/OFF) -->
             <div class="mt-6 flex justify-center">
-                <div class="bg-white/10 backdrop-blur-sm rounded-full p-1 flex">
-                    <button id="regularModeBtn" class="px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-blue-500 text-white shadow-lg">
-                        Oddiy Qidiruv
-                    </button>
-                    <button id="deepModeBtn" class="px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 text-white/70 hover:text-white">
-                        Chuqurlashtirilgan Qidiruv
-                    </button>
+                <div class="ignite-glass rounded-full px-4 py-3 flex items-center gap-3 select-none">
+                    <span class="text-white/80 text-sm">Chuqurlashtirilgan Qidiruv</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input id="deepToggle" type="checkbox" class="sr-only peer">
+                        <div class="w-16 h-8 bg-white/20 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-gradient-to-r peer-checked:from-orange-500 peer-checked:to-orange-700 transition-all duration-500"></div>
+                        <span class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-all duration-500 peer-checked:translate-x-8 shadow-md"></span>
+                        <span class="ml-3 text-sm text-white/80 peer-checked:text-white">ON</span>
+                    </label>
                 </div>
             </div>
             
@@ -440,39 +569,41 @@
         </div>
     </section>
 
-    <!-- How it Works -->
-    <section class="py-16 bg-white">
+    <!-- How it Works (Minimal) -->
+    <section class="py-8 bg-white">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-12">
-                <img src="https://soff.uz/static/img/star.svg" alt="Star" class="w-12 h-12 mx-auto mb-4">
-                <h2 class="text-3xl font-bold">Tayyor mahsulotlardan foydalanish qanday ishlaydi?</h2>
+            <div class="text-center mb-4">
+                <h2 class="text-xl font-semibold">Tayyor mahsulotlardan foydalanish qanday ishlaydi?</h2>
             </div>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="text-center">
-                    <div class="w-20 h-20 gradient-bg rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">1</div>
-                    <img src="https://soff.uz/static/img/catalogMenu.png" alt="Qidirish" class="w-24 h-24 mx-auto mb-4">
-                    <h3 class="font-semibold text-lg mb-2">Qidiring va tanlang</h3>
-                    <p class="text-gray-600">Katalogdan yoki qidiruv orqali sizga kerakli tayyor mahsulotni toping.</p>
-                        </div>
-                <div class="text-center">
-                    <div class="w-20 h-20 gradient-bg rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">2</div>
-                    <img src="https://soff.uz/static/img/catalogCoin.png" alt="Sotib olish" class="w-24 h-24 mx-auto mb-4">
-                    <h3 class="font-semibold text-lg mb-2">Sotib oling</h3>
-                    <p class="text-gray-600">Xavfsiz to'lov tizimi orqali mahsulotni sotib oling.</p>
-                        </div>
-                <div class="text-center">
-                    <div class="w-20 h-20 gradient-bg rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">3</div>
-                    <img src="https://soff.uz/static/img/catalogSecure.png" alt="Yuklab olish" class="w-24 h-24 mx-auto mb-4">
-                    <h3 class="font-semibold text-lg mb-2">Yuklab oling va foydalaning</h3>
-                    <p class="text-gray-600">Mahsulotni darhol yuklab oling va ishlatishni boshlang.</p>
+            <div class="flex items-center justify-between gap-3 rounded-xl p-3 ignite-glass">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-semibold">1</div>
+                    <div class="text-sm text-gray-700 flex items-center gap-2">
+                        <i data-feather="search" class="w-4 h-4 text-gray-500"></i>
+                        <span>Qidiring va tanlang</span>
                     </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-semibold">2</div>
+                    <div class="text-sm text-gray-700 flex items-center gap-2">
+                        <i data-feather="credit-card" class="w-4 h-4 text-gray-500"></i>
+                        <span>Sotib oling</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-semibold">3</div>
+                    <div class="text-sm text-gray-700 flex items-center gap-2">
+                        <i data-feather="download" class="w-4 h-4 text-gray-500"></i>
+                        <span>Yuklab oling</span>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- File Preview Modal -->
-    <div id="filePreviewModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl w-full max-w-6xl h-5/6 flex flex-col">
+    <div id="filePreviewModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden ios-modal flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-6xl h-5/6 flex flex-col ios-sheet">
             <div class="flex justify-between items-center p-4 border-b">
                 <h3 id="previewFileName" class="text-xl font-semibold text-primary"></h3>
                 <button onclick="closeFilePreview()" class="text-gray-500 hover:text-gray-700">
@@ -482,12 +613,7 @@
             <div class="flex-1 flex overflow-hidden">
                 <!-- File Preview Area (70%) -->
                 <div class="w-7/12 border-r p-4 overflow-auto">
-                    <div class="relative">
-                        <img id="previewImage" src="" alt="File Preview" class="w-full h-auto rounded-lg shadow-md">
-                        <div class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center text-4xl font-bold text-gray-500 pointer-events-none">
-                            WATERMARK
-                        </div>
-                    </div>
+                    <div id="previewImagesContainer" class="space-y-3"></div>
                 </div>
                 <!-- File Info & Download Area (30%) -->
                 <div class="w-5/12 p-6">
@@ -524,6 +650,38 @@
         </div>
         </div>
 
+    <!-- Floating Feedback Button + Popup -->
+    <button id="feedbackFab" aria-label="Fikr qoldirish" class="fixed z-50 bottom-5 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition flex items-center justify-center tilt-3d">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"><path d="M2 5a3 3 0 013-3h14a3 3 0 013 3v9a3 3 0 01-3 3H9.83l-3.41 3.41A1 1 0 015 19.59V17H5a3 3 0 01-3-3V5z"/></svg>
+    </button>
+
+    <div id="feedbackModal" class="fixed inset-0 hidden ios-modal z-50 flex items-end sm:items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50"></div>
+        <div class="w-full sm:max-w-md bg-white rounded-2xl ios-sheet p-4 sm:p-5 relative">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold">Fikr qoldirish</h3>
+                <button id="feedbackClose" class="text-gray-500 hover:text-gray-700" aria-label="Yopish">
+                    <i data-feather="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="feedbackForm" class="space-y-3">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Ism Familiya</label>
+                    <input id="fbFullName" type="text" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ismingiz va familiyangiz" required>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Aloqa (ixtiyoriy)</label>
+                    <input id="fbContact" type="text" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Telefon, email yoki Telegram">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Xabar</label>
+                    <textarea id="fbMessage" rows="4" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Fikringizni yozing" required></textarea>
+                </div>
+                <button type="submit" class="w-full ignite-btn rounded-lg py-2.5 font-medium">Yuborish</button>
+                <p id="fbResult" class="text-sm"></p>
+            </form>
+        </div>
+    </div>
     <script>
         feather.replace();
         
@@ -532,7 +690,7 @@
         let currentPage = 1;
         let totalPages = 1;
         let allFiles = [];
-        let filesPerPage = 9;
+        let filesPerPage = 12;
         let isSportMode = false;
         let isDeepMode = false;
         
@@ -542,54 +700,21 @@
         const SEARCH_API = `${API_BASE}/api/files/api/search/`;
         const DOWNLOAD_API = `${API_BASE}/api/files/api/`;
         
-        // Sport Mode Functions
-        function activateSportMode() {
+        // Ignite Theme Helpers (no indicator text)
+        function enableIgniteTheme() {
             const heroSection = document.getElementById('heroSection');
-            heroSection.classList.add('sport-mode');
-            isSportMode = true;
-            
-            // Add sport mode indicator
-            showSportModeIndicator();
-            
-            // Auto deactivate after 10 seconds
-            setTimeout(() => {
-                deactivateSportMode();
-            }, 10000);
+            heroSection.classList.add('ignite-mode');
         }
-        
-        function deactivateSportMode() {
+        function disableIgniteTheme() {
             const heroSection = document.getElementById('heroSection');
-            heroSection.classList.remove('sport-mode');
-            isSportMode = false;
-            
-            // Remove sport mode indicator
-            hideSportModeIndicator();
-        }
-        
-        function showSportModeIndicator() {
-            const indicator = document.createElement('div');
-            indicator.id = 'sportModeIndicator';
-            indicator.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-bounce';
-            indicator.innerHTML = `
-                <div class="flex items-center">
-                    <div class="w-3 h-3 bg-red-300 rounded-full mr-2 animate-pulse"></div>
-                    <span class="font-bold">SPORT MODE</span>
-                </div>
-            `;
-            document.body.appendChild(indicator);
-        }
-        
-        function hideSportModeIndicator() {
-            const indicator = document.getElementById('sportModeIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
+            heroSection.classList.remove('ignite-mode');
         }
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             loadTopFiles();
             setupSearchFunctionality();
+            setupFeedbackUI();
         });
         
         // Load top downloaded files
@@ -611,8 +736,8 @@
         function setupSearchFunctionality() {
             const searchInput = document.getElementById('searchInput');
             const searchBtn = document.getElementById('searchBtn');
-            const regularModeBtn = document.getElementById('regularModeBtn');
-            const deepModeBtn = document.getElementById('deepModeBtn');
+            const deepToggle = document.getElementById('deepToggle') || { checked: false };
+            const deepToggleInline = document.getElementById('deepToggleInline');
             
             // Search button click
             searchBtn.addEventListener('click', () => performSearch());
@@ -624,12 +749,15 @@
                 }
             });
             
-            // Mode toggle buttons
-            regularModeBtn.addEventListener('click', () => setSearchMode(false));
-            deepModeBtn.addEventListener('click', () => setSearchMode(true));
+            // Switch toggle(s)
+            deepToggleInline && deepToggleInline.addEventListener('change', (e) => setSearchMode(e.target.checked));
+            // Backwards-compat for previous switch
+            if (document.getElementById('deepToggle')) {
+                document.getElementById('deepToggle').addEventListener('change', (e) => setSearchMode(e.target.checked));
+            }
             
-            // Initialize with regular mode
-            setSearchMode(false);
+            // Initialize from inline checkbox (or legacy)
+            setSearchMode(deepToggleInline ? deepToggleInline.checked : deepToggle.checked);
         }
         
         // Set search mode (regular or deep)
@@ -641,25 +769,21 @@
             const searchInfo = document.getElementById('searchInfo');
             
             if (deep) {
-                // Deep mode active
-                regularModeBtn.className = 'px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 text-white/70 hover:text-white';
-                deepModeBtn.className = 'px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 deep-mode-active';
-                searchBtn.className = 'flex-1 sm:flex-none text-white px-4 sm:px-6 py-3 rounded-full transition relative group text-sm sm:text-base ripple hover-scale search-btn-deep';
+                // Deep mode active (Ignite mode)
+                searchBtn.className = 'flex-1 sm:flex-none text-white px-4 sm:px-6 py-3 rounded-full transition relative group text-sm sm:text-base ripple hover-scale search-btn-deep ignite-btn';
                 searchInfo.className = 'text-xs sm:text-sm search-info-deep';
                 searchInfo.innerHTML = '<span class="text-blue-300 font-medium">Chuqurlashtirilgan Qidiruv:</span> Fayl ichidan ham qidirish';
-                
-                // Activate sport mode
-                activateSportMode();
+                enableIgniteTheme();
+                const dk = document.getElementById('deepKnob');
+                if (dk) dk.style.transform = 'translateX(20px)';
             } else {
                 // Regular mode active
-                regularModeBtn.className = 'px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-blue-500 text-white shadow-lg';
-                deepModeBtn.className = 'px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 text-white/70 hover:text-white';
-                searchBtn.className = 'flex-1 sm:flex-none text-white px-4 sm:px-6 py-3 rounded-full transition relative group text-sm sm:text-base ripple hover-scale search-btn-regular';
+                searchBtn.className = 'flex-1 sm:flex-none bg-primary text-white px-4 sm:px-6 py-3 rounded-full hover:bg-blue-600 transition relative group text-sm sm:text-base ripple hover-scale';
                 searchInfo.className = 'text-xs sm:text-sm search-info-regular';
                 searchInfo.innerHTML = '<span class="text-blue-300 font-medium">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish';
-                
-                // Deactivate sport mode
-                deactivateSportMode();
+                disableIgniteTheme();
+                const dk = document.getElementById('deepKnob');
+                if (dk) dk.style.transform = 'translateX(0px)';
             }
         }
         
@@ -848,7 +972,7 @@
             const previewUrl = getFilePreview(file.id);
             
             return `
-                <div class="bg-white rounded-xl p-5 shadow-md card-hover hover-lift cursor-pointer animate-fadeInUp" 
+                <div class="bg-white rounded-xl p-5 shadow-md card-hover hover-lift hover-bloom hover-shadow-xl cursor-pointer animate-fadeInUp" 
                      onclick="showFilePreview('${file.id}', '${escapeHtml(file.title)}', '${fileType}', '${fileSize}', '${file.view_count || 0}', '${file.download_count || 0}', '${previewUrl}')">
                     <div class="flex items-center mb-4">
                         <img src="${iconUrl}" alt="${fileType} Icon" class="w-10 h-10 mr-3 hover-scale">
@@ -880,17 +1004,63 @@
             document.getElementById('previewFileSize').textContent = size;
             document.getElementById('previewViews').textContent = formatNumber(views);
             document.getElementById('previewDownloads').textContent = formatNumber(downloads);
-            document.getElementById('previewImage').src = previewUrl;
-            document.getElementById('filePreviewModal').classList.remove('hidden');
+            loadDocumentImages(fileId);
+            const modal = document.getElementById('filePreviewModal');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => modal.classList.add('open'));
             document.body.style.overflow = 'hidden';
             
             // Update view count
             updateViewCount(fileId);
         }
         
+        async function loadDocumentImages(productId) {
+            try {
+                const container = document.getElementById('previewImagesContainer');
+                container.innerHTML = '';
+                const prod = (allFiles || []).find(p => String(p.id) === String(productId));
+                const documentId = prod && (prod.document_id || (prod.document && prod.document.id));
+                if (!documentId) {
+                    const img = document.createElement('img');
+                    img.src = getFilePreview(productId);
+                    img.className = 'w-full h-auto rounded-lg shadow-md';
+                    container.appendChild(img);
+                    return;
+                }
+                const resp = await fetch(`${API_BASE}/api/files/api/${documentId}/images/`);
+                const data = await resp.json();
+                if (data && Array.isArray(data.images) && data.images.length) {
+                    data.images.forEach(it => {
+                        const img = document.createElement('img');
+                        img.src = it.url;
+                        img.alt = `Page ${it.page}`;
+                        img.className = 'w-full h-auto rounded-lg shadow-md';
+                        container.appendChild(img);
+                    });
+                } else {
+                    const img = document.createElement('img');
+                    img.src = getFilePreview(productId);
+                    img.className = 'w-full h-auto rounded-lg shadow-md';
+                    container.appendChild(img);
+                }
+            } catch (e) {
+                const container = document.getElementById('previewImagesContainer');
+                container.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = getFilePreview(productId);
+                img.className = 'w-full h-auto rounded-lg shadow-md';
+                container.appendChild(img);
+            }
+        }
+        
         // Close file preview modal
         function closeFilePreview() {
-            document.getElementById('filePreviewModal').classList.add('hidden');
+            const modal = document.getElementById('filePreviewModal');
+            modal.classList.remove('open');
+            // Wait for transition to finish before hiding
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 520);
             document.body.style.overflow = 'auto';
             currentFileId = null;
         }
@@ -1024,6 +1194,25 @@
             `;
         }
         
+        // Add subtle 3D tilt on hover for interactive elements
+        document.addEventListener('mousemove', function(e) {
+            document.querySelectorAll('.tilt-3d').forEach(function(el) {
+                const rect = el.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = -((y - centerY) / centerY) * 6;
+                const rotateY = ((x - centerX) / centerX) * 6;
+                el.style.transform = `perspective(700px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+        });
+        document.addEventListener('mouseout', function(e) {
+            if (e.target.classList && e.target.classList.contains('tilt-3d')) {
+                e.target.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg)';
+            }
+        });
+
         // Close modal on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
@@ -1037,6 +1226,52 @@
                 closeFilePreview();
             }
         });
+
+        // Feedback UI
+        function setupFeedbackUI() {
+            const fab = document.getElementById('feedbackFab');
+            const modal = document.getElementById('feedbackModal');
+            const closeBtn = document.getElementById('feedbackClose');
+            const form = document.getElementById('feedbackForm');
+            const result = document.getElementById('fbResult');
+
+            fab.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                requestAnimationFrame(() => modal.classList.add('open'));
+            });
+            closeBtn.addEventListener('click', () => hideFeedbackModal());
+            modal.addEventListener('click', (e) => { if (e.target === modal) hideFeedbackModal(); });
+
+            function hideFeedbackModal() {
+                modal.classList.remove('open');
+                setTimeout(() => modal.classList.add('hidden'), 520);
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                result.textContent = '';
+                const payload = {
+                    full_name: document.getElementById('fbFullName').value.trim(),
+                    contact: document.getElementById('fbContact').value.trim(),
+                    message: document.getElementById('fbMessage').value.trim()
+                };
+                try {
+                    const resp = await fetch(`${API_BASE}/api/feedback/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    result.className = 'text-sm text-green-600';
+                    result.textContent = 'Rahmat! Fikringiz yuborildi.';
+                    form.reset();
+                    setTimeout(() => hideFeedbackModal(), 800);
+                } catch (err) {
+                    result.className = 'text-sm text-red-600';
+                    result.textContent = 'Yuborishda xatolik. Keyinroq urinib ko‘ring.';
+                }
+            });
+        }
     </script>
 </body>
 </html>

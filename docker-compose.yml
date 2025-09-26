@@ -11,7 +11,6 @@ services:
              python manage.py collectstatic --no-input &&
              mkdir -p /app/media/downloads /app/media/download &&
              python manage.py clean --cancel-tasks --force &&
-             python manage.py elasticsearch_index --rebuild --force &&
              uvicorn core.asgi:application --host 0.0.0.0 --workers 12 --timeout-keep-alive 120"
     volumes:
       - .:/app

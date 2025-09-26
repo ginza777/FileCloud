@@ -22,7 +22,7 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from .models import Document, DocumentError
+from .models import Document, DocumentError, DocumentImage
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -80,6 +80,105 @@ def wait_for_telegram_rate_limit():
         logger.warning("Redis topilmadi, rate limit uchun 5 soniya kutamiz.")
         time.sleep(5)
         return
+def add_watermark_to_image(pil_image, text="fayltop.cloud"):
+    from PIL import ImageDraw, ImageFont, Image
+    image = pil_image.convert('RGBA')
+    overlay = Image.new('RGBA', image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay)
+    width, height = image.size
+    # Many faint diagonals
+    try:
+        font = ImageFont.truetype("DejaVuSans.ttf", max(14, width // 40))
+    except Exception:
+        font = ImageFont.load_default()
+    step = max(120, width // 6)
+    alpha = 28  # very faint
+    for y in range(-height, height, step):
+        draw.text((0, y), text, font=font, fill=(255, 255, 255, alpha))
+    # rotate overlay for diagonal effect
+    overlay = overlay.rotate(30, expand=1)
+    overlay = overlay.crop(( (overlay.width - width)//2, (overlay.height - height)//2, (overlay.width + width)//2, (overlay.height + height)//2 ))
+    combined = Image.alpha_composite(image, overlay)
+    return combined.convert('RGB')
+
+
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=10, max_retries=3)
+def generate_document_images_task(self, document_id: str, max_pages: int = 5):
+    """Download the document to media/file/, render up to 5 pages to images with faint repeated watermark,
+    save images to DocumentImage, then delete the working file. Supports PDFs primarily; other formats will be
+    attempted via Tika preview text rendered as image fallback.
+    """
+    import os
+    from pathlib import Path
+    from django.conf import settings
+    from PIL import Image, ImageDraw
+    from io import BytesIO
+    from pdf2image import convert_from_path, convert_from_bytes
+    import requests
+
+    doc = Document.objects.get(id=document_id)
+    if not doc.parse_file_url:
+        return
+
+    # Download to media/file/
+    work_dir = os.path.join(settings.MEDIA_ROOT, 'file', str(doc.id))
+    os.makedirs(work_dir, exist_ok=True)
+    ext = Path(doc.parse_file_url).suffix or '.bin'
+    work_path = os.path.join(work_dir, f"source{ext}")
+
+    with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
+        r.raise_for_status()
+        with open(work_path, 'wb') as f:
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+
+    images: list[Image.Image] = []
+    try:
+        if ext.lower() == '.pdf':
+            images = convert_from_path(work_path, dpi=150, first_page=1, last_page=max_pages)
+        else:
+            # Fallback: try bytes (some URLs might be pdf) else render simple text preview
+            try:
+                with open(work_path, 'rb') as fb:
+                    data = fb.read()
+                images = convert_from_bytes(data, dpi=150, first_page=1, last_page=max_pages)
+            except Exception:
+                img = Image.new('RGB', (1024, 1448), color=(245, 247, 250))
+                draw = ImageDraw.Draw(img)
+                preview = (doc.product.title or 'Document')[:120]
+                draw.text((40, 60), preview + "\nPreview not available", fill=(30, 41, 59))
+                images = [img]
+
+        # Resize and watermark, then save to DocumentImage
+        for idx, pil_img in enumerate(images[:max_pages], start=1):
+            w = 1280
+            ratio = w / pil_img.width
+            h = int(pil_img.height * ratio)
+            pil_img = pil_img.resize((w, h))
+            wm = add_watermark_to_image(pil_img, text="fayltop.cloud")
+
+            # Save to file storage via ImageField
+            buf = BytesIO()
+            wm.save(buf, format='JPEG', quality=82)
+            buf.seek(0)
+
+            # Build filename
+            filename = f"page_{idx}.jpg"
+            # Remove existing same page
+            DocumentImage.objects.filter(document=doc, page_number=idx).delete()
+            di = DocumentImage(document=doc, page_number=idx)
+            from django.core.files.base import ContentFile
+            di.image.save(filename, ContentFile(buf.read()), save=True)
+
+    finally:
+        # Remove working file
+        try:
+            if os.path.exists(work_path):
+                os.remove(work_path)
+        except Exception:
+            pass
+
+    return True
 
     try:
         redis_url = getattr(settings, 'CELERY_BROKER_URL', 'redis://redis:6379/0')

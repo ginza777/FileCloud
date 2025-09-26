@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from apps.bot.models import User, Broadcast, BroadcastRecipient, SubscribeChannel, Location
 from apps.files.models import SearchQuery, Document, Product, SiteToken, ParseProgress
+from .models import Feedback
 
 User = get_user_model()
 
@@ -184,6 +185,13 @@ class ParseProgressSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'last_page', 'total_pages_parsed', 'last_run_at', 'created_at'
         ]
+        read_only_fields = ['id', 'created_at']
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = ['id', 'full_name', 'message', 'contact', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 

@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import F, Q
 from .elasticsearch.documents import DocumentIndex
-from .models import Document, Product
-from .serializers import DocumentSerializer, SearchResultSerializer
+from .models import Document, Product, DocumentImage
+from .serializers import DocumentSerializer, SearchResultSerializer, DocumentImageSerializer
 
 def login_view(request):
     """Login page view"""
@@ -181,6 +181,22 @@ def increment_view_count(request, product_id):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+def document_images(request, document_id):
+    try:
+        doc = Document.objects.get(id=document_id)
+    except Document.DoesNotExist:
+        return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+    images = DocumentImage.objects.filter(document=doc).order_by('page_number')[:5]
+    data = []
+    for di in images:
+        url = di.image.url
+        if request is not None:
+            url = request.build_absolute_uri(url)
+        data.append({'page': di.page_number, 'url': url})
+    return Response({'images': data, 'count': len(data)})
 
 @api_view(['POST'])
 def increment_download_count(request, product_id):

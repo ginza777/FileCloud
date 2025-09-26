@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/top-downloads/', views.top_downloads, name='top_downloads'),
     path('api/<int:product_id>/view/', views.increment_view_count, name='increment_view_count'),
     path('api/<int:product_id>/download/', views.increment_download_count, name='increment_download_count'),
+    path('api/<uuid:document_id>/images/', views.document_images, name='document_images'),
 ]

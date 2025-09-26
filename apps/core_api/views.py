@@ -18,8 +18,10 @@ from .serializers import (
     BroadcastRecipientSerializer, SubscribeChannelSerializer, LocationSerializer,
     SearchQuerySerializer, UserStatsSerializer, BroadcastStatsSerializer,
     SearchStatsSerializer, LocationStatsSerializer, DocumentSerializer,
-    ProductSerializer, SiteTokenSerializer, ParseProgressSerializer, DocumentStatsSerializer
+    ProductSerializer, SiteTokenSerializer, ParseProgressSerializer, DocumentStatsSerializer,
+    FeedbackSerializer
 )
+from .models import Feedback
 from apps.bot.tasks import send_message_to_user_task
 from apps.bot.permissions import BOT_API_PERMISSION_CLASSES
 
@@ -496,3 +498,10 @@ class DocumentStatsView(APIView):
 
         serializer = DocumentStatsSerializer(data)
         return Response(serializer.data)
+
+
+# Feedback API
+class FeedbackCreateView(generics.CreateAPIView):
+    queryset = Feedback.objects.all()
+    serializer_class = FeedbackSerializer
+    permission_classes = [permissions.AllowAny]

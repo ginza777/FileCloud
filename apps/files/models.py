@@ -177,3 +177,21 @@ class SearchQuery(models.Model):
 
     def __str__(self):
         return f"'{self.query_text}' by {self.user}"
+
+
+def document_image_upload_to(instance, filename):
+    return f"file/{instance.document.id}/{filename}"
+
+
+class DocumentImage(models.Model):
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='images')
+    page_number = models.PositiveIntegerField()
+    image = models.ImageField(upload_to=document_image_upload_to)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('document', 'page_number')
+        ordering = ['page_number']
+
+    def __str__(self):
+        return f"Image p{self.page_number} for {self.document_id}"
