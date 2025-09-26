@@ -392,8 +392,8 @@
             }
         }
 
-        // Perform search
-        async function performSearch() {
+        // Perform search with pagination and retry
+        async function performSearch(page = 1) {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) {
                 // If search is empty, reload top files
@@ -409,17 +409,27 @@
                 searchBtn.innerHTML = '<span>Qidirilmoqda...</span>';
                 searchBtn.disabled = true;
 
-                // Build search URL with current mode
-                const searchUrl = isDeepMode
-                    ? `${SEARCH_API}?q=${encodeURIComponent(query)}&deep=true`
-                    : `${SEARCH_API}?q=${encodeURIComponent(query)}`;
+                const apiCall = async () => {
+                    // Build search URL with current mode and pagination
+                    const searchUrl = isDeepMode
+                        ? `${SEARCH_API}?q=${encodeURIComponent(query)}&deep=true&page=${page}&page_size=${filesPerPage}`
+                        : `${SEARCH_API}?q=${encodeURIComponent(query)}&page=${page}&page_size=${filesPerPage}`;
 
-                const response = await fetch(searchUrl);
-                const data = await response.json();
-                allFiles = data.results || [];
-                totalPages = Math.ceil(allFiles.length / filesPerPage);
-                displayFilesForPage(1);
-                generatePagination();
+                    const response = await fetch(searchUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.json();
+                };
+
+                const data = await retryApiCall(apiCall);
+                
+                if (data.results) {
+                    allFiles = data.results;
+                    totalPages = data.total_pages || 1;
+                    currentPage = data.page || 1;
+                    displayFiles(allFiles);
+                    generatePagination();
 
                 // Show search type indicator
                 const searchTypeIndicator = document.getElementById('searchTypeIndicator');
@@ -436,16 +446,19 @@
                     </p>
                 `;
 
-                const fileGrid = document.getElementById('fileGrid');
-                fileGrid.parentNode.insertBefore(indicator, fileGrid);
+                    const fileGrid = document.getElementById('fileGrid');
+                    fileGrid.parentNode.insertBefore(indicator, fileGrid);
+                } else {
+                    displayErrorMessage('Qidiruvda xatolik yuz berdi');
+                }
 
                 // Restore button state
                 searchBtn.innerHTML = originalSearchText;
                 searchBtn.disabled = false;
 
             } catch (error) {
-                console.error('Error performing search:', error);
-                displayErrorMessage('Qidiruvda xatolik yuz berdi');
+                console.error('Error performing search after retries:', error);
+                displayErrorMessage('Qidiruvda xatolik yuz berdi. Internet aloqasini tekshiring.');
 
                 // Restore button state on error
                 const searchBtn = document.getElementById('searchBtn');
@@ -471,7 +484,7 @@
             feather.replace();
         }
 
-        // Display files for specific page
+        // Display files for specific page (deprecated - now using API pagination)
         function displayFilesForPage(page) {
             const startIndex = (page - 1) * filesPerPage;
             const endIndex = startIndex + filesPerPage;
@@ -562,8 +575,14 @@
         // Change page function
         function changePage(page) {
             if (page >= 1 && page <= totalPages && page !== currentPage) {
-                displayFilesForPage(page);
-                generatePagination();
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) {
+                    // If there's a search query, perform search with new page
+                    performSearch(page);
+                } else {
+                    // If no search query, load top files with new page
+                    loadTopFiles(page);
+                }
                 // Scroll to top of file grid
                 document.getElementById('fileGrid').scrollIntoView({ behavior: 'smooth' });
             }
