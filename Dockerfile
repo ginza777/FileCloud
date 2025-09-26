@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade pip
+RUN pip install --upgrade pip
+
 # Install Python dependencies
 COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir -r requirements/production.txt
