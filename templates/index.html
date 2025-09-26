@@ -7,187 +7,123 @@
     <title>FayltopAi fayl qidiruv</title>
     <link rel="icon" type="image/x-icon" href="{% static 'icon.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
-                screens: {
-                    'xs': '475px',
-                    'sm': '640px',
-                    'md': '768px',
-                    'lg': '1024px',
-                    'xl': '1280px',
-                    '2xl': '1536px',
-                },
+                screens: { 'xs': '475px', 'sm': '640px', 'md': '768px', 'lg': '1024px', 'xl': '1280px', '2xl': '1536px' },
                 extend: {
-                    colors: {
-                        primary: '#0ea5e9',
-                        secondary: '#06b6d4',
-                        dark: '#0f172a',
-                        light: '#f8fafc'
-                    }
+                    colors: { primary: '#0ea5e9', secondary: '#06b6d4', dark: '#0f172a', light: '#f8fafc' }
                 }
             }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; color: #0f172a; background: #f8fafc; }
-        
-        /* Custom animations and effects (unchanged) */
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes fadeInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
-        @keyframes bounce { 0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); } 40%, 43% { transform: translate3d(0, -8px, 0); } 70% { transform: translate3d(0, -4px, 0); } 90% { transform: translate3d(0, -2px, 0); } }
-        @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .animate-fadeInUp { animation: fadeInUp 0.8s ease-out; }
-        .animate-fadeInLeft { animation: fadeInLeft 0.8s ease-out; }
-        .animate-fadeInRight { animation: fadeInRight 0.8s ease-out; }
-        .animate-pulse { animation: pulse 2s infinite; }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        .animate-bounce { animation: bounce 1s infinite; }
-        .hover-lift { transition: all 0.3s ease; }
-        .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
-        .hover-scale { transition: all 0.3s ease; }
-        .hover-scale:hover { transform: scale(1.05); }
-        .hover-glow { transition: all 0.3s ease; }
-        .hover-glow:hover { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
-        .hover-bloom { transition: filter 0.35s ease, box-shadow 0.35s ease; }
-        .hover-bloom:hover { filter: saturate(1.15) contrast(1.03); box-shadow: 0 14px 40px rgba(0,0,0,0.18); }
-        .hover-shadow-xl { transition: box-shadow 0.35s ease, transform 0.2s ease; }
-        .hover-shadow-xl:hover { box-shadow: 0 18px 55px rgba(0,0,0,0.22); transform: translateY(-2px); }
-        .hover-glass-pop { transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease; background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.14); }
-        .hover-glass-pop:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.28); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 10px 30px rgba(0,0,0,0.16); }
-        .hover-underline-slide { position: relative; }
-        .hover-underline-slide::after { content: ''; position: absolute; left: 50%; bottom: -2px; width: 0; height: 2px; background: currentColor; transition: width 0.3s ease, left 0.3s ease; }
-        .hover-underline-slide:hover::after { width: 100%; left: 0; }
-        .gradient-animated { background: linear-gradient(-45deg, #4f46e5, #0ea5e9, #14b8a6, #60a5fa); background-size: 400% 400%; animation: gradientShift 8s ease infinite; }
-        .hero-bg-container { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
-        .hero-bg-video, .hero-bg-image { position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%; width: auto; height: auto; transform: translate(-50%, -50%); object-fit: cover; filter: saturate(1.1) contrast(1.05) brightness(0.9); }
-        .hero-overlay { position: absolute; inset: 0; background: radial-gradient(1200px 600px at 10% -10%, rgba(0,0,0,0.25), transparent 60%), linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 100%); z-index: 1; }
-        .ignite-mode .hero-overlay { background: radial-gradient(1200px 600px at 10% -10%, rgba(249, 115, 22, 0.20), transparent 60%), linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%); }
-        .shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200px 100%; animation: shimmer 1.5s infinite; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeInUp { animation: fadeInUp 0.7s ease-out forwards; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; }
         .ios-modal { opacity: 0; backdrop-filter: blur(0px); transition: opacity 420ms ease, backdrop-filter 420ms ease; }
         .ios-modal.open { opacity: 1; backdrop-filter: blur(8px); }
-        .ios-sheet { transform: translateY(24px) scale(0.98); opacity: 0; transition: transform 520ms cubic-bezier(.22,.61,.36,1), opacity 380ms ease, box-shadow 380ms ease; will-change: transform, opacity; }
-        .ios-modal.open .ios-sheet { transform: translateY(0) scale(1); opacity: 1; box-shadow: 0 24px 60px rgba(0,0,0,0.25); }
-        .stagger-1 { animation-delay: 0.1s; } .stagger-2 { animation-delay: 0.2s; } .stagger-3 { animation-delay: 0.3s; } .stagger-4 { animation-delay: 0.4s; } .stagger-5 { animation-delay: 0.5s; }
-        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; } ::-webkit-scrollbar-thumb { background: linear-gradient(45deg, #667eea, #764ba2); border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background: linear-gradient(45deg, #5a67d8, #6b46c1); }
-        :root { --fire-50: #fff7ed; --fire-100: #ffedd5; --fire-200: #fed7aa; --fire-300: #fdba74; --fire-400: #fb923c; --fire-500: #f97316; --fire-600: #ea580c; --fire-700: #c2410c; --fire-800: #9a3412; --fire-900: #7c2d12; }
-        .ignite-mode { background: radial-gradient(1200px 600px at 20% -10%, rgba(249, 115, 22, 0.35), transparent 60%), radial-gradient(900px 500px at 110% 10%, rgba(251, 146, 60, 0.25), transparent 60%), linear-gradient(135deg, var(--fire-600) 0%, var(--fire-700) 40%, var(--fire-800) 100%) !important; position: relative; isolation: isolate; transition: background 900ms ease, box-shadow 900ms ease; }
-        .ignite-mode::before { content: ''; position: absolute; inset: -10% -10% -10% -10%; background: conic-gradient(from 180deg at 50% 50%, rgba(255,255,255,0.08), rgba(255,255,255,0.02), rgba(255,255,255,0.08)); filter: blur(40px); pointer-events: none; z-index: -1; }
-        .ignite-mode .gradient-animated { background: linear-gradient(-45deg, #ffedd5, #fb923c, #f97316, #ea580c); background-size: 400% 400%; animation: gradientShift 6s ease infinite; }
-        .ignite-glass { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 10px 30px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.12); backdrop-filter: blur(10px); }
-        .ignite-glow { box-shadow: 0 10px 40px rgba(249, 115, 22, 0.35), 0 0 0 1px rgba(249, 115, 22, 0.2); }
-        .ignite-btn { background: linear-gradient(135deg, var(--fire-500), var(--fire-700)); color: white !important; box-shadow: 0 10px 30px rgba(249, 115, 22, 0.35); transition: transform 0.2s ease, box-shadow 0.2s ease, background 600ms ease; }
-        .ignite-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(249, 115, 22, 0.45); background: linear-gradient(135deg, var(--fire-400), var(--fire-600)); }
-        .ignite-text-strong { color: #fff7ed !important; text-shadow: 0 8px 30px rgba(249, 115, 22, 0.35); }
-        .tilt-3d { transform-style: preserve-3d; transition: transform 200ms ease, box-shadow 200ms ease; will-change: transform; }
-        .tilt-3d > * { transform: translateZ(20px); }
-        .search-mode-toggle { transition: all 0.3s ease; }
-        .search-mode-toggle.active { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
-        .search-mode-toggle.inactive { background: transparent; color: rgba(255, 255, 255, 0.7); }
-        .search-mode-toggle.inactive:hover { color: white; background: rgba(255, 255, 255, 0.1); }
-        .deep-mode-active { background: linear-gradient(135deg, #dc2626, #b91c1c) !important; color: white !important; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4) !important; animation: deepModeGlow 2s ease-in-out infinite alternate; }
-        @keyframes deepModeGlow { from { box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4); background: linear-gradient(135deg, #dc2626, #b91c1c); } to { box-shadow: 0 4px 25px rgba(220, 38, 38, 0.6); background: linear-gradient(135deg, #b91c1c, #991b1b); } }
-        .search-btn-regular { background: #3b82f6 !important; }
-        .search-btn-regular:hover { background: #2563eb !important; }
-        .search-btn-deep { background: linear-gradient(135deg, #dc2626, #b91c1c) !important; animation: searchBtnDeepGlow 1.5s ease-in-out infinite alternate, heartbeatGlow 2.2s ease-in-out infinite; }
-        .search-btn-deep:hover { background: linear-gradient(135deg, #b91c1c, #991b1b) !important; }
-        @keyframes searchBtnDeepGlow { from { box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); } to { box-shadow: 0 0 30px rgba(220, 38, 38, 0.8); } }
-        @keyframes heartbeatGlow { 0% { filter: brightness(1); box-shadow: 0 0 18px rgba(249, 115, 22, 0.45); } 14% { filter: brightness(1.06); box-shadow: 0 0 28px rgba(249, 115, 22, 0.55); } 28% { filter: brightness(1); box-shadow: 0 0 18px rgba(249, 115, 22, 0.45); } 42% { filter: brightness(1.06); box-shadow: 0 0 32px rgba(249, 115, 22, 0.6); } 70%, 100% { filter: brightness(1); box-shadow: 0 0 18px rgba(249, 115, 22, 0.45); } }
-        .search-info-regular { color: rgba(255, 255, 255, 0.8) !important; }
-        .search-info-regular .text-blue-300 { color: #93c5fd !important; }
-        .search-info-deep { color: rgba(255, 255, 255, 0.9) !important; }
-        .search-info-deep .text-blue-300 { color: #fca5a5 !important; }
-        .search-shadow { box-shadow: 0 10px 40px rgba(14, 165, 233, 0.15); }
-        .card-hover { transition: all 0.3s ease; }
-        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
-        .gradient-bg { background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); }
-        .stat-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .ios-sheet { transform: translateY(24px) scale(0.98); opacity: 0; transition: transform 520ms cubic-bezier(.22,.61,.36,1), opacity 380ms ease; }
+        .ios-modal.open .ios-sheet { transform: translateY(0) scale(1); opacity: 1; }
     </style>
 </head>
-<body class="bg-light text-dark">
+<body>
     {% csrf_token %}
-    <header class="sticky top-0 z-50 bg-white shadow-sm">
-        <div class="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
-            <div class="flex flex-col xs:flex-row justify-between items-center gap-2 xs:gap-3 sm:gap-0">
-                <a href="#" class="text-primary font-bold text-lg xs:text-xl sm:text-2xl flex items-center">
-                    <img src="{% static 'fayltop_transparent.svg' %}" alt="FaylTop Logo" class="mr-1 xs:mr-2 w-8 h-8 xs:w-10 xs:h-10 sm:w-11 sm:h-11 md:w-12 md:h-12">
-                    <span class="hidden xs:inline">FaylTop.Cloud</span>
-                    <span class="xs:hidden">FaylTop</span>
+
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-sm">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <a href="/" class="flex items-center gap-2 text-xl font-bold text-primary">
+                    <img src="{% static 'fayltop_transparent.svg' %}" alt="FaylTop Logo" class="w-9 h-9 sm:w-10 sm:h-10">
+                    <span class="hidden sm:inline">FaylTop.Cloud</span>
+                    <span class="sm:hidden">FaylTop</span>
                 </a>
-                <div class="flex items-center space-x-1 xs:space-x-2 sm:space-x-4">
-                    <a href="https://t.me/fayltop_bot" class="bg-primary text-white px-2 xs:px-3 sm:px-4 py-1.5 xs:py-2 rounded-lg hover:bg-blue-600 transition flex items-center text-xs xs:text-sm sm:text-base">
-                        <i data-feather="message-circle" class="w-3 h-3 xs:w-4 xs:h-4 mr-1 xs:mr-2"></i>
-                        <span class="hidden xs:inline">FaylTop_Bot</span>
-                        <span class="xs:hidden">Bot</span>
-                    </a>
-                    <a href="https://t.me/fayltop_bot?start=auth" class="text-gray-600 hover:text-primary transition hidden">Kirish</a>
-                    <a href="https://t.me/fayltop_bot?start=register" class="bg-secondary text-white px-2 xs:px-3 sm:px-4 py-1.5 xs:py-2 rounded-lg hover:bg-teal-600 transition text-xs xs:text-sm sm:text-base hidden">Ro'yxatdan o'tish</a>
-                </div>
+                <a href="https://t.me/fayltopbot" target="_blank" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition flex items-center gap-2 text-sm font-medium">
+                    <i data-feather="message-circle" class="w-4 h-4"></i>
+                    <span class="hidden xs:inline">FaylTop Bot</span>
+                    <span class="xs:hidden">Bot</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <section id="heroSection" class="relative gradient-bg gradient-animated text-white py-16 md:py-24 overflow-hidden">
-        <div class="hero-bg-container" aria-hidden="true">
-            <video class="hero-bg-video" autoplay muted loop playsinline poster="{% static 'image_main.png' %}" preload="metadata" onended="this.currentTime=0;this.play();">
-                <source src="{% static 'video_main.mp4' %}" type="video/mp4">
-            </video>
-            <div class="hero-overlay"></div>
-        </div>
-        <div class="container mx-auto px-4 text-center relative z-10">
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 animate-fadeInUp">FayltopAi fayl qidiruv</h1>
-            <p class="text-md sm:text-lg md:text-xl mb-6 sm:mb-10 max-w-3xl mx-auto animate-fadeInUp stagger-1">Sifatli va tayyor ishlardan foydalaning, vaqt va kuchingizni tejang.</p>
-
-            <div class="max-w-4xl mx-auto bg-white rounded-full p-2 search-shadow animate-fadeInUp stagger-2 ignite-glass hover-glass-pop relative z-10">
-                <div class="flex flex-col xs:flex-row gap-2 items-center">
-                    <div class="flex items-center gap-2 xs:gap-3 w-full xs:flex-1">
-                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="w-full xs:flex-1 px-3 xs:px-4 sm:px-6 py-2.5 xs:py-3 rounded-full text-dark focus:outline-none text-xs xs:text-sm sm:text-base hover-glow">
-                    </div>
-                    <button id="searchBtn" class="w-full xs:w-auto flex-1 xs:flex-none bg-primary text-white px-3 xs:px-4 sm:px-6 py-2.5 xs:py-3 rounded-full hover:bg-blue-600 transition relative group text-xs xs:text-sm sm:text-base ripple hover-scale tilt-3d hover-bloom hover-shadow-xl" title="Qidirish">
-                        <span>Qidirish</span>
-                    </button>
-                </div>
+    <main>
+        <section class="relative text-white py-20 md:py-28 overflow-hidden bg-sky-500">
+             <div class="absolute inset-0 z-0">
+                <video class="w-full h-full object-cover" autoplay muted loop playsinline poster="{% static 'image_main.png' %}">
+                    <source src="{% static 'video_main.mp4' %}" type="video/mp4">
+                </video>
+                <div class="absolute inset-0 bg-black/50"></div>
             </div>
+            <div class="container mx-auto px-4 text-center relative z-10">
+                <h1 class="text-4xl md:text-6xl font-extrabold mb-4 animate-fadeInUp" style="animation-delay: 0.1s;">FayltopAi fayl qidiruv</h1>
+                <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto text-white/90 animate-fadeInUp" style="animation-delay: 0.2s;">Sifatli va tayyor ishlardan foydalaning, vaqt va kuchingizni tejang.</p>
 
-            <div class="mt-4 xs:mt-6 flex justify-center">
-                 <div class="ignite-glass rounded-full px-2 xs:px-3 py-1.5 xs:py-2 sm:px-4 sm:py-3 flex items-center gap-1.5 xs:gap-2 sm:gap-3 select-none">
-                     <span class="text-white/80 text-xs xs:text-sm text-center">Chuqurlashtirilgan Qidiruv</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input id="deepToggle" type="checkbox" class="sr-only peer">
-                        <div class="w-12 xs:w-14 sm:w-16 h-6 xs:h-7 sm:h-8 bg-white/20 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:bg-gradient-to-r peer-checked:from-orange-500 peer-checked:to-orange-700 transition-all duration-500"></div>
-                        <span class="absolute left-0.5 xs:left-1 top-0.5 xs:top-1 w-5 xs:w-6 h-5 xs:h-6 bg-white rounded-full transition-all duration-500 peer-checked:translate-x-6 xs:peer-checked:translate-x-7 sm:peer-checked:translate-x-8 shadow-md"></span>
-                        <span class="ml-2 xs:ml-3 text-xs xs:text-sm text-white/80 peer-checked:text-white">ON</span>
+                <div class="max-w-3xl mx-auto bg-white/20 backdrop-blur-md rounded-full p-2 animate-fadeInUp" style="animation-delay: 0.3s;">
+                    <form id="searchForm" class="flex flex-col sm:flex-row gap-2" onsubmit="performSearch(event)">
+                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="w-full px-6 py-3 rounded-full text-dark focus:outline-none focus:ring-2 focus:ring-sky-400 text-base">
+                        <button id="searchBtn" type="submit" class="w-full sm:w-auto bg-primary text-white px-8 py-3 rounded-full hover:bg-sky-600 transition font-semibold text-base">Qidirish</button>
+                    </form>
+                </div>
+
+                <div class="mt-6 flex justify-center items-center gap-4 animate-fadeInUp" style="animation-delay: 0.4s;">
+                    <label for="deepToggle" class="flex items-center gap-3 cursor-pointer select-none">
+                        <span class="text-sm text-white/80">Chuqurlashtirilgan Qidiruv</span>
+                        <div class="relative">
+                            <input id="deepToggle" type="checkbox" class="sr-only peer">
+                            <div class="w-14 h-8 bg-white/30 rounded-full peer-checked:bg-gradient-to-r peer-checked:from-orange-500 peer-checked:to-red-600 transition-colors"></div>
+                            <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
+                        </div>
                     </label>
                 </div>
+                 <p id="searchInfo" class="mt-4 text-sm text-white/90 animate-fadeInUp" style="animation-delay: 0.5s;"><span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish</p>
             </div>
+        </section>
 
-            <div class="mt-4 sm:mt-6 text-center px-4 animate-fadeInUp stagger-3">
-                <p id="searchInfo" class="text-xs sm:text-sm text-white/80">
-                    <span class="text-blue-300 font-medium">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish
-                </p>
-            </div>
-        </div>
-    </section>
+        <section class="py-12 sm:py-16">
+            <div class="container mx-auto px-4">
+                <h2 id="fileSectionTitle" class="text-3xl font-bold mb-8 text-center">Top Fayllar</h2>
+                
+                <div id="fileListContainer">
+                    <div id="skeletonLoader" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for i in "123456" %}
+                        <div class="bg-white rounded-xl p-5 shadow-md">
+                            <div class="flex items-center mb-4 gap-4">
+                                <div class="w-12 h-12 rounded-lg shimmer"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="h-4 bg-gray-200 rounded w-3/4 shimmer"></div>
+                                    <div class="h-3 bg-gray-200 rounded w-1/2 shimmer"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between">
+                                <div class="h-4 bg-gray-200 rounded w-1/4 shimmer"></div>
+                                <div class="h-4 bg-gray-200 rounded w-1/4 shimmer"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
 
-    <section class="py-8 sm:py-12 bg-gray-50">
-        <div class="container mx-auto px-4">
-            <h2 class="text-xl sm:text-2xl font-bold mb-6 sm:mb-8 text-center animate-fadeInUp">Top Fayllar</h2>
-            <div id="fileGrid" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4 sm:gap-6 mb-6 xs:mb-8 sm:mb-12">
+                    <div id="errorMessage" class="hidden text-center bg-red-50 border-l-4 border-red-400 text-red-700 p-6 rounded-lg max-w-2xl mx-auto">
+                        <div class="flex items-center justify-center gap-4">
+                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
+                            <div>
+                                <p class="font-bold text-lg">Xatolik yuz berdi</p>
+                                <p class="text-base">Fayllarni yuklab bo'lmadi. Iltimos, internet aloqasini tekshiring.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fileGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
                 </div>
 
-            <div id="paginationContainer" class="flex justify-center mt-4 xs:mt-6 sm:mt-8 mb-6 xs:mb-8 sm:mb-12">
-                <div id="pagination" class="flex items-center space-x-0.5 xs:space-x-1 sm:space-x-2">
-                    </div>
+                <div id="paginationContainer" class="flex justify-center mt-12"></div>
             </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <section class="py-8 bg-white">
         <div class="container mx-auto px-4">
@@ -220,48 +156,32 @@
         </div>
     </section>
 
-    <div id="filePreviewModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden ios-modal flex items-center justify-center p-2 xs:p-4">
-        <div class="bg-white rounded-xl xs:rounded-2xl w-full max-w-6xl h-5/6 flex flex-col ios-sheet">
-            <div class="flex justify-between items-center p-3 xs:p-4 border-b">
-                <h3 id="previewFileName" class="text-base xs:text-lg sm:text-xl font-semibold text-primary truncate pr-2"></h3>
+    <div id="filePreviewModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden ios-modal flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-6xl h-5/6 flex flex-col ios-sheet">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="previewFileName" class="text-lg sm:text-xl font-semibold text-primary truncate pr-2"></h3>
                 <button onclick="closeFilePreview()" class="text-gray-500 hover:text-gray-700 flex-shrink-0">
-                    <i data-feather="x" class="w-5 h-5 xs:w-6 xs:h-6"></i>
+                    <i data-feather="x" class="w-6 h-6"></i>
                 </button>
             </div>
              <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                <div class="w-full lg:w-7/12 border-b lg:border-b-0 lg:border-r p-2 xs:p-4 overflow-auto">
-                    <div id="previewImagesContainer" class="space-y-2 xs:space-y-3"></div>
-                </div>
-                <div class="w-full lg:w-5/12 p-3 xs:p-6 overflow-auto">
-                    <div class="mb-4 xs:mb-6">
-                        <h4 class="text-base xs:text-lg font-semibold mb-2">Fayl Ma'lumotlari</h4>
-                        <div class="space-y-1.5 xs:space-y-2 text-xs xs:text-sm text-gray-600">
-                            <div class="flex justify-between">
-                                <span>Format:</span>
-                                <span id="previewFileType" class="font-medium"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>Hajmi:</span>
-                                <span id="previewFileSize" class="font-medium"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>Ko'rishlar:</span>
-                                <span id="previewViews" class="font-medium"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>Yuklab olishlar:</span>
-                                <span id="previewDownloads" class="font-medium"></span>
-                            </div>
+                <div id="previewImagesContainer" class="w-full lg:w-7/12 border-b lg:border-b-0 lg:border-r p-4 overflow-auto space-y-3">
+                    </div>
+                <div class="w-full lg:w-5/12 p-6 overflow-auto">
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold mb-2">Fayl Ma'lumotlari</h4>
+                        <div class="space-y-2 text-sm text-gray-600">
+                            <div class="flex justify-between"><span>Format:</span><span id="previewFileType" class="font-medium"></span></div>
+                            <div class="flex justify-between"><span>Hajmi:</span><span id="previewFileSize" class="font-medium"></span></div>
+                            <div class="flex justify-between"><span>Ko'rishlar:</span><span id="previewViews" class="font-medium"></span></div>
+                            <div class="flex justify-between"><span>Yuklab olishlar:</span><span id="previewDownloads" class="font-medium"></span></div>
                         </div>
                     </div>
-                    <button id="downloadBtn" onclick="downloadFile()" class="w-full bg-primary text-white py-2.5 xs:py-3 rounded-lg hover:bg-blue-600 transition flex items-center justify-center text-sm xs:text-base">
-                        <i data-feather="download" class="w-4 h-4 xs:w-5 xs:h-5 mr-1.5 xs:mr-2"></i>
-                        <span class="hidden xs:inline">Telegram orqali yuklab olish</span>
-                        <span class="xs:hidden">Yuklab olish</span>
+                    <button id="downloadBtn" onclick="downloadFile()" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-sky-600 transition flex items-center justify-center text-base font-semibold">
+                        <i data-feather="download" class="w-5 h-5 mr-2"></i>
+                        <span>Telegram orqali yuklab olish</span>
                     </button>
-                    <p class="text-xs text-gray-500 text-center mt-2">
-                        Yuklab olish uchun Telegram hisobingizga ulaning
-                    </p>
+                    <p class="text-xs text-gray-500 text-center mt-2">Yuklab olish uchun Telegram botimizdan foydalaning</p>
                 </div>
             </div>
         </div>
@@ -300,22 +220,236 @@
     </div>
 
     <script>
-        // Javascript code is unchanged as it doesn't affect the layout.
+    document.addEventListener('DOMContentLoaded', function() {
         feather.replace();
-
-        // Global variables
-        let currentFileId = null;
-        let currentPage = 1;
-        let totalPages = 1;
-        let allFiles = [];
-        let filesPerPage = 9;
-        let isSportMode = false;
-        let isDeepMode = false;
-
-        // API URLs
+        
+        // GLOBAL VARIABLES & CONFIG
         const API_BASE = '{{ MAIN_URL }}';
         const TOP_FILES_API = `${API_BASE}/api/files/api/top-downloads/`;
         const SEARCH_API = `${API_BASE}/api/files/api/search/`;
+        const filesPerPage = 9;
+        let isDeepMode = false;
+        let currentFileId = null;
+
+        // DOM ELEMENTS
+        const fileGrid = document.getElementById('fileGrid');
+        const skeletonLoader = document.getElementById('skeletonLoader');
+        const errorMessage = document.getElementById('errorMessage');
+        const fileSectionTitle = document.getElementById('fileSectionTitle');
+
+        // --- UI STATE MANAGEMENT ---
+        function showLoadingState() {
+            skeletonLoader.classList.remove('hidden');
+            fileGrid.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+        }
+
+        function showContentState() {
+            fileGrid.classList.remove('hidden');
+            skeletonLoader.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+        }
+
+        function showErrorState() {
+            errorMessage.classList.remove('hidden');
+            skeletonLoader.classList.add('hidden');
+            fileGrid.classList.add('hidden');
+        }
+
+        // --- API & DATA FETCHING ---
+        async function fetchData(url) {
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Attempt ${attempt} failed:`, error);
+                    if (attempt === 3) throw error;
+                    await new Promise(res => setTimeout(res, 1000 * attempt));
+                }
+            }
+        }
+
+        async function loadTopFiles(page = 1) {
+            showLoadingState();
+            fileSectionTitle.textContent = "Top Fayllar";
+            try {
+                const data = await fetchData(`${TOP_FILES_API}?page=${page}&page_size=${filesPerPage}`);
+                if (data && data.results) {
+                    displayFiles(data.results);
+                    generatePagination(data.total_pages, page, loadTopFiles);
+                    showContentState();
+                } else {
+                    showErrorState();
+                }
+            } catch (error) {
+                console.error('Failed to load top files:', error);
+                showErrorState();
+            }
+        }
+
+        window.performSearch = async function(event, page = 1) {
+            if (event) event.preventDefault();
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                loadTopFiles();
+                return;
+            }
+
+            showLoadingState();
+            fileSectionTitle.textContent = `"${query}" uchun natijalar`;
+            const searchUrl = `${SEARCH_API}?q=${encodeURIComponent(query)}&deep=${isDeepMode}&page=${page}&page_size=${filesPerPage}`;
+            
+            try {
+                const data = await fetchData(searchUrl);
+                if (data && data.results) {
+                    displayFiles(data.results);
+                    const searchFn = (p) => performSearch(null, p);
+                    generatePagination(data.total_pages, page, searchFn);
+                    showContentState();
+                } else {
+                     showErrorState();
+                }
+            } catch (error) {
+                console.error('Failed to perform search:', error);
+                showErrorState();
+            }
+        }
+        
+        // --- RENDERING ---
+        function displayFiles(files) {
+            if (files.length === 0) {
+                fileGrid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500 text-lg">Hech qanday fayl topilmadi</div>`;
+                return;
+            }
+            fileGrid.innerHTML = files.map(file => createFileCard(file)).join('');
+            feather.replace();
+        }
+        
+        function createFileCard(file) {
+            const fileType = file.title.split('.').pop().toUpperCase() || 'FILE';
+            const fileSize = file.file_size ? `${(file.file_size / 1024 / 1024).toFixed(2)} MB` : 'N/A';
+            const escapedTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            return `
+                <div class="bg-white rounded-xl p-5 shadow-sm hover:shadow-lg transition-shadow duration-300 cursor-pointer" 
+                     onclick="showFilePreview('${file.id}', '${escapedTitle}', '${fileType}', '${fileSize}', '${file.view_count || 0}', '${file.download_count || 0}')">
+                    <div class="flex items-center mb-4 gap-4">
+                        <div class="w-12 h-12 bg-sky-100 text-sky-600 font-bold text-sm flex items-center justify-center rounded-lg flex-shrink-0">${fileType}</div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-gray-800 truncate">${file.title}</h3>
+                            <p class="text-sm text-gray-500">${fileSize}</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <div class="flex items-center gap-1.5"><i data-feather="eye" class="w-4 h-4"></i><span>${file.view_count || 0}</span></div>
+                        <div class="flex items-center gap-1.5"><i data-feather="download" class="w-4 h-4"></i><span>${file.download_count || 0}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generatePagination(totalPages, currentPage, pageChangeFn) {
+            const container = document.getElementById('paginationContainer');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="flex items-center space-x-2">';
+            const createButton = (page, content, disabled = false, active = false) => {
+                const baseClasses = 'w-10 h-10 flex items-center justify-center rounded-lg border';
+                let stateClasses = 'border-gray-300 text-gray-600 hover:bg-gray-50';
+                if (disabled) stateClasses = 'border-gray-200 text-gray-400 cursor-not-allowed';
+                if (active) stateClasses = 'bg-primary text-white border-primary cursor-default';
+                const button = document.createElement('button');
+                button.innerHTML = content;
+                button.className = `${baseClasses} ${stateClasses}`;
+                if (!disabled && !active) {
+                    button.onclick = () => pageChangeFn(page);
+                }
+                return button.outerHTML;
+            };
+
+            html += createButton(currentPage - 1, '<i data-feather="chevron-left" class="w-4 h-4"></i>', currentPage === 1);
+
+            // Logic for page numbers (e.g., 1 ... 4 5 6 ... 10)
+            const pagesToShow = [];
+            pagesToShow.push(1);
+            if (currentPage > 3) pagesToShow.push('...');
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                pagesToShow.push(i);
+            }
+            if (currentPage < totalPages - 2) pagesToShow.push('...');
+            if (totalPages > 1) pagesToShow.push(totalPages);
+            
+            const uniquePages = [...new Set(pagesToShow)];
+
+            uniquePages.forEach(page => {
+                if(page === '...') {
+                    html += '<span class="px-2 text-gray-500">...</span>';
+                } else {
+                    html += createButton(page, page, false, page === currentPage);
+                }
+            });
+
+            html += createButton(currentPage + 1, '<i data-feather="chevron-right" class="w-4 h-4"></i>', currentPage === totalPages);
+            html += '</div>';
+
+            container.innerHTML = html;
+            feather.replace();
+        }
+        
+        // --- MODAL & INTERACTIONS ---
+        window.showFilePreview = function(fileId, name, type, size, views, downloads) {
+            currentFileId = fileId;
+            document.getElementById('previewFileName').textContent = name;
+            document.getElementById('previewFileType').textContent = type;
+            document.getElementById('previewFileSize').textContent = size;
+            document.getElementById('previewViews').textContent = views;
+            document.getElementById('previewDownloads').textContent = downloads;
+            
+            const modal = document.getElementById('filePreviewModal');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => modal.classList.add('open'));
+            document.body.style.overflow = 'hidden';
+        }
+
+        window.closeFilePreview = function() {
+            const modal = document.getElementById('filePreviewModal');
+            modal.classList.remove('open');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 520);
+            document.body.style.overflow = 'auto';
+            currentFileId = null;
+        }
+
+        window.downloadFile = function() {
+            if (!currentFileId) return;
+            window.open(`https://t.me/fayltopbot?start=download_${currentFileId}`, '_blank');
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('deepToggle').addEventListener('change', (e) => {
+            isDeepMode = e.target.checked;
+            const searchInfo = document.getElementById('searchInfo');
+            if(isDeepMode) {
+                searchInfo.innerHTML = '<span class="font-semibold text-orange-300">Chuqurlashtirilgan Qidiruv:</span> Fayl ichidan ham qidirish';
+            } else {
+                searchInfo.innerHTML = '<span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish';
+            }
+        });
+
+        // Close modal on escape key or outside click
+        document.addEventListener('keydown', (e) => e.key === 'Escape' && closeFilePreview());
+        document.getElementById('filePreviewModal').addEventListener('click', (e) => e.target === e.currentTarget && closeFilePreview());
+
+        // INITIAL LOAD
+        loadTopFiles();
+    });
+    </script>
         const DOWNLOAD_API = `${API_BASE}/api/files/api/`;
 
         // Ignite Theme Helpers (no indicator text)
@@ -488,7 +622,7 @@
                 indicator.className = 'mt-4 text-center';
                 indicator.innerHTML = `
                     <p class="text-sm ${isDeepMode ? 'text-red-400' : 'text-blue-600'} font-medium">
-                        ${isDeepMode ? 'Chuqurlashtirilgan Qidiruv' : 'Oddiy Qidiruv'} - ${allFiles.length} ta natija topildi
+                        ${isDeepMode ? 'Chuqurlashtirilgan Qidiruv' : 'Oddiy Qidiruv'} - ${allFiles.length} ta natija topildi
                     </p>
                 `;
 
@@ -744,11 +878,11 @@
                 await updateDownloadCount(currentFileId);
 
                 // Redirect to Telegram bot
-                window.open('https://t.me/fayltop_bot?start=download_' + currentFileId, '_blank');
+                window.open('https://t.me/fayltopbot?start=download_' + currentFileId, '_blank');
                     } catch (error) {
                 console.error('Error downloading file:', error);
                 // Still redirect to bot even if API call fails
-                window.open('https://t.me/fayltop_bot', '_blank');
+                window.open('https://t.me/fayltopbot', '_blank');
             }
         }
 
