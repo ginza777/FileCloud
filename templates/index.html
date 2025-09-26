@@ -370,7 +370,7 @@
                 
                 if (data.results) {
                     allFiles = data.results;
-                    totalPages = data.total_pages || 1;
+                    totalPages = data.total_pages || Math.ceil(data.total / filesPerPage) || 1;
                     currentPage = data.page || 1;
                     displayFiles(allFiles);
                     generatePagination();
@@ -472,7 +472,7 @@
                 
                 if (data.results) {
                     allFiles = data.results;
-                    totalPages = data.total_pages || 1;
+                    totalPages = data.total_pages || Math.ceil(data.total / filesPerPage) || 1;
                     currentPage = data.page || 1;
                     displayFiles(allFiles);
                     generatePagination();
