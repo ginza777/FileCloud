@@ -89,11 +89,11 @@ class User(models.Model):
     """
     Represents a Telegram user who interacts with the bot.
     """
-    telegram_id = models.BigIntegerField(unique=True, help_text=_("Telegram user ID"))
+    telegram_id = models.BigIntegerField(unique=True, db_index=True, help_text=_("Telegram user ID"))
     first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True, null=True)
     username = models.CharField(max_length=100, blank=True, null=True)
-    last_active = models.DateTimeField(auto_now=True)
+    last_active = models.DateTimeField(auto_now=True, db_index=True)
     is_admin = models.BooleanField(default=False)
     is_blocked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -105,7 +105,8 @@ class User(models.Model):
     search_mode = models.CharField(
         max_length=10,
         choices=[("normal", "Normal"), ("deep", "Deep")],
-        default="normal"
+        default="normal",
+        db_index=True
     )
 
     class Meta:
@@ -171,7 +172,7 @@ class BroadcastRecipient(models.Model):
 
     broadcast = models.ForeignKey(Broadcast, on_delete=models.CASCADE, related_name="recipients")
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name="broadcast_messages")
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
     error_message = models.TextField(blank=True, null=True)
     sent_at = models.DateTimeField(blank=True, null=True)
 

@@ -54,22 +54,22 @@ class Document(models.Model):
                                 help_text="Direct link to the document file")
     #status
     download_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
-                                       verbose_name="Yuklab olish holati")
+                                       verbose_name="Yuklab olish holati", db_index=True)
     parse_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
-                                    verbose_name="Parse qilish holati")
+                                    verbose_name="Parse qilish holati", db_index=True)
     index_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
-                                    verbose_name="Indekslash holati")
+                                    verbose_name="Indekslash holati", db_index=True)
     telegram_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
-                                       verbose_name="Telegram holati")
+                                       verbose_name="Telegram holati", db_index=True)
     delete_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending',
-                                     verbose_name="O'chirish holati")
+                                     verbose_name="O'chirish holati", db_index=True)
 
     completed = models.BooleanField(default=False, verbose_name="Barchasi tugatildimi?",db_index=True)
 
     telegram_file_id = models.CharField(blank=True, null=True, verbose_name="Telegram File ID",
                                         help_text="File ID after sending to Telegram channel",db_index=True,max_length=500)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At",db_index=True)
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At", db_index=True)
     json_data = models.JSONField(blank=True, null=True, verbose_name="JSON Data")
     pipeline_running = models.BooleanField(default=False, db_index=True, help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi")
 
@@ -171,12 +171,12 @@ class DocumentError(models.Model):
         ('other', 'Boshqa xatolik'),
     ]
     
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='errors', verbose_name="Document")
-    error_type = models.CharField(max_length=20, choices=ERROR_TYPE_CHOICES, verbose_name="Xatolik turi")
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='errors', verbose_name="Document", db_index=True)
+    error_type = models.CharField(max_length=20, choices=ERROR_TYPE_CHOICES, verbose_name="Xatolik turi", db_index=True)
     error_message = models.TextField(verbose_name="Xatolik xabari")
     celery_attempt = models.PositiveIntegerField(default=1, verbose_name="Celery urinish raqami", help_text="Bu xatolik qaysi urinishda yuz bergani")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqt")
-    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqt", db_index=True)
+
     class Meta:
         verbose_name = "Document Error"
         verbose_name_plural = "Document Errors"
@@ -187,11 +187,11 @@ class DocumentError(models.Model):
 
 
 class SearchQuery(models.Model):
-    user = models.ForeignKey('bot.User', on_delete=models.CASCADE, related_name='search_queries')
-    query_text = models.CharField(max_length=500)
-    found_results = models.BooleanField(default=False)
-    is_deep_search = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey('bot.User', on_delete=models.CASCADE, related_name='search_queries', db_index=True)
+    query_text = models.CharField(max_length=500, db_index=True)
+    found_results = models.BooleanField(default=False, db_index=True)
+    is_deep_search = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return f"'{self.query_text}' by {self.user}"

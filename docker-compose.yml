@@ -11,7 +11,7 @@ services:
              python manage.py collectstatic --no-input &&
              mkdir -p /app/media/downloads /app/media/download &&
              python manage.py clean --cancel-tasks --force &&
-             uvicorn core.asgi:application --host 0.0.0.0 --workers 10 --timeout-keep-alive 120"
+             uvicorn core.asgi:application --host 0.0.0.0 --workers 4 --timeout-keep-alive 120"
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
@@ -37,7 +37,7 @@ services:
     container_name: filefinder_celery
     command: >
       sh -c "mkdir -p /app/media/downloads /app/media/download &&
-             celery -A core worker --loglevel=info --concurrency=5"
+             celery -A core worker --loglevel=info --concurrency=4"
     volumes:
       - .:/app
       - ./media:/app/media
