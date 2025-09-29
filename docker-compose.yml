@@ -9,7 +9,7 @@ services:
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&
              python manage.py collectstatic --no-input &&
-             mkdir -p /app/media/downloads /app/media/docpic_files && /app/media/images &&
+             mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
              python manage.py clean --cancel-tasks --force &&
              uvicorn core.asgi:application --host 0.0.0.0 --workers 4 --timeout-keep-alive 120"
     volumes:
@@ -36,7 +36,7 @@ services:
     build: .
     container_name: filefinder_celery
     command: >
-      sh -c "mkdir -p /app/media/downloads /app/media/docpic_files && /app/media/images &&
+      sh -c "mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
              celery -A core worker --loglevel=info --concurrency=4"
     volumes:
       - .:/app
@@ -56,7 +56,7 @@ services:
     container_name: filefinder_celery_beat
     command: >
       sh -c "python manage.py wait_for_db &&
-             mkdir -p /app/media/downloads /app/media/docpic_files && /app/media/images &&
+             mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
              python manage.py clean --cancel-tasks --force &&
              celery -A core beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:

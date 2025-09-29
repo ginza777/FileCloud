@@ -214,3 +214,4 @@ class DocumentImage(models.Model):
 
     def __str__(self):
         return f"Image p{self.page_number} for {self.document_id}"
+

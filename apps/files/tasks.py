@@ -5,12 +5,14 @@ import os
 import time
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from celery import shared_task
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction, DatabaseError
+from django.utils import timezone
 from elasticsearch import Elasticsearch
 from requests.adapters import HTTPAdapter
 from tika import parser as tika_parser
@@ -260,79 +262,53 @@ def generate_document_images_task(self, document_id: str, max_pages: int = 5):
     return f"Successfully generated {len(images)} images for document {document_id}."
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3)
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3, name='apps.files.tasks.process_document_pipeline')
 def process_document_pipeline(self, document_id):
-    """
-    To'liq pipeline. Hujjatni qaysi bosqichda bo'lsa, o'sha yerdan davom ettiradi.
-    Yuklaydi, parse qiladi, indekslaydi, yuboradi va oxirida o'chiradi.
-    """
-    logger.info(f"--- [PIPELINE START] Hujjat ID: {document_id} ---")
-    file_path_str = ""
+    # Qolgan kod o'zgarmaydi
+    try:
+        doc = Document.objects.select_related('product').get(id=document_id)
+    except Document.DoesNotExist:
+        logger.error(f"Document {document_id} not found in pipeline.")
+        return
+
+    # Agar pipeline allaqachon ishlayotgan bo'lsa, yangi taskni o'tkazib yuborish
+    if doc.pipeline_running and (timezone.now() - doc.updated_at).total_seconds() < 3600: # 1 soatdan kam vaqt o'tgan bo'lsa
+        logger.warning(f"Pipeline for document {document_id} is already running. Skipping new task.")
+        return
+
+    doc.pipeline_running = True
+    doc.save(update_fields=['pipeline_running'])
+
+    # Initialize file_path to avoid NameError in finally block
+    file_path = None
 
     try:
-        with transaction.atomic():
-            doc = Document.objects.select_for_update().get(id=document_id)
+        # --- FAYL YO'LINI ANIQLASH ---
+        file_name = os.path.basename(urlparse(doc.parse_file_url).path)
 
-            if doc.completed:
-                logger.info(f"[PIPELINE SKIPPED] Hujjat allaqachon yakunlangan: {document_id}")
-                return
-
-            if not doc.pipeline_running:
-                doc.pipeline_running = True
-                doc.save(update_fields=['pipeline_running'])
-                logger.info(f"[PIPELINE LOCK] {document_id} pipeline'ga qulflandi.")
-
-        # Fayl yo'lini aniqlash
-        try:
-            file_extension = Path(doc.parse_file_url).suffix
-            if not file_extension: raise ValueError("Fayl kengaytmasi topilmadi.")
-            
-            # Faqat /tmp papkasida fayl yaratamiz
-            temp_dir = '/tmp/filefinder_downloads'
-            os.makedirs(temp_dir, exist_ok=True)
-            temp_file_path = os.path.join(temp_dir, f"{doc.id}{file_extension}")
-            
-            # Media papkasini ham yaratamiz (agar muvaffaqiyatli bo'lsa)
-            media_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
-            try:
-                os.makedirs(media_dir, exist_ok=True)
-                file_path_str = os.path.join(media_dir, f"{doc.id}{file_extension}")
-            except:
-                # Agar media papkasida xato bo'lsa, faqat temp ishlatamiz
-                file_path_str = temp_file_path
-            
-        except Exception as path_err:
-            log_document_error(doc, 'other', f"Fayl yo'lini aniqlashda xato: {path_err}", self.request.retries + 1)
-            doc.pipeline_running = False
-            doc.save(update_fields=['pipeline_running'])
-            return
+        # Downloads directory (media/downloads)
+        downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
+        os.makedirs(downloads_dir, exist_ok=True) # Papka mavjudligini tekshirish
+        file_path = os.path.join(downloads_dir, file_name)
 
         # --- BOSQICHMA-BOSQICH BAJARISH ---
 
         # 1. DOWNLOAD
         if doc.download_status != 'completed':
             try:
-                logger.info(f"[1. Yuklash] Boshlandi: {document_id}")
+                logger.info(f"[1. Yuklash] Boshlandi: {document_id} -> {file_path}")
                 doc.download_status = 'processing'
                 doc.save(update_fields=['download_status'])
                 
-                # Faqat /tmp papkasida fayl yuklaymiz
                 with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                     r.raise_for_status()
-                    with open(temp_file_path, "wb") as f:
-                        for chunk in r.iter_content(chunk_size=8192): f.write(chunk)
-                
-                # Media papkasiga ko'chirishga harakat qilamiz
-                if file_path_str != temp_file_path:
-                    try:
-                        import shutil
-                        shutil.copy2(temp_file_path, file_path_str)
-                        logger.info(f"[1. Yuklash] Media papkasiga ko'chirildi: {file_path_str}")
-                    except Exception as copy_err:
-                        logger.warning(f"[1. Yuklash] Media papkasiga ko'chirishda xato: {copy_err}")
-                        # Agar ko'chirishda xato bo'lsa, temp faylni ishlatamiz
-                        file_path_str = temp_file_path
-                
+                    with open(file_path, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+
+                # Fayl to'g'ridan-to'g'ri downloads papkasiga yuklandi
+                logger.info(f"[1. Download] Fayl downloads papkasiga yuklandi: {file_path}")
+
                 doc.download_status = 'completed'
                 doc.save(update_fields=['download_status'])
                 logger.info(f"[1. Yuklash] Muvaffaqiyatli: {document_id}")
@@ -340,23 +316,20 @@ def process_document_pipeline(self, document_id):
                 doc.download_status = 'failed'
                 doc.save(update_fields=['download_status'])
                 log_document_error(doc, 'download', e, self.request.retries + 1)
-                raise  # Celery qayta urinishi uchun xatolikni yuqoriga uzatamiz
+                raise
 
         # 2. PARSE (TIKA)
         if doc.parse_status != 'completed':
             try:
                 logger.info(f"[2. Parse] Boshlandi: {document_id}")
                 
-                # Avval media papkasidagi faylni tekshiramiz, keyin temp papkasidagini
-                parse_file_path = file_path_str
-                if not os.path.exists(parse_file_path):
-                    parse_file_path = temp_file_path
-                    if not os.path.exists(parse_file_path):
-                        raise FileNotFoundError(f"Parse qilish uchun fayl topilmadi: {file_path_str} va {temp_file_path}")
-                
+                # Fayl downloads papkasida
+                if not os.path.exists(file_path):
+                    raise FileNotFoundError(f"Parse qilish uchun fayl topilmadi: {file_path}")
+
                 doc.parse_status = 'processing'
                 doc.save(update_fields=['parse_status'])
-                parsed = tika_parser.from_file(parse_file_path)
+                parsed = tika_parser.from_file(file_path)
                 content = (parsed.get("content") or "").strip()
                 with transaction.atomic():
                     product = doc.product
@@ -365,6 +338,8 @@ def process_document_pipeline(self, document_id):
                 doc.parse_status = 'completed'
                 doc.save(update_fields=['parse_status'])
                 logger.info(f"[2. Parse] Muvaffaqiyatli: {document_id}")
+                
+                # Parse qilgandan keyin faylni o'chirmaymiz, chunki Telegram stage'da kerak bo'ladi
             except Exception as e:
                 doc.parse_status = 'failed'
                 doc.save(update_fields=['parse_status'])
@@ -396,25 +371,32 @@ def process_document_pipeline(self, document_id):
             try:
                 logger.info(f"[4. Telegram] Boshlandi: {document_id}")
                 
-                # Avval media papkasidagi faylni tekshiramiz, keyin temp papkasidagini
-                telegram_file_path = file_path_str
-                if not os.path.exists(telegram_file_path):
-                    telegram_file_path = temp_file_path
-                    if not os.path.exists(telegram_file_path):
-                        raise FileNotFoundError(f"Telegramga yuborish uchun fayl topilmadi: {file_path_str} va {temp_file_path}")
+                # Agar fayl yo'q bo'lsa, uni qayta yuklashga harakat qilamiz
+                if not os.path.exists(file_path):
+                    logger.warning(f"[4. Telegram] Fayl yo'q, qayta yuklashga harakat qilamiz: {file_path}")
+                    try:
+                        # Faylni qayta yuklash
+                        with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
+                            r.raise_for_status()
+                            with open(file_path, "wb") as f:
+                                for chunk in r.iter_content(chunk_size=8192):
+                                    f.write(chunk)
+                        logger.info(f"[4. Telegram] Fayl qayta yuklandi: {file_path}")
+                    except Exception as download_error:
+                        raise FileNotFoundError(f"Telegramga yuborish uchun fayl topilmadi va qayta yuklash muvaffaqiyatsiz: {file_path} - {download_error}")
 
-                doc.telegram_status = 'processing'
-                doc.save(update_fields=['telegram_status'])
+                # Fayl hajmini tekshirish
+                file_size = os.path.getsize(file_path)
 
-                if os.path.getsize(telegram_file_path) > TELEGRAM_MAX_FILE_SIZE_BYTES:
+                if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
                     doc.telegram_status = 'skipped'
                     logger.warning(f"[4. Telegram] Fayl hajmi katta (>49MB), o'tkazib yuborildi: {doc.id}")
                 else:
                     wait_for_telegram_rate_limit()
                     caption = f"*{doc.product.title}*\n\nID: `{doc.id}`"
                     url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendDocument"
-                    with open(telegram_file_path, "rb") as f:
-                        files = {"document": (Path(telegram_file_path).name, f)}
+                    with open(file_path, "rb") as f:
+                        files = {"document": (Path(file_path).name, f)}
                         data = {"chat_id": settings.CHANNEL_ID, "caption": caption, "parse_mode": "Markdown"}
                         response = make_retry_session().post(url, files=files, data=data, timeout=180)
                     resp_data = response.json()
@@ -511,7 +493,7 @@ def process_document_pipeline(self, document_id):
             )
 
             # Agar fayl mavjud bo'lsa va...
-            if file_path_str and os.path.exists(file_path_str):
+            if file_path and os.path.exists(file_path):
                 # ...hujjat ideal holatga kelgan bo'lsa YOKI...
                 # ...vazifa barcha qayta urinishlardan so'ng ham muvaffaqiyatsiz bo'lsa YOKI...
                 # ...hujjat bajarilmay qolgan bo'lsa (pending holatda)
@@ -523,19 +505,11 @@ def process_document_pipeline(self, document_id):
                 )
 
                 if should_delete:
-                    # Avval media papkasidagi faylni o'chiramiz
-                    if os.path.exists(file_path_str):
+                    # Faylni o'chiramiz
+                    if os.path.exists(file_path):
                         try:
-                            os.remove(file_path_str)
-                            logger.info(f"[DELETE] Media fayl o'chirildi: {file_path_str}")
-                        except:
-                            pass
-                    
-                    # Keyin temp papkasidagi faylni ham o'chiramiz
-                    if os.path.exists(temp_file_path):
-                        try:
-                            os.remove(temp_file_path)
-                            logger.info(f"[DELETE] Temp fayl o'chirildi: {temp_file_path}")
+                            os.remove(file_path)
+                            logger.info(f"[DELETE] Fayl o'chirildi: {file_path}")
                         except:
                             pass
                     
@@ -550,6 +524,67 @@ def process_document_pipeline(self, document_id):
             logger.warning(f"Finally blokida hujjat topilmadi: {document_id}")
         except Exception as final_error:
             logger.error(f"[FINALLY BLOCK ERROR] {document_id}: {final_error}")
+            # Xatolik bo'lsa ham pipeline_running ni False qilishga harakat qilamiz
+            try:
+                Document.objects.filter(id=document_id).update(pipeline_running=False)
+                logger.info(f"[PIPELINE FORCE UNLOCK] {document_id} pipeline'dan majburiy qulf olindi.")
+            except Exception as unlock_error:
+                logger.error(f"[PIPELINE FORCE UNLOCK FAILED] {document_id}: {unlock_error}")
+
+
+@shared_task(name="apps.files.tasks.cleanup_temp_files_task")
+def cleanup_temp_files_task():
+    """
+    Temporary fayllarni tozalaydi va disk to'lib qolishini oldini oladi
+    """
+    logger.info("========= TEMPORARY FAYLLARNI TOZALASH BOSHLANDI =========")
+    
+    temp_dirs = ['/tmp/downloads', '/tmp', '/app/media/downloads']
+    total_freed = 0
+    total_files = 0
+    
+    for temp_dir in temp_dirs:
+        if not os.path.exists(temp_dir):
+            continue
+            
+        logger.info(f"Tozalash: {temp_dir}")
+        
+        # Fayllarni yoshi bo'yicha tekshirish (24 soatdan eski)
+        for root, dirs, files in os.walk(temp_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                try:
+                    # Fayl yoshini tekshirish
+                    file_age_hours = (os.path.getctime(file_path) - os.path.getctime('/')) / 3600
+                    
+                    if file_age_hours > 24:  # 24 soatdan eski
+                        file_size = os.path.getsize(file_path)
+                        total_freed += file_size
+                        total_files += 1
+                        
+                        os.remove(file_path)
+                        logger.info(f"✅ O'chirildi: {file_path} ({file_size} bytes)")
+                        
+                except Exception as e:
+                    logger.warning(f"❌ Xatolik: {file_path} - {e}")
+    
+    # Disk hajmini ko'rsatish
+    try:
+        disk_usage = shutil.disk_usage('/tmp')
+        free_gb = disk_usage.free / (1024**3)
+        
+        if free_gb < 1.0:  # 1 GB dan kam bo'sh joy
+            logger.warning("⚠️  DIQQAT: Disk to'lib qolmoqda!")
+        elif free_gb < 2.0:  # 2 GB dan kam bo'sh joy
+            logger.warning("⚠️  Ogoh: Disk to'lib qolish arafasida")
+        else:
+            logger.info("✅ Disk holati yaxshi")
+            
+    except Exception as e:
+        logger.error(f"❌ Disk hajmini o'qishda xatolik: {e}")
+    
+    logger.info(f"✅ Tozalash yakunlandi: {total_files} ta fayl, {total_freed / (1024**2):.1f} MB bo'shatildi")
+    return f"Cleaned {total_files} files, freed {total_freed / (1024**2):.1f} MB"
 
 
 @shared_task(name="apps.files.tasks.cleanup_files_task")
@@ -793,7 +828,7 @@ def soft_uz_process_documents():
                     locked_doc.save()
 
                     # Tozalangan hujjatni navbatga qo'shamiz
-                    process_document_pipeline.apply_async(args=[locked_doc.id])
+                    parse_document_pipeline.apply_async(args=[locked_doc.id])
 
                     logger.info(f"➡️  Navbatga qo'shildi (pending): {locked_doc.id}")
                     queued_for_processing_count += 1
@@ -1023,7 +1058,7 @@ def arxiv_uz_parse():
     from math import ceil
     from django.db import transaction
     from .models import Document, Product, SiteToken, ParseProgress
-    from .tasks import process_document_pipeline
+    from .tasks import parse_document_pipeline
 
     logger.info("========= ARXIV_UZ_PARSE TASK BOSHLANDI =========")
 
@@ -1218,7 +1253,7 @@ def arxiv_uz_parse():
                                     )
 
                                     # Celery orqali qayta ishlash uchun navbatga qo'shish
-                                    process_document_pipeline.apply_async(args=[new_doc.id])
+                                    parse_document_pipeline.apply_async(args=[new_doc.id])
 
                                     new_documents_created += 1
                                     documents_queued_for_processing += 1

@@ -87,20 +87,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Upload directory settings
-UPLOAD_DIR = 'uploads'  # Barcha yuklanayotgan fayllar uchun asosiy papka
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
-# Maxsus operatsiyalar uchun papkalar
-# Bu qism sizning talabingizga mos
-DOCPIC_FILES_DIR = os.path.join(MEDIA_ROOT, 'docpic_files')
-DOWNLOADS_DIR = os.path.join(MEDIA_ROOT, 'downloads')
-IMAGES_DIR = os.path.join(MEDIA_ROOT, 'images')
-
-# Papkalar mavjud bo'lmasa, ularni yaratish
-os.makedirs(DOCPIC_FILES_DIR, exist_ok=True)
-os.makedirs(DOWNLOADS_DIR, exist_ok=True)
-os.makedirs(IMAGES_DIR, exist_ok=True)
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 

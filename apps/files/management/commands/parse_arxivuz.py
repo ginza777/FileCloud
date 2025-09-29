@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 from ...models import Document, Product, SiteToken, ParseProgress
-from ...tasks import process_document_pipeline
+from ...tasks import parse_document_pipeline
 
 # Logging sozlamalari
 logger = logging.getLogger(__name__)
@@ -265,7 +265,7 @@ class Command(BaseCommand):
                                     )
                                     
                                     # Celery orqali qayta ishlash uchun navbatga qo'shish
-                                    process_document_pipeline.apply_async(args=[new_doc.id])
+                                    parse_document_pipeline.apply_async(args=[new_doc.id])
                                     
                                     new_documents_created += 1
                                     documents_queued_for_processing += 1

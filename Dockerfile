@@ -31,10 +31,9 @@ RUN useradd -m app_user && \
     chown -R app_user:app_user /app
 
 # Create necessary directories and set permissions
-RUN mkdir -p /app/media /app/staticfiles /app/backups/postgres/daily /app/backups/postgres/weekly /app/backups/postgres/monthly /app/backups/elasticsearch/daily /app/backups/elasticsearch/weekly /app/backups/elasticsearch/monthly /app/backups/redis/daily /app/backups/redis/weekly /app/backups/redis/monthly && \
+RUN mkdir -p /app/media /app/media/downloads /app/staticfiles /app/backups/postgres/daily /app/backups/postgres/weekly /app/backups/postgres/monthly /app/backups/elasticsearch/daily /app/backups/elasticsearch/weekly /app/backups/elasticsearch/monthly /app/backups/redis/daily /app/backups/redis/weekly /app/backups/redis/monthly && \
     chown -R app_user:app_user /app/media /app/staticfiles /app/backups && \
     chmod -R 755 /app/media /app/staticfiles /app/backups
-
 # Copy project files
 COPY --chown=app_user:app_user . .
 
