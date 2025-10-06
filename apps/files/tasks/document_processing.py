@@ -316,6 +316,7 @@ def process_document_pipeline(self, document_id):
                 es_client.index(index=settings.ES_INDEX, id=str(doc.id), document=body)
                 doc.index_status = 'completed'
                 doc.save(update_fields=['index_status'])
+                doc.check_and_set_completed()  # Ensure completed=True if all statuses are done
                 logger.info(f"[3. Indekslash] Muvaffaqiyatli: {document_id}")
             except Exception as e:
                 doc.index_status = 'failed'
@@ -360,6 +361,8 @@ def process_document_pipeline(self, document_id):
                         doc.telegram_file_id = resp_data["result"]["document"]["file_id"]
                         doc.telegram_status = 'completed'
                         logger.info(f"[4. Telegram] Muvaffaqiyatli: {document_id}")
+                        doc.save(update_fields=['telegram_file_id', 'telegram_status'])
+                        doc.check_and_set_completed()  # Ensure completed=True if all statuses are done
                     elif resp_data.get("error_code") == 429:
                         retry_after = int(resp_data.get("parameters", {}).get("retry_after", 5))
                         logger.warning(f"[4. Telegram] Rate limit xatosi, {retry_after}s keyin qayta uriniladi.")
@@ -413,6 +416,7 @@ def process_document_pipeline(self, document_id):
                         os.remove(file_path)
                         doc.delete_status = 'completed'
                         logger.info(f"[DELETE] Fayl o'chirildi: {file_path}")
+                        doc.check_and_set_completed()  # Ensure completed=True if all statuses are done
                     except OSError as e:
                         logger.warning(f"[DELETE FAILED] Faylni o'chirishda xatolik: {file_path}, {e}")
                         doc.delete_status = 'failed'
