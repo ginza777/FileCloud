@@ -332,7 +332,7 @@ async def toggle_search_mode(update, context, user, language):
     await update.message.reply_text(response_text)
 
 # --- Qidiruv va Fayllar Bilan Ishlash ---
-@get_user
+@update_or_create_user
 @channel_subscribe
 async def main_text_handler(update, context, user, language):
     """
