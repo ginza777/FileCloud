@@ -84,24 +84,68 @@ class DocumentAdmin(admin.ModelAdmin):
     set_pipeline_running_to_false.short_description = "Tanlangan hujjatlar uchun pipeline_running ni False qilish"
 
 
+# admin.py
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    """Admin for product management with performance optimizations"""
+    """
+    Optimallashtirilgan Product admin paneli.
+    - Ro'yxat va yagona mahsulot sahifalari tez ishlashi uchun sozlangan.
+    """
+
+    # ----------------------------------------------------
+    # Ro'yxat Sahifasi Sozlamalari (List View)
+    # ----------------------------------------------------
     list_display = ('id', 'title', 'slug', 'document', 'created_at', 'updated_at')
+    list_display_links = ('id', 'title')
     ordering = ('-created_at',)
-    search_fields = ('id', 'title', 'slug', 'parsed_content', 'document__id')
-    list_filter = ('created_at', 'updated_at', 'document','document__completed')
-    
-    # Performance optimizations
-    list_per_page = 30  # Limit items per page
-    list_select_related = ('document',)  # Optimize foreign key queries
-    raw_id_fields = ('document',)  # Use raw_id for large foreign key dropdowns
-    
+
+    # ENG MUHIM OPTIMIZATSIYA (List View):
+    # 'parsed_content' bo'yicha qidiruv olib tashlandi. Bu qidiruvni tezlashtiradi.
+    search_fields = ('id', 'title', 'slug', 'document__id')
+
+    # IKKINCHI MUHIM OPTIMIZATSIYA (List View):
+    # 'document' (ForeignKey) bo'yicha filtr olib tashlandi. Bu filtr panelini tezlashtiradi.
+    list_filter = ('document__completed', 'created_at', 'updated_at')
+
+    # ----------------------------------------------------
+    # Yagona Mahsulot Sahifasi Sozlamalari (Detail/Change View)
+    # ----------------------------------------------------
+
+    # ENG MUHIM OPTIMIZATSIYA (Detail View):
+    # 'parsed_content' maydoni formadan olib tashlandi. Bu sahifa yuklanishini tezlashtiradi.
+    # Agar biror maydonni ko'rsatish kerak bo'lsa, shu ro'yxatga qo'shing.
+    fields = (
+        'title', 'slug', 'document',
+        'view_count', 'download_count', 'file_size',
+        'created_at', 'updated_at'
+    )
+
+    # Vaqt maydonlarini tahrirlashni cheklash.
+    readonly_fields = ('created_at', 'updated_at')
+
+    # 'document' uchun ochiluvchi ro'yxat o'rniga qidiruv maydonini ishlatish.
+    # Bu yagona mahsulot sahifasi uchun juda muhim optimizatsiya.
+    raw_id_fields = ('document',)
+
+    # ----------------------------------------------------
+    # Umumiy Tezlik Sozlamalari
+    # ----------------------------------------------------
+    list_per_page = 30  # Bir sahifadagi yozuvlar soni
+
+    # N+1 muammosini hal qilish uchun. Ro'yxatda 'document' ma'lumotlarini
+    # bitta so'rovda olishni ta'minlaydi.
+    list_select_related = ('document',)
+
+    # Jami yozuvlar sonini hisoblash uchun qo'shimcha so'rov yubormaslik.
+    # Katta jadvallarda sezilarli tezlik beradi.
+    show_full_result_count = False
+
     def get_queryset(self, request):
-        """Optimize queryset for better performance"""
+        """Ma'lumotlar bazasidan faqat kerakli ustunlarni olish uchun so'rovni optimallashtiradi."""
         queryset = super().get_queryset(request)
         return queryset.select_related('document').only(
-            'id', 'title', 'slug', 'document_id', 'created_at', 'updated_at'
+            'id', 'title', 'slug', 'document__id', 'created_at', 'updated_at'
         )
 
 
