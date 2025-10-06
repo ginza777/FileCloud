@@ -161,7 +161,7 @@ class Document(models.Model):
         default=uuid.uuid4, 
         editable=False, 
         db_index=True,
-        help_text="Hujjatning noyob identifikatori"
+        help_text="Hujjatning noyub identifikatori"
     )
 
     parse_file_url = models.TextField(
@@ -289,7 +289,7 @@ class Document(models.Model):
         pipeline_not_running = (not self.pipeline_running)
 
         # BARCHA 4 SHART bajarilgan bo'lsa - IDEAL HOLAT
-        if has_parsed_content and has_telegram_file and is_indexed and pipeline_not_running:
+        if has_parsed_content and has_telegram_file and is_indexed:
             # Completed = True va barcha statuslarni completed qilish
             self.completed = True
             self.pipeline_running = False
@@ -310,6 +310,21 @@ class Document(models.Model):
             str: Hujjat ID va fayl havolasi
         """
         return f"Document {self.id} ({self.parse_file_url or 'no file'})"
+
+    def check_and_set_completed(self):
+        """
+        Agar barcha status maydonlari 'completed' bo'lsa, completed=True ga o'zgartiring va saqlang.
+        """
+        if (
+            self.download_status == 'completed' and
+            self.parse_status == 'completed' and
+            self.index_status == 'completed' and
+            self.telegram_status == 'completed' and
+            self.delete_status == 'completed'
+        ):
+            if not self.completed:
+                self.completed = True
+                self.save(update_fields=['completed'])
 
 
 class Product(models.Model):
@@ -335,7 +350,7 @@ class Product(models.Model):
     id = models.AutoField(
         primary_key=True, 
         verbose_name="Product ID",
-        help_text="Mahsulotning noyob identifikatori"
+        help_text="Mahsulotning noyub identifikatori"
     )
     title = models.TextField(
         verbose_name="Title", 
@@ -652,4 +667,3 @@ class DocumentImage(models.Model):
             str: Sahifa raqami va hujjat ID'si
         """
         return f"Image p{self.page_number} for {self.document_id}"
-
