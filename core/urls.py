@@ -14,11 +14,19 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.files.views import index
+
+# Import all admin configurations
+import apps.bot.admin  # noqa
+import apps.files.admin  # noqa
+import apps.core_api.admin  # noqa
+
+from django.contrib import admin
+from apps.core_api.api.web.views import index_view
+from apps.core_api.admin_panel.admin_dashboard import admin_dashboard
+from apps.core_api.admin_panel.dashboard_api import dashboard_stats_api, dashboard_charts_api, dashboard_activities_api, dashboard_health_api
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
@@ -34,9 +42,13 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('', index, name='index'),
+    path('', index_view, name='index'),
     path('admin/', admin.site.urls),
-    path('api/files/', include('apps.files.urls')),
+    path('admin/dashboard/', admin_dashboard, name='admin_dashboard'),
+    path('admin/api/stats/', dashboard_stats_api, name='dashboard_stats_api'),
+    path('admin/api/charts/', dashboard_charts_api, name='dashboard_charts_api'),
+    path('admin/api/activities/', dashboard_activities_api, name='dashboard_activities_api'),
+    path('admin/api/health/', dashboard_health_api, name='dashboard_health_api'),
     path('api/', include('apps.core_api.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),

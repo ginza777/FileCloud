@@ -84,6 +84,17 @@ def update_or_create_user(func: Callable):
     """
     Foydalanuvchini topadi yoki yaratadi. Faqat asosiy kirish nuqtalarida
     (masalan, /start) ishlatilishi kerak.
+    
+    Bu dekorator:
+    - Foydalanuvchini bazadan qidiradi
+    - Agar topilmasa, yangi foydalanuvchi yaratadi
+    - Foydalanuvchi ma'lumotlarini yangilaydi
+    - user va language parametrlarini funksiyaga uzatadi
+    
+    Ishlatish:
+        @update_or_create_user
+        async def start_command(update, context, user, language):
+            pass
     """
 
     @wraps(func)
@@ -114,6 +125,16 @@ def get_user(func: Callable):
     """
     Mavjud foydalanuvchini bazadan oladi. Agar topilmasa, /start ga yo'naltiradi.
     Bu tezkor dekorator bo'lib, bazaga yozish amalini bajarmaydi.
+    
+    Bu dekorator:
+    - Faqat mavjud foydalanuvchini qidiradi
+    - Agar topilmasa, /start buyrug'ini so'raydi
+    - user va language parametrlarini funksiyaga uzatadi
+    
+    Ishlatish:
+        @get_user
+        async def some_command(update, context, user, language):
+            pass
     """
 
     @wraps(func)
@@ -140,7 +161,18 @@ def get_user(func: Callable):
 
 def admin_only(func: Callable):
     """
-    Decorator to check if user is admin before allowing access to admin functions
+    Admin huquqlarini tekshiradi. Faqat admin foydalanuvchilar funksiyaga kirishga ruxsat beriladi.
+    
+    Bu dekorator:
+    - Foydalanuvchini bazadan qidiradi
+    - Admin huquqlarini tekshiradi
+    - Agar admin bo'lmasa, rad etish xabarini yuboradi
+    
+    Ishlatish:
+        @get_user
+        @admin_only
+        async def admin_command(update, context, user, language):
+            pass
     """
     @wraps(func)
     async def wrapper(update, context, *args, **kwargs):
@@ -166,6 +198,17 @@ def channel_subscribe(func: Callable):
     """
     Kanalga obunani tekshiradi. Faqat qidiruv vaqtida ishlatiladi.
     O'zidan oldin @get_user yoki @update_or_create_user ishlatilishiga tayanadi.
+    
+    Bu dekorator:
+    - Faol kanallarni tekshiradi
+    - Foydalanuvchining obuna holatini tekshiradi
+    - Agar obuna bo'lmasa, obuna tugmasini ko'rsatadi
+    
+    Ishlatish:
+        @get_user
+        @channel_subscribe
+        async def search_command(update, context, user, language):
+            pass
     """
 
     @wraps(func)
@@ -198,6 +241,19 @@ def channel_subscribe(func: Callable):
 async def get_user_statistics(bot_username: str) -> dict:
     """
     Foydalanuvchilarning umumiy va oxirgi 24 soatdagi faol soni haqida statistika qaytaradi.
+    
+    Args:
+        bot_username (str): Bot username (hozircha ishlatilmaydi, kelajakda kerak bo'lishi mumkin)
+    
+    Returns:
+        dict: {
+            'total': int - jami foydalanuvchilar soni,
+            'active_24h': int - oxirgi 24 soatda faol bo'lgan foydalanuvchilar soni
+        }
+    
+    Ishlatish:
+        stats = await get_user_statistics("MyBot")
+        print(f"Jami: {stats['total']}, Faol: {stats['active_24h']}")
     """
     total = await User.objects.acount()
     active_24 = await User.objects.filter(last_active__gte=now() - timedelta(hours=24)).acount()
@@ -210,7 +266,14 @@ async def perform_database_backup():
     PostgreSQL va SQLite3'ni qo'llab-quvvatlaydi.
 
     Returns:
-        (fayl_nomi, xatolik_matni) tuple. Muvaffaqiyatli bo'lsa xatolik None bo'ladi.
+        tuple: (fayl_nomi, xatolik_matni) tuple. Muvaffaqiyatli bo'lsa xatolik None bo'ladi.
+    
+    Ishlatish:
+        dump_file, error = await perform_database_backup()
+        if dump_file and not error:
+            print(f"Zaxira yaratildi: {dump_file}")
+        else:
+            print(f"Xatolik: {error}")
     """
     db_engine = settings.DATABASES['default']['ENGINE']
     db_config = settings.DATABASES['default']
@@ -262,6 +325,17 @@ def generate_csv_from_users(users_data) -> io.BytesIO:
     """
     Foydalanuvchilar ma'lumotidan (QuerySet.values()) CSV fayl yaratib,
     uni BytesIO obyekti sifatida qaytaradi.
+    
+    Args:
+        users_data: Django QuerySet.values() natijasi yoki shunga o'xshash ma'lumotlar
+    
+    Returns:
+        io.BytesIO: CSV ma'lumotlari bilan to'ldirilgan BytesIO obyekti
+    
+    Ishlatish:
+        users = User.objects.values()
+        csv_file = generate_csv_from_users(users)
+        # csv_file ni Telegram orqali yuborish mumkin
     """
     if not users_data:
         return io.BytesIO(b"Ma'lumotlar mavjud emas")

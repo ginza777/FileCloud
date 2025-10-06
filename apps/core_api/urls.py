@@ -11,6 +11,9 @@ urlpatterns = [
     # Files API endpoints
     path('files/', include('apps.core_api.api.files.urls')),
     
+    # Web API endpoints
+    path('web/', include('apps.core_api.api.web.urls')),
+    
     # Core API endpoints
     path('', include('apps.core_api.api.core.urls')),
 ]

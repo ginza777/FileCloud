@@ -1,7 +1,7 @@
 # Media (foydalanuvchi yuklagan fayllar)
 /media/
-
-# Static (collectstatic natijalari)
+# statik manbalar (dev rejim)
+/static/
 /staticfiles/
 
 # Maxfiy ma'lumotlar
@@ -10,22 +10,22 @@
 .env.*
 
 # Python generatsiya qiladigan fayllar
-*.pyc
-__pycache__/
-*.py[cod]
-*$py.class
-
+.env.local
+.env.development
+.env.production
+.env.test
+.envrc
 # Baza fayllari
 db.sqlite3
 *.sqlite3
 
-# OS va redaktor fayllari
-*.swp
+.mypy_cache/
+.ruff_cache/
 *.DS_Store
 .idea/
 .vscode/
 *.sublime-*
-
+*.dump
 # Virtual muhit
 /venv
 .virtualenv/
@@ -34,9 +34,9 @@ env/
 ENV/
 
 # Loglar va vaqtinchalik fayllar
-*.log
-*.sql
-temp/
+# Node (agar front bor bo'lsa)
+node_modules/
+
 tmp/
 
 # Coverage va test fayllari
@@ -49,3 +49,6 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+celerybeat-schedule
+celery.pid
+dump.rdb  # Redis dump

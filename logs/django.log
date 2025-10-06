@@ -1,0 +1,125 @@
+INFO 2025-10-06 13:22:05,113 documents 7 281472962347040 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:05,154 _transport 7 281472962347040 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:05,155 _transport 7 281472962347040 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:05,277 backup_tasks 7 281472962347040 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:05,280 backup_tasks 7 281472962347040 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:05,893 documents 8 281473463480352 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:05,936 _transport 8 281473463480352 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:05,938 _transport 8 281473463480352 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 13:22:06,059 backup_tasks 8 281473463480352 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:06,062 backup_tasks 8 281473463480352 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:07,208 documents 11 281473112612896 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:07,253 _transport 11 281473112612896 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:07,255 _transport 11 281473112612896 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:07,940 documents 14 281473293160480 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:07,989 _transport 14 281473293160480 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:07,991 _transport 14 281473293160480 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:08,112 backup_tasks 14 281473293160480 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:08,114 backup_tasks 14 281473293160480 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:08,751 documents 15 281473452646432 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:08,796 _transport 15 281473452646432 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:08,798 _transport 15 281473452646432 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:08,921 backup_tasks 15 281473452646432 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:08,923 backup_tasks 15 281473452646432 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:09,608 documents 17 281472993419296 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:09,654 _transport 17 281472993419296 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:09,655 _transport 17 281472993419296 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:10,493 backup_tasks 20 281473445240864 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:10,495 backup_tasks 20 281473445240864 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:10,523 documents 20 281473445240864 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:10,576 _transport 20 281473445240864 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:10,578 _transport 20 281473445240864 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:11,294 documents 32 281473524830240 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:11,327 _transport 32 281473524830240 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:11,330 _transport 32 281473524830240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:11,395 backup_tasks 32 281473524830240 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:11,397 backup_tasks 32 281473524830240 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:11,483 _transport 32 281473524830240 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:11,484 _transport 32 281473524830240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:11,491 _transport 32 281473524830240 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:11,493 _transport 32 281473524830240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:11,497 _transport 32 281473524830240 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:11,498 _transport 32 281473524830240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:11,502 _transport 32 281473524830240 PUT http://es01:9200/documents [status:400 duration:0.001s]
+INFO 2025-10-06 13:22:11,503 _transport 32 281473524830240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:11,506 _transport 32 281473524830240 PUT http://es01:9200/documents [status:400 duration:0.001s]
+INFO 2025-10-06 13:22:11,507 _transport 32 281473524830240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:12,164 backup_tasks 44 281473588355104 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:12,167 backup_tasks 44 281473588355104 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:12,213 documents 44 281473588355104 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:12,263 _transport 44 281473588355104 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:12,265 _transport 44 281473588355104 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 13:22:13,974 backup_tasks 56 281472842297376 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:13,977 backup_tasks 56 281472842297376 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:14,020 documents 56 281472842297376 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:14,067 _transport 56 281472842297376 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:14,068 _transport 56 281472842297376 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:15,798 backup_tasks 68 281473014034464 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:15,800 backup_tasks 68 281473014034464 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:15,840 documents 68 281473014034464 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:15,884 _transport 68 281473014034464 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:15,885 _transport 68 281473014034464 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:16,864 documents 80 281473840013344 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:16,895 _transport 80 281473840013344 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:16,897 _transport 80 281473840013344 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:16,960 backup_tasks 80 281473840013344 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:16,963 backup_tasks 80 281473840013344 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:18,193 backup_tasks 92 281473789743136 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:18,196 backup_tasks 92 281473789743136 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:18,251 documents 92 281473789743136 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:18,302 _transport 92 281473789743136 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:18,304 _transport 92 281473789743136 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:18,366 admin_dashboard 92 281473789743136 Cache miss for chart data, calculating...
+INFO 2025-10-06 13:22:18,373 admin_dashboard 92 281473789743136 Cache miss for recent activities, calculating...
+INFO 2025-10-06 13:22:18,378 admin_dashboard 92 281473789743136 Cache miss for main statistics, calculating...
+INFO 2025-10-06 13:22:18,378 admin_dashboard 92 281473789743136 Calculating main statistics with optimized queries
+INFO 2025-10-06 13:22:18,379 admin_dashboard 92 281473789743136 Statistics calculated: {'total_documents': 0, 'completed_documents': 0, 'pending_documents': 0, 'failed_documents': 0, 'total_products': 0, 'total_users': 0, 'telegram_sent': 0, 'telegram_failed': 0, 'tika_parsed': 0, 'indexed_documents': 0, 'total_errors': 0, 'today_activity': 0, 'pipeline_running': 0}
+INFO 2025-10-06 13:22:18,380 admin_dashboard 92 281473789743136 Cache miss for system health, calculating...
+INFO 2025-10-06 13:22:18,383 admin_dashboard 92 281473789743136 Cache miss for main statistics, calculating...
+INFO 2025-10-06 13:22:18,383 admin_dashboard 92 281473789743136 Calculating main statistics with optimized queries
+INFO 2025-10-06 13:22:18,384 admin_dashboard 92 281473789743136 Statistics calculated: {'total_documents': 0, 'completed_documents': 0, 'pending_documents': 0, 'failed_documents': 0, 'total_products': 0, 'total_users': 0, 'telegram_sent': 0, 'telegram_failed': 0, 'tika_parsed': 0, 'indexed_documents': 0, 'total_errors': 0, 'today_activity': 0, 'pipeline_running': 0}
+INFO 2025-10-06 13:22:18,384 admin_dashboard 92 281473789743136 Cache miss for chart data, calculating...
+INFO 2025-10-06 13:22:18,386 admin_dashboard 92 281473789743136 Cache miss for recent activities, calculating...
+INFO 2025-10-06 13:22:18,387 admin_dashboard 92 281473789743136 Dashboard cache invalidated
+INFO 2025-10-06 13:22:18,408 admin_dashboard 92 281473789743136 Cache miss for main statistics, calculating...
+INFO 2025-10-06 13:22:18,408 admin_dashboard 92 281473789743136 Calculating main statistics with optimized queries
+INFO 2025-10-06 13:22:18,412 admin_dashboard 92 281473789743136 Statistics calculated: {'total_documents': 0, 'completed_documents': 0, 'pending_documents': 0, 'failed_documents': 0, 'total_products': 0, 'total_users': 0, 'telegram_sent': 0, 'telegram_failed': 0, 'tika_parsed': 0, 'indexed_documents': 0, 'total_errors': 0, 'today_activity': 0, 'pipeline_running': 0}
+INFO 2025-10-06 13:22:18,412 admin_dashboard 92 281473789743136 Cache miss for chart data, calculating...
+INFO 2025-10-06 13:22:18,415 admin_dashboard 92 281473789743136 Cache miss for recent activities, calculating...
+INFO 2025-10-06 13:22:18,416 admin_dashboard 92 281473789743136 Dashboard cache invalidated
+INFO 2025-10-06 13:22:18,416 admin_dashboard 92 281473789743136 Cache miss for main statistics, calculating...
+INFO 2025-10-06 13:22:18,416 admin_dashboard 92 281473789743136 Calculating main statistics with optimized queries
+INFO 2025-10-06 13:22:18,417 admin_dashboard 92 281473789743136 Statistics calculated: {'total_documents': 0, 'completed_documents': 0, 'pending_documents': 0, 'failed_documents': 0, 'total_products': 0, 'total_users': 0, 'telegram_sent': 0, 'telegram_failed': 0, 'tika_parsed': 0, 'indexed_documents': 0, 'total_errors': 0, 'today_activity': 0, 'pipeline_running': 0}
+INFO 2025-10-06 13:22:18,417 admin_dashboard 92 281473789743136 Cache miss for chart data, calculating...
+INFO 2025-10-06 13:22:18,419 admin_dashboard 92 281473789743136 Cache miss for recent activities, calculating...
+INFO 2025-10-06 13:22:18,529 logger 92 281473789743136 Starting test_function with args=(5,), kwargs={'y': 15}
+INFO 2025-10-06 13:22:18,529 logger 92 281473789743136 Completed test_function in 0.00s
+INFO 2025-10-06 13:22:18,639 backup_tasks 92 281473789743136 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:18,642 backup_tasks 92 281473789743136 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:18,694 admin_dashboard 92 281473789743136 Calculating main statistics with optimized queries
+INFO 2025-10-06 13:22:18,697 admin_dashboard 92 281473789743136 Statistics calculated: {'total_documents': 100, 'completed_documents': 0, 'pending_documents': 98, 'failed_documents': 0, 'total_products': 0, 'total_users': 0, 'telegram_sent': 20, 'telegram_failed': 0, 'tika_parsed': 0, 'indexed_documents': 25, 'total_errors': 0, 'today_activity': 0, 'pipeline_running': 0}
+INFO 2025-10-06 13:22:18,788 backup_tasks 92 281473789743136 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:18,791 backup_tasks 92 281473789743136 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:20,111 backup_tasks 116 281473622663200 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:20,114 backup_tasks 116 281473622663200 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:20,151 documents 116 281473622663200 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:20,204 _transport 116 281473622663200 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 13:22:20,205 _transport 116 281473622663200 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:21,243 backup_tasks 128 281472843943968 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:21,246 backup_tasks 128 281472843943968 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:21,279 documents 128 281472843943968 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:21,325 _transport 128 281472843943968 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:21,326 _transport 128 281472843943968 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:22,639 backup_tasks 140 281473342246944 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:22,642 backup_tasks 140 281473342246944 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:22,679 documents 140 281473342246944 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:22,725 _transport 140 281473342246944 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:22,727 _transport 140 281473342246944 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:23,611 backup_tasks 152 281473051332640 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:23,614 backup_tasks 152 281473051332640 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:23,654 documents 152 281473051332640 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 13:22:23,703 _transport 152 281473051332640 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 13:22:23,704 _transport 152 281473051332640 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 13:22:24,628 backup_tasks 164 281473407438880 Database backup schedule ensured (sync)
+INFO 2025-10-06 13:22:24,632 backup_tasks 164 281473407438880 File cleanup schedule ensured (sync)
+INFO 2025-10-06 13:22:24,688 documents 164 281473407438880 Successfully connected to Elasticsearch at http://es01:9200

@@ -43,7 +43,8 @@ class DocumentIndex(Document):
     )
     slug = Keyword()
     parsed_content = Text(
-        analyzer='standard'
+        analyzer='standard',
+        index_options='docs'  # Optimize for faster search, less storage
     )
     completed = Boolean()
     document_id = Keyword()
@@ -60,7 +61,9 @@ class DocumentIndex(Document):
                         'stopwords': '_none_'
                     }
                 }
-            }
+            },
+            'max_result_window': 5000,  # Limit maximum results for performance
+            'index.refresh_interval': '30s'  # Reduce refresh frequency for bulk operations
         }
 
     def save(self, **kwargs):
@@ -178,23 +181,26 @@ class DocumentIndex(Document):
                 return None
 
         search = cls.search()
+        search = search[0:100]  # Limit results for performance
 
         if completed is not None:
             search = search.filter('term', completed=completed)
 
         if query:
             if deep:
-                # Deep search: Search in both title and parsed_content
+                # Deep search: Search in both title and parsed_content with boosted title
                 search = search.query('multi_match',
                     query=query,
-                    fields=['title', 'parsed_content'],
-                    operator='and'
+                    fields=['title^2', 'parsed_content'],  # Boost title matches
+                    operator='or',  # More flexible matching
+                    fuzziness='AUTO',  # Allow fuzzy matching for better results
+                    prefix_length=2  # Optimize fuzzy search performance
                 )
             else:
-                # Regular search: Search in title and slug
+                # Regular search: Search in title and slug with boosted title
                 search = search.query('bool',
                     should=[
-                        {'match': {'title': query}},
+                        {'match': {'title': {'query': query, 'boost': 2}}},
                         {'match': {'slug': query}}
                     ],
                     minimum_should_match=1

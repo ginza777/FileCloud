@@ -1,3 +1,25 @@
+"""
+Files App Utility Functions
+==========================
+
+Bu modul files app uchun yordamchi funksiyalarni o'z ichiga oladi.
+Asosan SOFF sayti bilan ishlash va HTTP so'rovlarini boshqarish uchun ishlatiladi.
+
+Funksiyalar:
+- make_retry_session: HTTP so'rovlar uchun qayta urinish mexanizmi
+- refresh_soff_token: SOFF saytidan yangi token olish
+- get_valid_soff_token: Haqiqiy SOFF tokenini olish yoki yangilash
+
+Ishlatish:
+    from apps.files.utils import make_retry_session, get_valid_soff_token
+    
+    # HTTP sessiya yaratish
+    session = make_retry_session(retries=5)
+    
+    # SOFF token olish
+    token = get_valid_soff_token()
+"""
+
 import logging
 import re
 
@@ -17,16 +39,32 @@ def make_retry_session(
         session=None,
 ):
     """
-    Create a requests session with retry capabilities.
-
+    HTTP so'rovlar uchun qayta urinish mexanizmi bilan sessiya yaratadi.
+    
+    Bu funksiya:
+    - HTTP so'rovlar uchun avtomatik qayta urinish mexanizmini qo'shadi
+    - Server xatolari paytida qayta urinish qiladi
+    - Exponential backoff strategiyasini qo'llab-quvvatlaydi
+    
     Args:
-        retries (int): Number of retries
-        backoff_factor (float): Backoff factor between retries
-        status_forcelist (tuple): HTTP status codes to retry on
-        session (requests.Session, optional): Existing session to add retry to
-
+        retries (int): Qayta urinishlar soni (default: 3)
+        backoff_factor (float): Qayta urinishlar orasidagi kutish koeffitsienti (default: 0.3)
+        status_forcelist (tuple): Qayta urinish kerak bo'lgan HTTP status kodlari (default: 500, 502, 504)
+        session (requests.Session, optional): Mavjud sessiyaga qayta urinish mexanizmini qo'shish
+    
     Returns:
-        requests.Session: Session with retry capability
+        requests.Session: Qayta urinish mexanizmi bilan sessiya
+    
+    Ishlatish:
+        # Oddiy sessiya
+        session = make_retry_session()
+        
+        # Maxsus parametrlar bilan
+        session = make_retry_session(retries=5, backoff_factor=0.5)
+        
+        # Mavjud sessiyaga qo'shish
+        existing_session = requests.Session()
+        session = make_retry_session(session=existing_session)
     """
     session = session or requests.Session()
     retry = Retry(
@@ -44,8 +82,27 @@ def make_retry_session(
 
 def refresh_soff_token():
     """
-    Refreshes the SOFF website token (buildId) by scraping it from the website.
-    Returns the new token if successful, None if failed.
+    SOFF saytidan yangi token (buildId) olish va bazaga saqlash.
+    
+    Bu funksiya:
+    - SOFF saytining asosiy sahifasini yuklaydi
+    - HTML dan buildId ni topadi
+    - Yangi token ni bazaga saqlaydi
+    - Xatoliklar paytida log yozadi
+    
+    Returns:
+        str: Yangi token muvaffaqiyatli bo'lsa, None xatolik paytida
+    
+    Raises:
+        requests.RequestException: Tarmoq xatolari
+        Exception: Boshqa kutilmagan xatoliklar
+    
+    Ishlatish:
+        token = refresh_soff_token()
+        if token:
+            print(f"Yangi token: {token}")
+        else:
+            print("Token olishda xatolik")
     """
     try:
         page_url = "https://soff.uz/scientific-resources/all?slug=all&search="
@@ -87,8 +144,27 @@ def refresh_soff_token():
 
 def get_valid_soff_token():
     """
-    Gets a valid SOFF token, refreshing it if necessary.
-    Returns the token if successful, None if failed.
+    Haqiqiy SOFF tokenini olish. Agar token eskirgan bo'lsa, yangilaydi.
+    
+    Bu funksiya:
+    - Bazadan mavjud token ni qidiradi
+    - Token ning haqiqiyligini tekshiradi
+    - Agar token eskirgan bo'lsa, yangi token olishga chaqiradi
+    - Avtomatik token yangilash mexanizmini ta'minlaydi
+    
+    Returns:
+        str: Haqiqiy token muvaffaqiyatli bo'lsa, None xatolik paytida
+    
+    Raises:
+        Exception: Token tekshirish yoki olishda xatoliklar
+    
+    Ishlatish:
+        token = get_valid_soff_token()
+        if token:
+            # Token bilan API so'rov yuborish
+            api_url = f"https://soff.uz/_next/data/{token}/..."
+        else:
+            print("Token olishda xatolik")
     """
     try:
         # Try to get existing token

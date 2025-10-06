@@ -1,4 +1,16 @@
-# apps/files/management/commands/reset_stuck_pipelines.py
+"""
+Pipeline Reset Command
+======================
+
+Bu komanda stuck bo'lib qolgan pipeline'larni qayta tiklaydi.
+Pipeline_running=True bo'lib qolgan hujjatlarni tozalaydi.
+
+Ishlatish:
+    python manage.py reset_stuck_pipelines
+    python manage.py reset_stuck_pipelines --timeout-minutes 30
+    python manage.py reset_stuck_pipelines --dry-run
+"""
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from apps.files.models import Document
@@ -6,7 +18,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
+    """
+    Stuck pipeline'larni qayta tiklash komandasi.
+    
+    Bu komanda:
+    1. Pipeline_running=True bo'lib qolgan hujjatlarni topadi
+    2. Belgilangan vaqtdan eski hujjatlarni qayta tiklaydi
+    3. Pipeline holatini False qiladi
+    4. Dry-run rejimida faqat ko'rsatadi
+    """
+    
     help = "Pipeline_running=True bo'lib qolib ketgan hujjatlarni tozalaydi"
 
     def add_arguments(self, parser):
@@ -23,37 +46,58 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Asosiy pipeline qayta tiklash jarayoni."""
         timeout_minutes = options['timeout_minutes']
         dry_run = options['dry_run']
+        
+        self.stdout.write(
+            self.style.SUCCESS("=== Stuck Pipeline'lar Qayta Tiklash ===")
+        )
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN rejimi - o'zgartirishlar amalga oshirilmaydi"))
+        
+        self.stdout.write(f"Timeout: {timeout_minutes} daqiqa")
         
         # Vaqt chegarasini hisoblash
         timeout_threshold = timezone.now() - timezone.timedelta(minutes=timeout_minutes)
         
-        # Stuck bo'lgan hujjatlarni topish
+        # Stuck pipeline'larni topish
         stuck_docs = Document.objects.filter(
             pipeline_running=True,
             updated_at__lt=timeout_threshold
         )
         
-        count = stuck_docs.count()
+        total_stuck = stuck_docs.count()
         
-        if count == 0:
-            self.stdout.write(self.style.SUCCESS("Stuck bo'lgan pipeline'lar topilmadi."))
+        if total_stuck == 0:
+            self.stdout.write(
+                self.style.SUCCESS("Stuck pipeline'lar topilmadi")
+            )
             return
-            
-        self.stdout.write(f"Topildi: {count} ta stuck pipeline")
         
-        if dry_run:
-            self.stdout.write("DRY RUN - Quyidagi hujjatlar qayta ishga tushiriladi:")
-            for doc in stuck_docs[:10]:  # Faqat birinchi 10 tasini ko'rsatish
-                time_diff = (timezone.now() - doc.updated_at).total_seconds() / 60
-                self.stdout.write(f"  - ID: {doc.id}, Oxirgi yangilanish: {time_diff:.1f} daqiqa oldin")
-        else:
-            # Pipeline_running ni False qilish
+        self.stdout.write(f"Topilgan stuck pipeline'lar: {total_stuck}")
+        
+        # Har bir stuck hujjatni ko'rsatish
+        for doc in stuck_docs:
+            last_update = doc.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+            self.stdout.write(
+                f"  Hujjat {doc.id}: oxirgi yangilanish {last_update}"
+            )
+        
+        if not dry_run:
+            # Pipeline'larni qayta tiklash
             updated_count = stuck_docs.update(pipeline_running=False)
-            self.stdout.write(self.style.SUCCESS(f"✅ {updated_count} ta hujjat qayta ishga tushirildi"))
             
-            # Statistika
-            self.stdout.write(f"Jami hujjatlar: {Document.objects.count()}")
-            self.stdout.write(f"Completed: {Document.objects.filter(completed=True).count()}")
-            self.stdout.write(f"Pipeline running: {Document.objects.filter(pipeline_running=True).count()}")
+            self.stdout.write(
+                self.style.SUCCESS(f"{updated_count} ta pipeline qayta tiklandi")
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING(f"{total_stuck} ta pipeline qayta tiklanadi (dry-run)")
+            )
+        
+        # Yakuniy hisobot
+        self.stdout.write(
+            self.style.SUCCESS("=== Pipeline Qayta Tiklash Yakunlandi ===")
+        )

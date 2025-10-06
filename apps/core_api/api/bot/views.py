@@ -12,6 +12,7 @@ from django.views.decorators.vary import vary_on_cookie
 from django.utils import timezone
 
 from apps.bot.models import *
+from apps.files.models import SearchQuery  # SearchQuery files app'da joylashgan
 from apps.core_api.serializers import (
     SubscribeChannelSerializer, LocationSerializer, SearchQuerySerializer,
     LocationStatsSerializer, SearchStatsSerializer, BroadcastSerializer,

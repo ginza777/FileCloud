@@ -37,6 +37,9 @@ RUN mkdir -p /app/media /app/media/downloads /app/staticfiles /app/backups/postg
 # Copy project files
 COPY --chown=app_user:app_user . .
 
+# Make test runner script executable
+RUN chmod +x /app/run_tests.sh
+
 # Switch to app user
 USER app_user
 

@@ -1,5 +1,26 @@
 """
 Files API Views
+==============
+
+Bu modul fayllar bilan bog'liq API endpoint'larini o'z ichiga oladi.
+REST API orqali hujjatlar, mahsulotlar va boshqa ma'lumotlar bilan ishlash imkonini beradi.
+
+API Endpoint'lar:
+- DocumentListCreateView: Hujjatlar ro'yxati va yangi hujjat yaratish
+- DocumentDetailView: Hujjat ma'lumotlarini olish/yangilash/o'chirish
+- DocumentStatsView: Hujjatlar statistikasi
+- ProductListCreateView: Mahsulotlar ro'yxati va yangi mahsulot yaratish
+- ProductDetailView: Mahsulot ma'lumotlarini olish/yangilash/o'chirish
+- SiteTokenListCreateView: Sayt tokenlari ro'yxati
+- SiteTokenDetailView: Sayt token ma'lumotlari
+- ParseProgressListCreateView: Parse jarayoni ro'yxati
+- ParseProgressDetailView: Parse jarayoni ma'lumotlari
+
+Xususiyatlar:
+- Caching: 10 daqiqa cache
+- Filtering: Status, search, ordering
+- Permissions: Faqat autentifikatsiya qilingan foydalanuvchilar
+- Pagination: Avtomatik pagination
 """
 from rest_framework import generics, status, filters, permissions
 from rest_framework.response import Response
@@ -30,7 +51,24 @@ __all__ = [
 
 
 class DocumentListCreateView(generics.ListCreateAPIView):
-    """List all documents or create a new one"""
+    """
+    Hujjatlar ro'yxatini ko'rsatish va yangi hujjat yaratish uchun API view.
+    
+    Bu view:
+    - GET: Barcha hujjatlar ro'yxatini qaytaradi
+    - POST: Yangi hujjat yaratadi
+    - Filtering: Status bo'yicha filtrlash
+    - Search: Fayl URL bo'yicha qidiruv
+    - Ordering: Vaqt bo'yicha tartiblash
+    - Caching: 10 daqiqa cache
+    
+    Permissions:
+    - Faqat autentifikatsiya qilingan foydalanuvchilar
+    
+    Returns:
+    - GET: Hujjatlar ro'yxati (paginated)
+    - POST: Yaratilgan hujjat ma'lumotlari
+    """
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -43,18 +81,63 @@ class DocumentListCreateView(generics.ListCreateAPIView):
     @method_decorator(cache_page(60 * 10))  # Cache for 10 minutes
     @method_decorator(vary_on_cookie)
     def get(self, request, *args, **kwargs):
+        """
+        Hujjatlar ro'yxatini cache bilan qaytaradi.
+        
+        Args:
+            request: HTTP request obyekti
+            *args: Positional argumentlar
+            **kwargs: Keyword argumentlar
+        
+        Returns:
+            Response: Hujjatlar ro'yxati (cached)
+        """
         return super().get(request, *args, **kwargs)
 
 
 class DocumentDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete a document"""
+    """
+    Hujjat ma'lumotlarini olish, yangilash va o'chirish uchun API view.
+    
+    Bu view:
+    - GET: Hujjat ma'lumotlarini qaytaradi
+    - PUT/PATCH: Hujjat ma'lumotlarini yangilaydi
+    - DELETE: Hujjatni o'chiradi
+    - Permissions: Faqat autentifikatsiya qilingan foydalanuvchilar
+    
+    Args:
+        pk: Hujjat ID'si (UUID)
+    
+    Returns:
+    - GET: Hujjat ma'lumotlari
+    - PUT/PATCH: Yangilangan hujjat ma'lumotlari
+    - DELETE: Bo'sh response (204 status)
+    """
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 
 class ProductListCreateView(generics.ListCreateAPIView):
-    """List all products or create a new one"""
+    """
+    Mahsulotlar ro'yxatini ko'rsatish va yangi mahsulot yaratish uchun API view.
+    
+    Bu view:
+    - GET: Barcha mahsulotlar ro'yxatini qaytaradi
+    - POST: Yangi mahsulot yaratadi
+    - Optimized queryset: select_related bilan
+    - Filtering: Document bo'yicha
+    - Search: Title, slug va parsed_content bo'yicha qidiruv
+    - Ordering: ID, title va vaqt bo'yicha tartiblash
+    - Caching: 10 daqiqa cache
+    
+    Permissions:
+    - Faqat autentifikatsiya qilingan foydalanuvchilar
+    
+    Returns:
+    - GET: Mahsulotlar ro'yxati (paginated, cached)
+    - POST: Yaratilgan mahsulot ma'lumotlari
+    """
     queryset = Product.objects.select_related('document')
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -67,6 +150,17 @@ class ProductListCreateView(generics.ListCreateAPIView):
     @method_decorator(cache_page(60 * 10))  # Cache for 10 minutes
     @method_decorator(vary_on_cookie)
     def get(self, request, *args, **kwargs):
+        """
+        Mahsulotlar ro'yxatini cache bilan qaytaradi.
+        
+        Args:
+            request: HTTP request obyekti
+            *args: Positional argumentlar
+            **kwargs: Keyword argumentlar
+        
+        Returns:
+            Response: Mahsulotlar ro'yxati (cached)
+        """
         return super().get(request, *args, **kwargs)
 
 

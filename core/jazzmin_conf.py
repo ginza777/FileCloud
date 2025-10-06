@@ -1,118 +1,182 @@
+"""
+Jazzmin Admin Configuration
+============================
+
+Django Jazzmin - modern admin interface konfiguratsiyasi.
+"""
+
 JAZZMIN_SETTINGS = {
-    "site_title": "FaylTop",
+    # Site title
+    "site_title": "FaylTop Admin",
     "site_header": "FaylTop",
     "site_brand": "FaylTop Admin",
-    "welcome_sign": "FaylTop Admin Paneliga xush kelibsiz",
-    # Copyright on the footer
-    "copyright": "FaylTop Team",
-    "user_avatar": None,
+
     # Logo
     "site_logo": "fayltop_transparent.svg",
+    "login_logo": None,
+    "login_logo_dark": None,
     "site_logo_classes": "img-circle",
     "site_icon": "fayltop_transparent.svg",
+
+    # Welcome text
+    "welcome_sign": "FaylTop Admin Paneliga xush kelibsiz",
+
+    # Copyright
+    "copyright": "FaylTop Team",
+
+    # Search models
+    "search_model": ["auth.User", "files.Document", "files.Product", "bot.User"],
+
+    # User avatar
+    "user_avatar": None,
+
     ############
     # Top Menu #
     ############
-    # Links to put along the top menu
     "topmenu_links": [
-        # Url that gets reversed (Permissions can be added)
-        {"name": "FileFinder", "url": "home", "permissions": ["auth.view_user"]},
-        # model admin to link to (Permissions checked against model)
+        {"name": "Dashboard", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "API Docs", "url": "/api/docs/", "new_window": True},
         {"model": "auth.User"},
     ],
+
+    #############
+    # User Menu #
+    #############
+    "usermenu_links": [
+        {"name": "API Documentation", "url": "/api/docs/", "new_window": True},
+        {"model": "auth.user"}
+    ],
+
     #############
     # Side Menu #
     #############
-    # Whether to display the side menu
     "show_sidebar": True,
-    # Whether to aut expand the menu
     "navigation_expanded": True,
-    # Custom icons for side menu apps/models See https://fontawesome.com/icons?d=gallery&m=free&v=5.0.0,5.0.1,5.0.10,5.0.11,5.0.12,5.0.13,5.0.2,5.0.3,5.0.4,5.0.5,5.0.6,5.0.7,5.0.8,5.0.9,5.1.0,5.1.1,5.2.0,5.3.0,5.3.1,5.4.0,5.4.1,5.4.2,5.13.0,5.12.0,5.11.2,5.11.1,5.10.0,5.9.0,5.8.2,5.8.1,5.7.2,5.7.1,5.7.0,5.6.3,5.5.0,5.4.2
-    # for the full list of 5.13.0 free icon classes
+    "hide_apps": [],
+    "hide_models": [],
+
+    # Order apps
+    "order_with_respect_to": [
+        "auth",
+        "files",
+        "files.document",
+        "files.product",
+        "bot",
+        "bot.user",
+        "core_api",
+        "django_celery_results",
+        "django_celery_beat"
+    ],
+
+    # Custom links
+    "custom_links": {},
+
+    # Icons
     "icons": {
+        # Django Auth
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
-        "auth.group": "fas fa-users",
-        "users.User": "fas fa-user",
+        "auth.Group": "fas fa-users",
         "admin.LogEntry": "fas fa-file-alt",
+
+        # Files App
+        "files": "fas fa-folder",
+        "files.Document": "fas fa-file-pdf",
+        "files.Product": "fas fa-box",
+        "files.SiteToken": "fas fa-key",
+        "files.ParseProgress": "fas fa-tasks",
+        "files.DocumentError": "fas fa-exclamation-triangle",
+        "files.SearchQuery": "fas fa-search",
+        "files.DocumentImage": "fas fa-image",
+
+        # Bot App
         "bot": "fas fa-robot",
-        "bot.user": "fas fa-user-friends",
-        "bot.document": "fas fa-file-download",
-        "bot.broadcast": "fas fa-bullhorn",
-        "bot.searchquery": "fas fa-search",
-        "bot.location": "fas fa-map-marker-alt",
-        "bot.subscribechannel": "fas fa-bell",
-        "multiparser": "fas fa-parser",
-        "multiparser.document": "fas fa-file-pdf",
-        "multiparser.product": "fas fa-box",
-        "multiparser.seller": "fas fa-store",
-        "multiparser.productview": "fas fa-eye",
+        "bot.User": "fas fa-user-friends",
+        "bot.SubscribeChannel": "fas fa-bell",
+        "bot.Location": "fas fa-map-marker-alt",
+        "bot.Broadcast": "fas fa-bullhorn",
+        "bot.BroadcastRecipient": "fas fa-users",
+
+        # Core API App
+        "core_api": "fas fa-cogs",
+        "core_api.Feedback": "fas fa-comment-dots",
+
+        # Celery Results
         "django_celery_results": "fas fa-tasks",
-        "django_celery_results.taskresult": "fas fa-check-circle",
+        "django_celery_results.TaskResult": "fas fa-check-circle",
+        "django_celery_results.GroupResult": "fas fa-layer-group",
+
+        # Celery Beat
         "django_celery_beat": "fas fa-clock",
-        "django_celery_beat.periodictask": "fas fa-calendar-alt",
-        "django_celery_beat.crontabschedule": "fas fa-calendar-check",
-        "django_celery_beat.intervalschedule": "fas fa-stopwatch",
-        "django_celery_beat.solarschedule": "fas fa-sun",
-        "django_celery_beat.clockedschedule": "fas fa-clock",
-        "files.documentimage": "fas fa-image",
+        "django_celery_beat.PeriodicTask": "fas fa-calendar-alt",
+        "django_celery_beat.CrontabSchedule": "fas fa-calendar-check",
+        "django_celery_beat.IntervalSchedule": "fas fa-stopwatch",
+        "django_celery_beat.SolarSchedule": "fas fa-sun",
+        "django_celery_beat.ClockedSchedule": "fas fa-clock",
+
+        # Auth Token
+        "authtoken": "fas fa-key",
+        "authtoken.Token": "fas fa-unlock-alt",
+        "authtoken.TokenProxy": "fas fa-unlock-alt",
     },
-    # # Icons that are used when one is not manually specified
+
     "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-arrow-circle-right",
+    "default_icon_children": "fas fa-circle",
+
     #################
     # Related Modal #
     #################
-    # Use modals instead of popups
     "related_modal_active": False,
+
     #############
     # UI Tweaks #
     #############
-    # Relative paths to custom CSS/JS scripts (must be present in static files)
-    # Uncomment this line once you create the bootstrap-dark.css file
-    # "custom_css": "css/bootstrap-dark.css",
+    "custom_css": None,
     "custom_js": None,
-    # Whether to show the UI customizer on the sidebar
+    "use_google_fonts_cdn": True,
     "show_ui_builder": False,
+
     ###############
     # Change view #
     ###############
     "changeform_format": "horizontal_tabs",
-    # override change forms on a per modeladmin basis
     "changeform_format_overrides": {
         "auth.user": "collapsible",
-        "auth.group": "vertical_tabs",
+        "auth.group": "vertical_tabs"
     },
+
+    # Language chooser
+    "language_chooser": False,
 }
 
 JAZZMIN_UI_TWEAKS = {
+    "show_ui_builder": True,
     "navbar_small_text": False,
     "footer_small_text": False,
-    "body_small_text": False,
+    "body_small_text": True,
     "brand_small_text": False,
-    "brand_colour": "navbar-success",
-    "accent": "accent-teal",
+    "brand_colour": "navbar-indigo",
+    "accent": "accent-success",
     "navbar": "navbar-dark",
     "no_navbar_border": False,
-    "navbar_fixed": False,
+    "navbar_fixed": True,
     "layout_boxed": False,
     "footer_fixed": False,
-    "sidebar_fixed": False,
-    "sidebar": "sidebar-dark-info",
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-lime",
     "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
+    "sidebar_disable_expand": True,
+    "sidebar_nav_child_indent": True,
     "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_legacy_style": True,
     "sidebar_nav_flat_style": False,
-    "theme": "cyborg",
-    "dark_mode_theme": None,
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
         "info": "btn-info",
         "warning": "btn-warning",
         "danger": "btn-danger",
-        "success": "btn-success",
+        "success": "btn-success"
     },
+    "actions_sticky_top": True
 }

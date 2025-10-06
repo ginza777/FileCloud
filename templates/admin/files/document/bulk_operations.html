@@ -1,0 +1,475 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Bulk Operations" %}{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .bulk-operations-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .bulk-operations-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .bulk-operations-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .bulk-operations-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .bulk-operations-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .bulk-operations-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .bulk-operations-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .bulk-operations-card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .operation-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .operation-select {
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .operation-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+        
+        .operation-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .operation-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .documents-list {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .documents-list h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .document-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .document-item:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+        
+        .document-checkbox {
+            margin-right: 15px;
+            transform: scale(1.2);
+        }
+        
+        .document-info {
+            flex: 1;
+        }
+        
+        .document-id {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .document-url {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .document-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-completed {
+            background: rgba(46, 213, 115, 0.1);
+            color: #2ed573;
+        }
+        
+        .status-pending {
+            background: rgba(255, 165, 2, 0.1);
+            color: #ffa502;
+        }
+        
+        .status-failed {
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+        }
+        
+        .status-processing {
+            background: rgba(55, 66, 250, 0.1);
+            color: #3742fa;
+        }
+        
+        .select-all-container {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .select-all-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 5px;
+        }
+        
+        .select-all-button:hover {
+            background: #5a6268;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        @media (max-width: 768px) {
+            .bulk-operations-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="bulk-operations-container">
+    <!-- Header -->
+    <div class="bulk-operations-header">
+        <h1 class="bulk-operations-title">
+            <i class="fas fa-cogs"></i>
+            Bulk Operations
+        </h1>
+        <p class="bulk-operations-subtitle">
+            Ko'plab hujjatlarni bir vaqtda boshqarish
+        </p>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-number">{{ documents|length }}</div>
+            <div class="stat-label">Jami Hujjatlar</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ documents|length }}</div>
+            <div class="stat-label">Tanlangan</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Amalga oshirilgan</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Xatoliklar</div>
+        </div>
+    </div>
+    
+    <!-- Bulk Operations Grid -->
+    <div class="bulk-operations-grid">
+        <!-- Download Operations -->
+        <div class="bulk-operations-card">
+            <h3><i class="fas fa-download"></i> Yuklab Olish</h3>
+            <form method="post" class="operation-form" id="download-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="download">
+                <select name="document_ids" multiple class="operation-select" id="download-select">
+                    {% for doc in documents %}
+                    <option value="{{ doc.id }}">{{ doc.id }} - {{ doc.parse_file_url|truncatechars:50 }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="operation-button">
+                    <i class="fas fa-play"></i> Yuklab Olishni Boshlash
+                </button>
+            </form>
+        </div>
+        
+        <!-- Parse Operations -->
+        <div class="bulk-operations-card">
+            <h3><i class="fas fa-file-alt"></i> Parse Qilish</h3>
+            <form method="post" class="operation-form" id="parse-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="parse">
+                <select name="document_ids" multiple class="operation-select" id="parse-select">
+                    {% for doc in documents %}
+                    <option value="{{ doc.id }}">{{ doc.id }} - {{ doc.parse_file_url|truncatechars:50 }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="operation-button">
+                    <i class="fas fa-play"></i> Parse Qilishni Boshlash
+                </button>
+            </form>
+        </div>
+        
+        <!-- Index Operations -->
+        <div class="bulk-operations-card">
+            <h3><i class="fas fa-search"></i> Indekslash</h3>
+            <form method="post" class="operation-form" id="index-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="index">
+                <select name="document_ids" multiple class="operation-select" id="index-select">
+                    {% for doc in documents %}
+                    <option value="{{ doc.id }}">{{ doc.id }} - {{ doc.parse_file_url|truncatechars:50 }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="operation-button">
+                    <i class="fas fa-play"></i> Indekslashni Boshlash
+                </button>
+            </form>
+        </div>
+        
+        <!-- Telegram Operations -->
+        <div class="bulk-operations-card">
+            <h3><i class="fas fa-paper-plane"></i> Telegram</h3>
+            <form method="post" class="operation-form" id="telegram-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="telegram">
+                <select name="document_ids" multiple class="operation-select" id="telegram-select">
+                    {% for doc in documents %}
+                    <option value="{{ doc.id }}">{{ doc.id }} - {{ doc.parse_file_url|truncatechars:50 }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="operation-button">
+                    <i class="fas fa-play"></i> Telegram'ga Yuborishni Boshlash
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Documents List -->
+    <div class="documents-list">
+        <h3><i class="fas fa-list"></i> Hujjatlar Ro'yxati</h3>
+        
+        <div class="select-all-container">
+            <button type="button" class="select-all-button" onclick="selectAll()">
+                <i class="fas fa-check-square"></i> Barchasini Tanlash
+            </button>
+            <button type="button" class="select-all-button" onclick="deselectAll()">
+                <i class="fas fa-square"></i> Barchasini Bekor Qilish
+            </button>
+            <button type="button" class="select-all-button" onclick="selectCompleted()">
+                <i class="fas fa-check-circle"></i> Faqat Tugatilganlarni
+            </button>
+            <button type="button" class="select-all-button" onclick="selectPending()">
+                <i class="fas fa-clock"></i> Faqat Kutilmoqdalarni
+            </button>
+        </div>
+        
+        <div id="documents-container">
+            {% for doc in documents %}
+            <div class="document-item">
+                <input type="checkbox" class="document-checkbox" value="{{ doc.id }}" id="doc-{{ doc.id }}">
+                <div class="document-info">
+                    <div class="document-id">ID: {{ doc.id }}</div>
+                    <div class="document-url">{{ doc.parse_file_url|truncatechars:80 }}</div>
+                </div>
+                <div class="document-status status-{{ doc.download_status }}">
+                    {{ doc.download_status }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Select all documents
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.document-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelects();
+}
+
+// Deselect all documents
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.document-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelects();
+}
+
+// Select only completed documents
+function selectCompleted() {
+    const checkboxes = document.querySelectorAll('.document-checkbox');
+    checkboxes.forEach(checkbox => {
+        const status = checkbox.closest('.document-item').querySelector('.document-status');
+        checkbox.checked = status.classList.contains('status-completed');
+    });
+    updateSelects();
+}
+
+// Select only pending documents
+function selectPending() {
+    const checkboxes = document.querySelectorAll('.document-checkbox');
+    checkboxes.forEach(checkbox => {
+        const status = checkbox.closest('.document-item').querySelector('.document-status');
+        checkbox.checked = status.classList.contains('status-pending');
+    });
+    updateSelects();
+}
+
+// Update select elements with selected documents
+function updateSelects() {
+    const checkboxes = document.querySelectorAll('.document-checkbox:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Update all select elements
+    const selects = document.querySelectorAll('.operation-select');
+    selects.forEach(select => {
+        Array.from(select.options).forEach(option => {
+            option.selected = selectedIds.includes(option.value);
+        });
+    });
+    
+    // Update statistics
+    document.querySelector('.stats-container .stat-card:nth-child(2) .stat-number').textContent = selectedIds.length;
+}
+
+// Add event listeners to checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.document-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelects);
+    });
+    
+    // Add form submission handlers
+    const forms = document.querySelectorAll('.operation-form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const select = this.querySelector('.operation-select');
+            const selectedOptions = Array.from(select.selectedOptions);
+            
+            if (selectedOptions.length === 0) {
+                e.preventDefault();
+                alert('Iltimos, kamida bitta hujjat tanlang!');
+                return;
+            }
+            
+            if (!confirm(`Haqiqatan ham ${selectedOptions.length} ta hujjat uchun amalni bajarishni xohlaysizmi?`)) {
+                e.preventDefault();
+                return;
+            }
+        });
+    });
+});
+
+// Auto refresh every 30 seconds
+setInterval(function() {
+    if (!document.hidden) {
+        window.location.reload();
+    }
+}, 30000);
+</script>
+{% endblock %}

@@ -146,7 +146,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = [
-            'id', 'parse_file_url', 'file_path', 'download_status', 'parse_status',
+            'id', 'parse_file_url', 'download_status', 'parse_status',
             'index_status', 'telegram_status', 'delete_status', 'completed',
             'telegram_file_id', 'created_at', 'updated_at', 'json_data'
         ]
@@ -163,7 +163,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'title', 'parsed_content', 'slug', 'document', 'document_info',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class SiteTokenSerializer(serializers.ModelSerializer):

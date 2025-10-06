@@ -14,22 +14,27 @@ app = Celery('core')
 
 # Configure Celery using environment variables
 app.conf.update(
-    BROKER_URL=os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
-    RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
+    BROKER_URL=os.getenv('CELERY_BROKER_URL', 'django-db'),  # Development uchun database
+    RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND', 'django-db'),  # Django database uchun
     ACCEPT_CONTENT=['json'],
     TASK_SERIALIZER='json',
     RESULT_SERIALIZER='json',
-    TIMEZONE=os.getenv('CELERY_TIMEZONE', 'UTC'),
+    TIMEZONE=os.getenv('CELERY_TIMEZONE', 'Asia/Tashkent'),
     CELERY_TASK_TRACK_STARTED=True,
     CELERY_TASK_TIME_LIMIT=int(os.getenv('CELERY_TASK_TIME_LIMIT', 30 * 60)),
+    CELERY_TASK_SOFT_TIME_LIMIT=int(os.getenv('CELERY_TASK_SOFT_TIME_LIMIT', 25 * 60)),  # Soft limit 25 minutes
+    CELERY_RESULT_EXPIRES=3600,  # 1 soat
     beat_scheduler='django_celery_beat.schedulers:DatabaseScheduler',
+    task_default_retry_delay=300,  # 5 minutes retry delay
+    task_max_retries=3,  # Maximum retries for failed tasks
+    task_ignore_result=False,  # Store task results
+    task_store_errors_even_if_ignored=True,  # Store errors even if task is ignored
+    broker_connection_retry_on_startup=True,  # Retry connection on startup
 )
 
+# Django settings'dan Celery sozlamalarini olish
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
-
-# Import backup tasks to register them
-from apps.files import backup_tasks
 
 # Periodic tasks configuration
 app.conf.beat_schedule = {
