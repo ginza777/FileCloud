@@ -4,6 +4,11 @@ Document Processing Command
 
 Bu komanda mavjud hujjatlarni qayta ishlash uchun pipeline'ga yuboradi.
 Completed=False va pipeline_running=False bo'lgan hujjatlarni topib, ularni qayta ishlash uchun navbatga qo'yadi.
+
+Ishlatish:
+    python manage.py process_documents
+    python manage.py process_documents --limit 50
+    python manage.py process_documents --document-id "uuid-here"
 """
 
 from django.core.management.base import BaseCommand
@@ -15,6 +20,12 @@ from apps.files.tasks.document_processing import process_document_pipeline
 class Command(BaseCommand):
     """
     Hujjatlarni qayta ishlash uchun pipeline'ga yuborish komandasi.
+
+    Bu komanda:
+    1. Completed=False va pipeline_running=False bo'lgan hujjatlarni topadi
+    2. Ularni Celery task orqali qayta ishlash uchun yuboradi
+    3. Pipeline holatini kuzatadi
+    4. Xatoliklarni boshqaradi
     """
 
     help = "Completed=False va pipeline_running=False bo'lgan hujjatlarni pipeline'ga yuboradi"
@@ -60,22 +71,9 @@ class Command(BaseCommand):
 
             # Completed=False va pipeline_running=False bo'lgan hujjatlarni topish
             candidate_docs = Document.objects.filter(
-                # 1. Barcha jarayonlar tugatilgan (completed) bo'lmasin.
                 completed=False,
-
-                # 2. Pipeline ustida ishlamayotgan bo'lsin.
-                pipeline_running=False,
-
-                # 3. Telegram fayl ID'si mavjud bo'lsin (NULL emas).
-                telegram_file_id__isnull=False,
-            ).exclude(
-                # 4. Parse holati 'completed' bo'lmasin.
-                parse_status='completed'
-            ).exclude(
-                # 5. Telegram fayl ID'si bo'sh string ('') bo'lmasin.
-                telegram_file_id=''
-            ).order_by('created_at') # Eng eski hujjatlardan boshlab
-
+                pipeline_running=False
+            ).order_by('created_at')
 
             if limit:
                 candidate_docs = candidate_docs[:limit]
@@ -97,9 +95,8 @@ class Command(BaseCommand):
                     processed_count += 1
                 except Exception as e:
                     self.stdout.write(
-                        self.style.WARNING(f"Hujjat {doc.id} da xatolik: {e}. Navbatga qo'yish muvaffaqiyatsiz.")
+                        self.style.WARNING(f"Hujjat {doc.id} da xatolik: {e}")
                     )
-                    # Xato bo'lsa ham loopni davom ettirish
                     continue
 
             self.stdout.write(
@@ -109,16 +106,17 @@ class Command(BaseCommand):
     def process_single_document(self, document):
         """
         Bitta hujjatni qayta ishlash uchun yuborish.
-        """
-        # Tranzaksiya qismi: Documentni yangilash va Taskni yuborish
-        try:
-            with transaction.atomic():
-                # Pipeline holatini yangilash (faqat bitta field)
-                document.pipeline_running = True
-                document.save(update_fields=['pipeline_running'])
 
-                # Celery task'ni ishga tushirish
-                task = process_document_pipeline.delay(str(document.id))
+        Args:
+            document (Document): Qayta ishlash kerak bo'lgan hujjat
+        """
+        try:
+            # Pipeline holatini yangilash
+            document.pipeline_running = True
+            document.save(update_fields=['pipeline_running'])
+
+            # Celery task'ni ishga tushirish
+            task = process_document_pipeline.delay(str(document.id))
 
             self.stdout.write(
                 self.style.SUCCESS(
@@ -127,14 +125,12 @@ class Command(BaseCommand):
             )
 
         except DatabaseError as e:
-            # Database xatoligi yuzaga kelsa, uni ushlab, qayta tashlash
             self.stdout.write(
-                self.style.ERROR(f"Database xatoligi: {e}. Tranzaksiya bekor qilindi.")
+                self.style.ERROR(f"Database xatoligi: {e}")
             )
             raise
         except Exception as e:
-            # Kutilmagan xatolikni ushlab, qayta tashlash
             self.stdout.write(
-                self.style.ERROR(f"Kutilmagan xatolik: {e}. Task yuborilmadi.")
+                self.style.ERROR(f"Kutilmagan xatolik: {e}")
             )
             raise

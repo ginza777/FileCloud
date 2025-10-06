@@ -22,6 +22,7 @@ from django.utils import timezone
 from ..models import Document, Product, SiteToken, ParseProgress
 from ..utils import get_valid_soff_token
 from .document_processing import process_document_pipeline
+from apps.files.management.commands.parse_soff_documents import create_slug
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -289,6 +290,10 @@ def soft_uz_parse():
                 else:
                     doc = Document(parse_file_url=file_url, json_data=item)
                     prod = Product(id=item_id, title=item.get("title", ""), slug=item.get("slug", ""), document=doc)
+
+                    # Unique slug yaratish
+                    slug = create_slug(item.get("title", ""))
+                    prod.slug = slug
 
                     docs_to_create.append(doc)
                     products_to_create.append(prod)

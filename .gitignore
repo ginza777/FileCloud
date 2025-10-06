@@ -8,7 +8,7 @@
 .env
 *.env
 .env.*
-
+cookies.txt
 # Python generatsiya qiladigan fayllar
 .env.local
 .env.development

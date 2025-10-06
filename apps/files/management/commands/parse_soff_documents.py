@@ -62,7 +62,8 @@ def extract_file_url(poster_url):
     return None
 
 def create_slug(title):
-    """Sarlavhadan slug yaratadi (URL uchun)."""
+    """Sarlavhadan unique slug yaratadi (URL uchun)."""
+    from apps.files.models import Product  # Import here to avoid circular import
     translit_map = {
         'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
         'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
@@ -79,6 +80,12 @@ def create_slug(title):
     slug = re.sub(r'[^a-z0-9\s-]', '', slug)
     slug = re.sub(r'\s+', '-', slug)
     slug = re.sub(r'-+', '-', slug)
+    slug = slug.strip('-')
+    base_slug = slug
+    counter = 1
+    while Product.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
     return slug.strip('-')
 
 
