@@ -1,6 +1,7 @@
 # views.py
 import logging
 import os
+from django.db.models import F
 from asgiref.sync import sync_to_async
 from django.core.paginator import Paginator, Page
 from elasticsearch_dsl import Q
@@ -249,6 +250,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
 
             # Fayl tayyor va yuborish mumkin bo'lsa
             if document.completed and document.telegram_file_id:
+                # Yuklab olishlar sonini oshirish
+                await sync_to_async(lambda: Product.objects.filter(id=document.product.id).update(
+                    download_count=F('download_count') + 1
+                ))()
+                
                 await context.bot.send_document(
                     chat_id=user.telegram_id,
                     document=document.telegram_file_id,
@@ -515,6 +521,27 @@ async def handle_search_pagination(update, context, user, language):
     await query.edit_message_text(text=response_text, reply_markup=reply_markup)
 
 @get_user
+async def increment_view_count_callback(update, context, user, language):
+    """
+    Qidiruv natijalarida fayl tugmasini bosganda ko'rishlar sonini oshirish
+    """
+    query = update.callback_query
+    document_uuid = query.data.split('_')[1]
+    
+    try:
+        # Ko'rishlar sonini oshirish
+        await sync_to_async(lambda: Product.objects.filter(document_id=document_uuid).update(
+            view_count=F('view_count') + 1
+        ))()
+        
+        # Faylni yuborish
+        await send_file_by_callback(update, context, user, language)
+        
+    except Exception as e:
+        logger.error(f"View count increment error: {e}")
+        await send_file_by_callback(update, context, user, language)
+
+@get_user
 async def send_file_by_callback(update, context, user, language):
     """
     Callback orqali faylni Telegramning o'zidagi file_id yordamida yuboradi.
@@ -526,6 +553,11 @@ async def send_file_by_callback(update, context, user, language):
     try:
         document = await Document.objects.select_related('product').aget(id=document_uuid)
         if document.telegram_file_id:
+            # Yuklab olishlar sonini oshirish
+            await sync_to_async(lambda: Product.objects.filter(id=document.product.id).update(
+                download_count=F('download_count') + 1
+            ))()
+            
             await context.bot.send_document(
                 chat_id=user.telegram_id,
                 document=document.telegram_file_id,

@@ -214,7 +214,8 @@ def build_search_results_keyboard(products_on_page, page_obj, search_mode, langu
     # Fayllar ro'yxati uchun tugmalarni yaratamiz
     for product in products_on_page:
         callback_data = f"getfile_{product.document_id}"
-        button_text = f"📄 {product.title}"
+        # Ko'rishlar va yuklab olishlar sonini ko'rsatish
+        button_text = f"📄 {product.title}\n👁 {product.view_count} | ⬇️ {product.download_count}"
         buttons.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
     # Sahifalash (pagination) tugmalari

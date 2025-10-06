@@ -99,7 +99,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken', # Token authentication
     'django_celery_results', # Celery task results
     'django_celery_beat',    # Celery periodic tasks
-    'cacheops',              # ORM cache with automatic invalidation
 ]
 
 MIDDLEWARE = [
@@ -158,21 +157,29 @@ MEDIA_URL = '/media/'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# PostgreSQL database (Production va Test muhiti uchun)
+# Use SQLite for development/testing
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'filefinder_db'),
-        'USER': os.getenv('POSTGRES_USER', 'filefinder_user'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'filefinder_pass'),
-        'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        'CONN_MAX_AGE': 600,  # Connection pooling uchun
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# PostgreSQL database (Production va Test muhiti uchun)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRES_DB', 'filefinder_db'),
+#         'USER': os.getenv('POSTGRES_USER', 'filefinder_user'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'filefinder_pass'),
+#         'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
+#         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+#         'CONN_MAX_AGE': 600,  # Connection pooling uchun
+#         'OPTIONS': {
+#             'connect_timeout': 10,
+#         },
+#     }
+# }
 
 # Test muhiti uchun alohida sozlamalar
 if 'test' in sys.argv:
@@ -259,12 +266,12 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.fayltop\.cloud$",
 ]
 
-# Cache Configuration for Admin Panel Optimization
+# Redis Cache Configuration for Admin Panel Optimization
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 300,  # 5 daqiqa
+        'TIMEOUT': 180,  # 3 daqiqa (180 seconds)
         'OPTIONS': {
             'MAX_ENTRIES': 1000,
             'CULL_FREQUENCY': 3,
@@ -272,10 +279,28 @@ CACHES = {
     }
 }
 
+# Redis Cache Configuration (Production uchun)
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#         'LOCATION': 'redis://redis:6379/0',
+#         'TIMEOUT': 180,  # 3 daqiqa (180 seconds)
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'CONNECTION_POOL_KWARGS': {
+#                 'max_connections': 50,
+#                 'retry_on_timeout': True,
+#             },
+#             'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+#             'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+#         }
+#     }
+# }
+
 # Admin Panel Performance Optimizations
 ADMIN_OPTIMIZATIONS = {
     'ENABLE_CACHE': True,
-    'CACHE_TIMEOUT': 300,  # 5 daqiqa
+    'CACHE_TIMEOUT': 180,  # 3 daqiqa (180 seconds)
     'PAGINATION_SIZE': 25,
     'ENABLE_SELECT_RELATED': True,
     'ENABLE_PREFETCH_RELATED': True,
@@ -485,40 +510,6 @@ LOGGING = {
     },
 }
 
-# =============================================================================
-# CACHEOPS CONFIGURATION - ORM Cache with automatic invalidation
-# =============================================================================
-
-CACHEOPS_REDIS = {
-    "host": "redis",
-    "port": 6379,
-    "db": 1,  # Use separate DB for cacheops
-    "socket_timeout": 3,
-}
-
-# Cache configuration for different models
-CACHEOPS = {
-    # Files app models - cache for 1 hour
-    "files.*": {"ops": "all", "timeout": 3600},
-    "files.document": {"ops": "all", "timeout": 3600},
-    "files.product": {"ops": "all", "timeout": 3600},
-    
-    # Bot app models - cache for 30 minutes
-    "bot.*": {"ops": "all", "timeout": 1800},
-    "bot.user": {"ops": "all", "timeout": 1800},
-    
-    # Core API models - cache for 1 hour
-    "core_api.*": {"ops": "all", "timeout": 3600},
-    
-    # Django built-in models - cache for 1 hour
-    "auth.*": {"ops": "all", "timeout": 3600},
-    "contenttypes.*": {"ops": "all", "timeout": 3600},
-}
-
-# Cacheops settings
-CACHEOPS_DEGRADE_ON_FAILURE = True  # Continue without cache if Redis fails
-CACHEOPS_ENABLED = True
-CACHEOPS_FAKE = False  # Use real caching in production
 
 # Create logs directory if it doesn't exist
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')

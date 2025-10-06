@@ -19,7 +19,7 @@ from .translation import (
 from .views import (
     start, ask_language, language_choice_handle,
     toggle_search_mode, help_handler, about_handler, share_bot_handler,
-    main_text_handler, handle_search_pagination, send_file_by_callback,
+    main_text_handler, handle_search_pagination, increment_view_count_callback,
     admin_panel, stats, backup_db, export_users, secret_level,
     ask_location, location_handler,
     start_broadcast_conversation, receive_broadcast_message,
@@ -68,7 +68,7 @@ def get_application(token: str) -> Application:
             # --- Callback So'rovlari ---
             CallbackQueryHandler(handle_broadcast_confirmation, pattern="^brdcast_"),
             CallbackQueryHandler(handle_search_pagination, pattern="^search_"),
-            CallbackQueryHandler(send_file_by_callback, pattern="^getfile_"),
+            CallbackQueryHandler(increment_view_count_callback, pattern="^getfile_"),
             CallbackQueryHandler(language_choice_handle, pattern="^language_setting_"),
             CallbackQueryHandler(secret_level, pattern="^SCRT_LVL"),
 

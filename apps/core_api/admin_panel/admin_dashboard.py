@@ -25,8 +25,6 @@ from datetime import datetime, timedelta
 import json
 import logging
 
-from cacheops import cached_as, cached_view
-
 from apps.files.models import (
     Document, Product, DocumentError, ParseProgress, 
     DocumentImage, SearchQuery
@@ -39,7 +37,6 @@ logger = logging.getLogger(__name__)
 from django.contrib.admin.views.decorators import staff_member_required
 
 @staff_member_required
-@cached_view(timeout=60)  # Cache dashboard view for 1 minute
 def admin_dashboard(request):
     """
     Admin dashboard view - loyiha haqida barcha statistiklarni ko'rsatadi.
@@ -99,7 +96,7 @@ def admin_dashboard(request):
     ]
     
     # System health
-    system_health = get_system_health()
+    system_health = get_cached_system_health()
     
     context = {
         # Asosiy statistikalar
@@ -206,7 +203,6 @@ def calculate_main_statistics():
     return result
 
 
-@cached_as(Document, Product, timeout=300)  # Cache for 5 minutes
 def prepare_chart_data():
     """
     Charts uchun ma'lumotlarni tayyorlaydi (optimized).
@@ -314,7 +310,6 @@ def prepare_chart_data():
     }
 
 
-@cached_as(Product, DocumentError, ParseProgress, timeout=120)  # Cache for 2 minutes
 def get_recent_activities():
     """
     So'nggi faoliyatlarni olish (optimized).
@@ -449,34 +444,62 @@ def get_system_health():
         }
 
 
-# Redis Cache Functions with Cacheops
-@cached_as(Document, timeout=300)  # Cache for 5 minutes, auto-invalidate on Document changes
+# Redis Cache Functions with 3-minute refresh
 def get_cached_statistics():
-    """Cacheops bilan asosiy statistikalarni olish - avtomatik invalidation"""
-    logger.info("Calculating main statistics (cacheops)...")
-    return calculate_main_statistics()
+    """Redis cache bilan asosiy statistikalarni olish - 3 daqiqa cache"""
+    cache_key = 'admin_dashboard_statistics'
+    cached_stats = cache.get(cache_key)
+    
+    if cached_stats is None:
+        logger.info("Cache miss for statistics, calculating...")
+        cached_stats = calculate_main_statistics()
+        # 3 daqiqa cache (180 seconds)
+        cache.set(cache_key, cached_stats, 180)
+    else:
+        logger.debug("Cache hit for statistics")
+    
+    return cached_stats
 
 
-@cached_as(Document, Product, timeout=600)  # Cache for 10 minutes, auto-invalidate on changes
 def get_cached_chart_data():
-    """Cacheops bilan chart ma'lumotlarini olish - avtomatik invalidation"""
-    logger.info("Calculating chart data (cacheops)...")
-    return prepare_chart_data()
+    """Redis cache bilan chart ma'lumotlarini olish - 3 daqiqa cache"""
+    cache_key = 'admin_dashboard_chart_data'
+    cached_data = cache.get(cache_key)
+    
+    if cached_data is None:
+        logger.info("Cache miss for chart data, calculating...")
+        cached_data = prepare_chart_data()
+        # 3 daqiqa cache (180 seconds)
+        cache.set(cache_key, cached_data, 180)
+    else:
+        logger.debug("Cache hit for chart data")
+    
+    return cached_data
 
 
-@cached_as(Product, User, timeout=120)  # Cache for 2 minutes, auto-invalidate on changes
 def get_cached_recent_activities():
-    """Cacheops bilan so'nggi faoliyatlarni olish - avtomatik invalidation"""
-    logger.info("Calculating recent activities (cacheops)...")
-    return get_recent_activities()
+    """Redis cache bilan so'nggi faoliyatlarni olish - 3 daqiqa cache"""
+    cache_key = 'admin_dashboard_recent_activities'
+    cached_activities = cache.get(cache_key)
+    
+    if cached_activities is None:
+        logger.info("Cache miss for recent activities, calculating...")
+        cached_activities = get_recent_activities()
+        # 3 daqiqa cache (180 seconds)
+        cache.set(cache_key, cached_activities, 180)
+    else:
+        logger.debug("Cache hit for recent activities")
+    
+    return cached_activities
 
 
 def invalidate_dashboard_cache():
     """Dashboard cache'ni tozalash"""
     cache_keys = [
-        'dashboard_main_statistics',
-        'dashboard_chart_data', 
-        'dashboard_recent_activities'
+        'admin_dashboard_statistics',
+        'admin_dashboard_chart_data', 
+        'admin_dashboard_recent_activities',
+        'dashboard_system_health'
     ]
     
     for key in cache_keys:
@@ -486,15 +509,15 @@ def invalidate_dashboard_cache():
 
 
 def get_cached_system_health():
-    """Redis cache bilan system health ma'lumotlarini olish"""
+    """Redis cache bilan system health ma'lumotlarini olish - 3 daqiqa cache"""
     cache_key = 'dashboard_system_health'
     cached_health = cache.get(cache_key)
     
     if cached_health is None:
         logger.info("Cache miss for system health, calculating...")
         cached_health = get_system_health()
-        # 1 daqiqa cache
-        cache.set(cache_key, cached_health, 60)
+        # 3 daqiqa cache (180 seconds)
+        cache.set(cache_key, cached_health, 180)
     else:
         logger.debug("Cache hit for system health")
     

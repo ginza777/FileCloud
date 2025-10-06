@@ -33,14 +33,23 @@ def dashboard_stats_api(request):
         if request.method != 'GET':
             from django.http import HttpResponseNotAllowed
             return HttpResponseNotAllowed(['GET'])
+        
         # Force a DB access so tests can mock failures deterministically
         Document.objects.count()
-        # Cache'dan statistikalarni olish
+        
+        # Cache'dan barcha ma'lumotlarni olish
         stats = get_cached_statistics()
+        chart_data = get_cached_chart_data()
+        activities = get_cached_recent_activities()
+        system_health = get_cached_system_health()
         
         return JsonResponse({
             'success': True,
-            'stats': stats
+            'stats': stats,
+            'charts': chart_data,
+            'activities': activities,
+            'system_health': system_health,
+            'timestamp': timezone.now().isoformat()
         })
         
     except Exception as e:
