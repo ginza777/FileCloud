@@ -26,22 +26,15 @@ RUN pip install --upgrade pip
 COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir -r requirements/production.txt
 
-# Create app user
-RUN useradd -m app_user && \
-    chown -R app_user:app_user /app
-
 # Create necessary directories and set permissions
 RUN mkdir -p /app/media /app/media/downloads /app/staticfiles /app/logs /app/backups/postgres/daily /app/backups/postgres/weekly /app/backups/postgres/monthly /app/backups/elasticsearch/daily /app/backups/elasticsearch/weekly /app/backups/elasticsearch/monthly /app/backups/redis/daily /app/backups/redis/weekly /app/backups/redis/monthly && \
-    chown -R app_user:app_user /app/media /app/staticfiles /app/logs /app/backups && \
     chmod -R 755 /app/media /app/staticfiles /app/logs /app/backups
 # Copy project files
-COPY --chown=app_user:app_user . .
+COPY . .
 
 # Make test runner script executable
 RUN chmod +x /app/run_tests.sh
 
-# Switch to app user
-USER app_user
 
 # Expose port
 EXPOSE 8000
