@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 from django.contrib.admin.views.decorators import staff_member_required
 
 @staff_member_required
+@cached_view(timeout=60)  # Cache dashboard view for 1 minute
 def admin_dashboard(request):
     """
     Admin dashboard view - loyiha haqida barcha statistiklarni ko'rsatadi.
@@ -205,15 +206,16 @@ def calculate_main_statistics():
     return result
 
 
+@cached_as(Document, Product, timeout=300)  # Cache for 5 minutes
 def prepare_chart_data():
     """
-    Charts uchun ma'lumotlarni tayyorlaydi.
+    Charts uchun ma'lumotlarni tayyorlaydi (optimized).
     
     Returns:
         dict: Charts uchun barcha ma'lumotlar
     """
     
-    # Kunlik faoliyat (oxirgi 7 kun)
+    # Kunlik faoliyat (oxirgi 7 kun) - bitta so'rov bilan
     daily_labels = []
     daily_data = []
     
@@ -229,26 +231,33 @@ def prepare_chart_data():
     daily_labels.reverse()
     daily_data.reverse()
     
-    # Holat taqsimoti
-    completed_count = Document.objects.filter(completed=True).count()
-    processing_count = Document.objects.filter(
-        Q(download_status='processing') |
-        Q(parse_status='processing') |
-        Q(index_status='processing') |
-        Q(telegram_status='processing')
-    ).count()
-    failed_count = Document.objects.filter(
-        Q(download_status='failed') |
-        Q(parse_status='failed') |
-        Q(index_status='failed') |
-        Q(telegram_status='failed')
-    ).count()
-    pending_count = Document.objects.filter(
-        Q(download_status='pending') |
-        Q(parse_status='pending') |
-        Q(index_status='pending') |
-        Q(telegram_status='pending')
-    ).count()
+    # Holat taqsimoti - bitta aggregate so'rov bilan
+    status_stats = Document.objects.aggregate(
+        completed_count=Count('id', filter=Q(completed=True)),
+        processing_count=Count('id', filter=Q(
+            Q(download_status='processing') |
+            Q(parse_status='processing') |
+            Q(index_status='processing') |
+            Q(telegram_status='processing')
+        )),
+        failed_count=Count('id', filter=Q(
+            Q(download_status='failed') |
+            Q(parse_status='failed') |
+            Q(index_status='failed') |
+            Q(telegram_status='failed')
+        )),
+        pending_count=Count('id', filter=Q(
+            Q(download_status='pending') |
+            Q(parse_status='pending') |
+            Q(index_status='pending') |
+            Q(telegram_status='pending')
+        ))
+    )
+    
+    completed_count = status_stats['completed_count']
+    processing_count = status_stats['processing_count']
+    failed_count = status_stats['failed_count']
+    pending_count = status_stats['pending_count']
     
     # Xatolik turlari
     error_types = []
@@ -305,9 +314,10 @@ def prepare_chart_data():
     }
 
 
+@cached_as(Product, DocumentError, ParseProgress, timeout=120)  # Cache for 2 minutes
 def get_recent_activities():
     """
-    So'nggi faoliyatlarni olish.
+    So'nggi faoliyatlarni olish (optimized).
     
     Returns:
         list: So'nggi faoliyatlar ro'yxati
@@ -315,8 +325,8 @@ def get_recent_activities():
     
     activities = []
     
-    # So'nggi mahsulotlar
-    recent_products = Product.objects.order_by('-created_at')[:5]
+    # So'nggi mahsulotlar - select_related bilan optimizatsiya
+    recent_products = Product.objects.select_related('document').order_by('-created_at')[:5]
     for product in recent_products:
         activities.append({
             'title': f"Yangi mahsulot: {product.title[:50]}...",
@@ -326,7 +336,7 @@ def get_recent_activities():
         })
     
     # So'nggi xatoliklar
-    recent_errors = DocumentError.objects.order_by('-created_at')[:3]
+    recent_errors = DocumentError.objects.select_related('document').order_by('-created_at')[:3]
     for error in recent_errors:
         activities.append({
             'title': f"Xatolik: {error.error_type}",
