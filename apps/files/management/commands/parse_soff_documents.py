@@ -8,6 +8,7 @@ Yaroqsiz URL'li va bazada mavjud ID'li (Product) elementlarni SKIP qiladi.
 MUHIM TUZATISHLAR:
 1. Bazada ID bo'yicha mavjud bo'lsa, skip qilish.
 2. Har bir item alohida tranzaksiyada, xatoliklar bir-biriga ta'sir qilmaydi.
+3. KeyError: 'start-page' xatosi tuzatildi: options['start-page'] -> options['start_page']
 """
 
 # apps/files/management/commands/parsing/parse_soff_documents.py
@@ -25,7 +26,7 @@ from apps.files.utils import get_valid_soff_token
 SOFF_BUILD_ID_HOLDER = "{build_id}"
 BASE_API_URL_TEMPLATE = f"https://soff.uz/_next/data/{SOFF_BUILD_ID_HOLDER}/scientific-resources/all.json"
 
-# ... (parse_file_size, extract_file_url, create_slug funksiyalari o'zgarishsiz qoladi)
+# =======================================================================
 
 def parse_file_size(file_size_str):
     """Fayl hajmini string formatdan (masalan, '3.49 MB') baytga o'giradi."""
@@ -118,8 +119,9 @@ class Command(BaseCommand):
         """
         Asosiy pars qilish jarayoni.
         """
-        start_page = options['start-page']
-        end_page = options['end-page']
+        # !!! KEY ERROR TUZATILDI: 'start-page' o'rniga 'start_page' ishlatildi
+        start_page = options['start_page']
+        end_page = options['end_page']
         limit = options['limit']
         delay = options['delay']
 
@@ -145,8 +147,8 @@ class Command(BaseCommand):
         if created:
             self.stdout.write("Yangi progress obyekti yaratildi")
         else:
-            # Agar start_page berilmasa, oxirgi to'xtagan joydan davom ettiramiz
-            if options['start-page'] == 1:
+            # Agar start_page default qiymatda (1) bo'lsa, oxirgi to'xtagan joydan davom ettiramiz
+            if options['start_page'] == 1:
                 start_page = progress.last_page + 1
             self.stdout.write(f"Mavjud progress: sahifa {progress.last_page}")
 
