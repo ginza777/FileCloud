@@ -416,10 +416,8 @@ LOGGING = {
         },
         'celery_file': {
             'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'celery.log'),
-            'maxBytes': 1024*1024*15,  # 15MB
-            'backupCount': 10,
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',
             'formatter': 'verbose',
         },
         'mail_admins': {

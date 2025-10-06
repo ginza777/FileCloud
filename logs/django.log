@@ -35193,3 +35193,1667 @@ INFO 2025-10-06 15:26:56,189 _transport 10 281472950841376 POST http://es01:9200
 INFO 2025-10-06 15:26:57,031 documents 7 281473021116448 Successfully connected to Elasticsearch at http://es01:9200
 INFO 2025-10-06 15:26:57,072 _transport 7 281473021116448 PUT http://es01:9200/documents [status:400 duration:0.003s]
 INFO 2025-10-06 15:26:57,073 _transport 7 281473021116448 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:27:58,222 documents 9 281473098633248 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:27:58,262 _transport 9 281473098633248 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:27:58,264 _transport 9 281473098633248 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:27:58,933 documents 10 281473260752928 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:27:58,983 _transport 10 281473260752928 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:27:58,984 _transport 10 281473260752928 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:27:59,911 documents 7 281472912150560 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:27:59,950 _transport 7 281472912150560 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:27:59,952 _transport 7 281472912150560 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:29:01,124 documents 9 281473479876640 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:29:01,167 _transport 9 281473479876640 PUT http://es01:9200/documents [status:400 duration:0.005s]
+INFO 2025-10-06 15:29:01,170 _transport 9 281473479876640 POST http://es01:9200/documents/_refresh [status:200 duration:0.003s]
+INFO 2025-10-06 15:29:01,837 documents 10 281473486766112 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:29:01,888 _transport 10 281473486766112 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:29:01,889 _transport 10 281473486766112 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:29:02,716 documents 7 281473574641696 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:29:02,756 _transport 7 281473574641696 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:29:02,757 _transport 7 281473574641696 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:30:03,921 documents 9 281473107558432 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:30:03,963 _transport 9 281473107558432 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:30:03,964 _transport 9 281473107558432 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:30:04,704 documents 10 281473264767008 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:30:04,755 _transport 10 281473264767008 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:30:04,756 _transport 10 281473264767008 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:30:05,698 documents 7 281473067679776 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:30:05,747 _transport 7 281473067679776 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:30:05,749 _transport 7 281473067679776 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:31:06,858 documents 9 281473190232096 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:31:06,898 _transport 9 281473190232096 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:31:06,900 _transport 9 281473190232096 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:31:07,555 documents 10 281473619787808 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:31:07,605 _transport 10 281473619787808 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:31:07,606 _transport 10 281473619787808 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:31:08,442 documents 7 281473267175456 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:31:08,482 _transport 7 281473267175456 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:31:08,483 _transport 7 281473267175456 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:32:09,624 documents 9 281473067487264 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:32:09,667 _transport 9 281473067487264 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:32:09,668 _transport 9 281473067487264 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:32:10,314 documents 10 281473859915808 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:32:10,364 _transport 10 281473859915808 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:32:10,365 _transport 10 281473859915808 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:32:11,179 documents 7 281473892962336 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:32:11,219 _transport 7 281473892962336 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:32:11,220 _transport 7 281473892962336 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:33:12,437 documents 9 281472981614624 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:33:12,482 _transport 9 281472981614624 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:33:12,483 _transport 9 281472981614624 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:33:13,143 documents 10 281473290285088 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:33:13,192 _transport 10 281473290285088 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:33:13,194 _transport 10 281473290285088 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:33:14,096 documents 7 281472876257312 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:33:14,143 _transport 7 281472876257312 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:33:14,144 _transport 7 281472876257312 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:34:15,260 documents 9 281473053171744 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:34:15,301 _transport 9 281473053171744 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:34:15,302 _transport 9 281473053171744 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:34:16,009 documents 10 281472895324192 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:34:16,065 _transport 10 281472895324192 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:34:16,066 _transport 10 281472895324192 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:34:16,992 documents 7 281473609248800 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:34:17,037 _transport 7 281473609248800 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:34:17,038 _transport 7 281473609248800 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:35:18,279 documents 9 281473435205664 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:35:18,323 _transport 9 281473435205664 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:35:18,325 _transport 9 281473435205664 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:35:19,074 documents 10 281473325109280 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:35:19,127 _transport 10 281473325109280 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:35:19,129 _transport 10 281473325109280 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:36:29,673 documents 7 281473328332832 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:36:29,738 _transport 7 281473328332832 PUT http://elastic:9200/documents [status:N/A duration:0.010s]
+WARNING 2025-10-06 15:36:29,739 _node_pool 7 281473328332832 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:36:29,739 _transport 7 281473328332832 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff988ee810>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff988ee810>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:29,743 _transport 7 281473328332832 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:29,743 _node_pool 7 281473328332832 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:36:29,743 _transport 7 281473328332832 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff980107d0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff980107d0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:29,746 _transport 7 281473328332832 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:29,746 _node_pool 7 281473328332832 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:36:29,746 _transport 7 281473328332832 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff98011400>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff98011400>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:29,748 _transport 7 281473328332832 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:29,748 _node_pool 7 281473328332832 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:36:29,748 documents 7 281473328332832 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff988ee810>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:36:37,605 documents 7 281472957100064 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:36:37,667 _transport 7 281472957100064 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:37,668 _node_pool 7 281472957100064 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:36:37,668 _transport 7 281472957100064 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff82d04b60>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff82d04b60>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:37,672 _transport 7 281472957100064 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:37,672 _node_pool 7 281472957100064 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:36:37,672 _transport 7 281472957100064 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff836688f0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff836688f0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:37,675 _transport 7 281472957100064 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:37,675 _node_pool 7 281472957100064 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:36:37,675 _transport 7 281472957100064 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff82d05850>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff82d05850>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:37,678 _transport 7 281472957100064 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:37,678 _node_pool 7 281472957100064 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:36:37,678 documents 7 281472957100064 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff82d04b60>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:36:37,693 documents 7 281473154068512 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:36:37,883 _transport 7 281473154068512 PUT http://es01:9200/documents [status:200 duration:0.115s]
+INFO 2025-10-06 15:36:37,893 _transport 7 281473154068512 POST http://es01:9200/documents/_refresh [status:200 duration:0.010s]
+INFO 2025-10-06 15:36:38,376 backup_tasks 7 281472957100064 Database backup schedule ensured (sync)
+INFO 2025-10-06 15:36:38,378 backup_tasks 7 281472957100064 File cleanup schedule ensured (sync)
+INFO 2025-10-06 15:36:38,970 documents 8 281473569144864 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:36:39,030 _transport 8 281473569144864 PUT http://elastic:9200/documents [status:N/A duration:0.004s]
+WARNING 2025-10-06 15:36:39,030 _node_pool 8 281473569144864 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:36:39,030 _transport 8 281473569144864 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffa750a2d0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa750a2d0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:39,037 _transport 8 281473569144864 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:39,037 _node_pool 8 281473569144864 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:36:39,037 _transport 8 281473569144864 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffa750a480>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa750a480>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:39,040 _transport 8 281473569144864 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:39,040 _node_pool 8 281473569144864 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:36:39,040 _transport 8 281473569144864 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffa750a990>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa750a990>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:39,044 _transport 8 281473569144864 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:39,044 _node_pool 8 281473569144864 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:36:39,044 documents 8 281473569144864 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa750a2d0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:36:39,183 backup_tasks 8 281473569144864 Database backup schedule ensured (sync)
+INFO 2025-10-06 15:36:39,186 backup_tasks 8 281473569144864 File cleanup schedule ensured (sync)
+INFO 2025-10-06 15:36:40,453 documents 11 281473823154208 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:36:40,501 _transport 11 281473823154208 PUT http://elastic:9200/documents [status:N/A duration:0.004s]
+WARNING 2025-10-06 15:36:40,501 _node_pool 11 281473823154208 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:36:40,501 _transport 11 281473823154208 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffb669d100>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffb669d100>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:40,504 _transport 11 281473823154208 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:40,504 _node_pool 11 281473823154208 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:36:40,504 _transport 11 281473823154208 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffb669d160>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffb669d160>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:40,508 _transport 11 281473823154208 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:40,508 _node_pool 11 281473823154208 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:36:40,508 _transport 11 281473823154208 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffb669ddf0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffb669ddf0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:40,511 _transport 11 281473823154208 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:40,511 _node_pool 11 281473823154208 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:36:40,511 documents 11 281473823154208 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffb669d100>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:36:54,724 documents 15 281473165070368 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:36:54,775 _transport 15 281473165070368 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:54,775 _node_pool 15 281473165070368 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:36:54,775 _transport 15 281473165070368 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff8a3c6360>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff8a3c6360>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:54,779 _transport 15 281473165070368 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:54,779 _node_pool 15 281473165070368 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:36:54,779 _transport 15 281473165070368 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff89fb83b0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff89fb83b0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:54,782 _transport 15 281473165070368 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:54,782 _node_pool 15 281473165070368 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:36:54,782 _transport 15 281473165070368 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff89fb84a0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff89fb84a0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:54,784 _transport 15 281473165070368 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:54,784 _node_pool 15 281473165070368 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:36:54,784 documents 15 281473165070368 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff8a3c6360>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:36:56,636 documents 14 281472834080800 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:36:56,685 _transport 14 281472834080800 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:36:56,685 _node_pool 14 281472834080800 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:36:56,685 _transport 14 281472834080800 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff763b82c0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff763b82c0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:56,688 _transport 14 281472834080800 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:56,688 _node_pool 14 281472834080800 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:36:56,689 _transport 14 281472834080800 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff768c61e0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff768c61e0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:56,691 _transport 14 281472834080800 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:56,692 _node_pool 14 281472834080800 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:36:56,692 _transport 14 281472834080800 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffff763b8a70>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff763b8a70>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:36:56,694 _transport 14 281472834080800 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:36:56,694 _node_pool 14 281472834080800 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:36:56,694 documents 14 281472834080800 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffff763b82c0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:37:00,268 documents 17 281473548595232 Successfully connected to Elasticsearch at http://elastic:9200
+INFO 2025-10-06 15:37:00,316 _transport 17 281473548595232 PUT http://elastic:9200/documents [status:N/A duration:0.003s]
+WARNING 2025-10-06 15:37:00,316 _node_pool 17 281473548595232 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 1 times in a row, putting on 1 second timeout
+WARNING 2025-10-06 15:37:00,316 _transport 17 281473548595232 Retrying request after failure (attempt 0 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffa0db46e0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa0db46e0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:37:00,320 _transport 17 281473548595232 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:37:00,320 _node_pool 17 281473548595232 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 2 times in a row, putting on 2 second timeout
+WARNING 2025-10-06 15:37:00,320 _transport 17 281473548595232 Retrying request after failure (attempt 1 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffa0db4860>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa0db4860>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:37:00,323 _transport 17 281473548595232 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:37:00,323 _node_pool 17 281473548595232 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 3 times in a row, putting on 4 second timeout
+WARNING 2025-10-06 15:37:00,323 _transport 17 281473548595232 Retrying request after failure (attempt 2 of 3)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/socket.py", line 978, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 167, in perform_request
+    response = self.pool.urlopen(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/retry.py", line 449, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connectionpool.py", line 493, in _make_request
+    conn.request(
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 494, in request
+    self.endheaders()
+  File "/usr/local/lib/python3.12/http/client.py", line 1333, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/local/lib/python3.12/http/client.py", line 1093, in _send_output
+    self.send(msg)
+  File "/usr/local/lib/python3.12/http/client.py", line 1037, in send
+    self.connect()
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 325, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPConnection object at 0xffffa0db4a70>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_transport.py", line 342, in perform_request
+    resp = node.perform_request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/elastic_transport/_node/_http_urllib3.py", line 202, in perform_request
+    raise err from e
+elastic_transport.ConnectionError: Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa0db4a70>: Failed to resolve 'elastic' ([Errno -2] Name or service not known))
+INFO 2025-10-06 15:37:00,326 _transport 17 281473548595232 PUT http://elastic:9200/documents [status:N/A duration:0.002s]
+WARNING 2025-10-06 15:37:00,326 _node_pool 17 281473548595232 Node <Urllib3HttpNode(http://elastic:9200)> has failed for 4 times in a row, putting on 8 second timeout
+ERROR 2025-10-06 15:37:00,326 documents 17 281473548595232 Failed to initialize index: Connection error caused by: ConnectionError(Connection error caused by: NameResolutionError(<urllib3.connection.HTTPConnection object at 0xffffa0db46e0>: Failed to resolve 'elastic' ([Errno -2] Name or service not known)))
+INFO 2025-10-06 15:37:39,070 documents 9 281473303568416 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:37:39,113 _transport 9 281473303568416 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:37:39,116 _transport 9 281473303568416 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:37:39,807 documents 10 281473759592480 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:37:39,858 _transport 10 281473759592480 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:37:39,859 _transport 10 281473759592480 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:37:40,752 documents 7 281472823275552 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:37:40,793 _transport 7 281472823275552 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:37:40,794 _transport 7 281472823275552 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:38:41,943 documents 9 281473775943712 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:38:41,985 _transport 9 281473775943712 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:38:41,987 _transport 9 281473775943712 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:38:42,710 documents 10 281473195577376 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:38:42,765 _transport 10 281473195577376 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:38:42,767 _transport 10 281473195577376 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:38:43,586 documents 7 281473239805984 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:38:43,626 _transport 7 281473239805984 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:38:43,628 _transport 7 281473239805984 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:39:44,753 documents 9 281473502507040 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:39:44,794 _transport 9 281473502507040 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:39:44,796 _transport 9 281473502507040 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:39:45,485 documents 10 281473180500000 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:39:45,537 _transport 10 281473180500000 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:39:45,538 _transport 10 281473180500000 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:39:46,375 documents 7 281473332129824 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:39:46,415 _transport 7 281473332129824 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:39:46,416 _transport 7 281473332129824 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:40:47,527 documents 9 281473677430816 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:40:47,569 _transport 9 281473677430816 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:40:47,570 _transport 9 281473677430816 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:40:48,248 documents 10 281473743532064 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:40:48,300 _transport 10 281473743532064 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:40:48,301 _transport 10 281473743532064 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:40:49,127 documents 7 281473411649568 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:40:49,169 _transport 7 281473411649568 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:40:49,171 _transport 7 281473411649568 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:41:50,296 documents 9 281473098203168 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:41:50,336 _transport 9 281473098203168 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:41:50,338 _transport 9 281473098203168 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:41:51,030 documents 10 281472841089056 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:41:51,084 _transport 10 281472841089056 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:41:51,085 _transport 10 281472841089056 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:41:51,922 documents 7 281473162616864 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:41:51,962 _transport 7 281473162616864 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:41:51,964 _transport 7 281473162616864 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:42:53,165 documents 9 281473855434784 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:42:53,207 _transport 9 281473855434784 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:42:53,209 _transport 9 281473855434784 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:42:53,884 documents 10 281473594044448 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:42:53,935 _transport 10 281473594044448 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:42:53,936 _transport 10 281473594044448 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:42:54,830 documents 7 281473722519584 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:42:54,870 _transport 7 281473722519584 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:42:54,872 _transport 7 281473722519584 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:43:56,030 documents 9 281473197379616 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:43:56,072 _transport 9 281473197379616 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:43:56,073 _transport 9 281473197379616 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:43:56,750 documents 10 281472963018784 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:43:56,802 _transport 10 281472963018784 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:43:56,803 _transport 10 281472963018784 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:43:57,639 documents 7 281473820254240 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:43:57,682 _transport 7 281473820254240 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:43:57,684 _transport 7 281473820254240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:44:58,839 documents 9 281473181601824 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:44:58,879 _transport 9 281473181601824 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:44:58,880 _transport 9 281473181601824 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:44:59,537 documents 10 281473209778208 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:44:59,587 _transport 10 281473209778208 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:44:59,588 _transport 10 281473209778208 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:45:00,400 documents 7 281472843374624 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:45:00,440 _transport 7 281472843374624 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:45:00,441 _transport 7 281472843374624 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:46:01,561 documents 9 281473837445152 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:46:01,602 _transport 9 281473837445152 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:46:01,603 _transport 9 281473837445152 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:46:02,272 documents 10 281472845332512 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:46:02,323 _transport 10 281472845332512 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:46:02,324 _transport 10 281472845332512 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:46:03,134 documents 7 281473885782048 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:46:03,173 _transport 7 281473885782048 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:46:03,175 _transport 7 281473885782048 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:47:04,328 documents 9 281473100087328 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:47:04,368 _transport 9 281473100087328 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:47:04,369 _transport 9 281473100087328 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:47:05,087 documents 10 281473636376608 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:47:05,137 _transport 10 281473636376608 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:47:05,138 _transport 10 281473636376608 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:47:06,045 documents 7 281472852078624 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:47:06,093 _transport 7 281472852078624 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:47:06,095 _transport 7 281472852078624 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:48:07,262 documents 9 281473414733856 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:48:07,303 _transport 9 281473414733856 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:48:07,304 _transport 9 281473414733856 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:48:07,963 documents 10 281473484427296 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:48:08,051 _transport 10 281473484427296 PUT http://es01:9200/documents [status:400 duration:0.041s]
+INFO 2025-10-06 15:48:08,054 _transport 10 281473484427296 POST http://es01:9200/documents/_refresh [status:200 duration:0.003s]
+INFO 2025-10-06 15:48:08,891 documents 7 281473223704608 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:48:08,931 _transport 7 281473223704608 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:48:08,932 _transport 7 281473223704608 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:49:10,157 documents 9 281473000648736 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:49:10,197 _transport 9 281473000648736 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:49:10,198 _transport 9 281473000648736 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:49:10,856 documents 10 281473488637984 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:49:10,906 _transport 10 281473488637984 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:49:10,907 _transport 10 281473488637984 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:49:11,726 documents 7 281473357111328 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:49:11,766 _transport 7 281473357111328 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:49:11,767 _transport 7 281473357111328 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:50:12,944 documents 9 281473609715744 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:50:12,983 _transport 9 281473609715744 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:50:12,985 _transport 9 281473609715744 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:50:13,635 documents 10 281473631977504 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:50:13,687 _transport 10 281473631977504 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:50:13,688 _transport 10 281473631977504 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:50:14,485 documents 7 281472994865184 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:50:14,524 _transport 7 281472994865184 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:50:14,525 _transport 7 281472994865184 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:51:15,713 documents 9 281473460969504 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:51:15,752 _transport 9 281473460969504 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:51:15,753 _transport 9 281473460969504 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:51:16,401 documents 10 281473869508640 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:51:16,449 _transport 10 281473869508640 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:51:16,451 _transport 10 281473869508640 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:51:17,266 documents 7 281473500860448 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:51:17,305 _transport 7 281473500860448 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:51:17,306 _transport 7 281473500860448 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:52:18,471 documents 9 281473128714272 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:52:18,510 _transport 9 281473128714272 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:52:18,511 _transport 9 281473128714272 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:52:19,172 documents 10 281473203179552 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:52:19,221 _transport 10 281473203179552 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:52:19,222 _transport 10 281473203179552 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:52:20,089 documents 7 281473770111008 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:52:20,154 _transport 7 281473770111008 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:52:20,155 _transport 7 281473770111008 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:53:21,318 documents 9 281473594208288 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:53:21,358 _transport 9 281473594208288 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:53:21,359 _transport 9 281473594208288 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:53:22,016 documents 10 281473766375456 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:53:22,065 _transport 10 281473766375456 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:53:22,066 _transport 10 281473766375456 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:53:22,877 documents 7 281473479442464 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:53:22,917 _transport 7 281473479442464 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:53:22,918 _transport 7 281473479442464 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:54:24,109 documents 9 281473086627872 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:54:24,150 _transport 9 281473086627872 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:54:24,152 _transport 9 281473086627872 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:54:24,808 documents 10 281473433423904 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:54:24,857 _transport 10 281473433423904 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:54:24,859 _transport 10 281473433423904 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:54:25,680 documents 7 281473665437728 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:54:25,719 _transport 7 281473665437728 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:54:25,721 _transport 7 281473665437728 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:55:27,016 documents 9 281473352200224 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:55:27,068 _transport 9 281473352200224 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 15:55:27,069 _transport 9 281473352200224 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:55:27,775 documents 10 281473179582496 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:55:27,826 _transport 10 281473179582496 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:55:27,827 _transport 10 281473179582496 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:55:28,707 documents 7 281473856253984 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:55:28,752 _transport 7 281473856253984 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:55:28,754 _transport 7 281473856253984 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:56:29,939 documents 9 281472960946208 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:56:29,981 _transport 9 281472960946208 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:56:29,983 _transport 9 281472960946208 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:56:30,661 documents 10 281473425432608 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:56:30,711 _transport 10 281473425432608 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:56:30,713 _transport 10 281473425432608 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:56:31,575 documents 7 281473550213152 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:56:31,615 _transport 7 281473550213152 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:56:31,616 _transport 7 281473550213152 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:57:32,719 documents 9 281473299374112 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:57:32,759 _transport 9 281473299374112 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:57:32,760 _transport 9 281473299374112 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:57:33,472 documents 10 281473741738016 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:57:33,524 _transport 10 281473741738016 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:57:33,525 _transport 10 281473741738016 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:57:34,392 documents 7 281472900538400 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:57:34,432 _transport 7 281472900538400 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:57:34,434 _transport 7 281472900538400 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:58:35,593 documents 9 281473448177696 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:58:35,633 _transport 9 281473448177696 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:58:35,635 _transport 9 281473448177696 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 15:58:36,348 documents 10 281473824583712 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:58:36,398 _transport 10 281473824583712 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:58:36,399 _transport 10 281473824583712 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:58:37,235 documents 7 281473573429280 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:58:37,278 _transport 7 281473573429280 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:58:37,279 _transport 7 281473573429280 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:59:38,447 documents 9 281473428209696 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:59:38,488 _transport 9 281473428209696 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 15:59:38,489 _transport 9 281473428209696 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:59:39,180 documents 10 281472933212192 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:59:39,229 _transport 10 281472933212192 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:59:39,231 _transport 10 281472933212192 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 15:59:40,054 documents 7 281473785532448 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 15:59:40,094 _transport 7 281473785532448 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 15:59:40,095 _transport 7 281473785532448 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:00:41,220 documents 9 281472936075296 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:00:41,261 _transport 9 281472936075296 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:00:41,262 _transport 9 281472936075296 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:00:41,940 documents 10 281472871546912 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:00:41,989 _transport 10 281472871546912 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:00:41,990 _transport 10 281472871546912 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:00:42,828 documents 7 281473380388896 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:00:42,880 _transport 7 281473380388896 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:00:42,882 _transport 7 281473380388896 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:01:44,045 documents 9 281473648631840 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:01:44,087 _transport 9 281473648631840 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 16:01:44,089 _transport 9 281473648631840 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:01:44,784 documents 10 281473875480608 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:01:44,834 _transport 10 281473875480608 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:01:44,835 _transport 10 281473875480608 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:01:45,641 documents 7 281473883688992 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:01:45,682 _transport 7 281473883688992 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:01:45,683 _transport 7 281473883688992 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:02:46,810 documents 9 281473343119392 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:02:46,851 _transport 9 281473343119392 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:02:46,852 _transport 9 281473343119392 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:02:47,518 documents 10 281473839513632 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:02:47,571 _transport 10 281473839513632 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:02:47,572 _transport 10 281473839513632 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:02:48,399 documents 7 281473250607136 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:02:48,439 _transport 7 281473250607136 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:02:48,440 _transport 7 281473250607136 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:03:49,621 documents 9 281473431420960 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:03:49,664 _transport 9 281473431420960 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:03:49,666 _transport 9 281473431420960 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:03:50,338 documents 10 281473857585184 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:03:50,388 _transport 10 281473857585184 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:03:50,390 _transport 10 281473857585184 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:03:51,365 documents 7 281472835883040 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:03:51,405 _transport 7 281472835883040 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:03:51,406 _transport 7 281472835883040 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:04:52,529 documents 9 281473589256224 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:04:52,570 _transport 9 281473589256224 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:04:52,573 _transport 9 281473589256224 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:04:53,225 documents 10 281472836644896 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:04:53,274 _transport 10 281472836644896 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:04:53,275 _transport 10 281472836644896 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:04:54,076 documents 7 281473222717472 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:04:54,115 _transport 7 281473222717472 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:04:54,116 _transport 7 281473222717472 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:05:55,236 documents 9 281472882954272 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:05:55,276 _transport 9 281472882954272 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:05:55,277 _transport 9 281472882954272 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:05:55,922 documents 10 281473654325280 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:05:55,971 _transport 10 281473654325280 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:05:55,972 _transport 10 281473654325280 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:05:56,777 documents 7 281472883154976 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:05:56,816 _transport 7 281472883154976 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:05:56,817 _transport 7 281472883154976 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:06:57,909 documents 9 281473334554656 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:06:57,949 _transport 9 281473334554656 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:06:57,950 _transport 9 281473334554656 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:06:58,595 documents 10 281472873447456 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:06:58,646 _transport 10 281472873447456 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:06:58,647 _transport 10 281472873447456 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:06:59,441 documents 7 281473257779232 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:06:59,480 _transport 7 281473257779232 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:06:59,481 _transport 7 281473257779232 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:08:00,612 documents 9 281473810829344 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:08:00,656 _transport 9 281473810829344 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:08:00,657 _transport 9 281473810829344 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:08:01,308 documents 10 281472823013408 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:08:01,356 _transport 10 281472823013408 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:08:01,357 _transport 10 281472823013408 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:08:02,166 documents 7 281473531760672 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:08:02,205 _transport 7 281473531760672 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:08:02,206 _transport 7 281473531760672 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:09:03,381 documents 9 281473395327008 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:09:03,425 _transport 9 281473395327008 PUT http://es01:9200/documents [status:400 duration:0.004s]
+INFO 2025-10-06 16:09:03,426 _transport 9 281473395327008 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:09:04,244 documents 10 281472900599840 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:09:04,404 _transport 10 281472900599840 PUT http://es01:9200/documents [status:400 duration:0.005s]
+INFO 2025-10-06 16:09:04,407 _transport 10 281472900599840 POST http://es01:9200/documents/_refresh [status:200 duration:0.003s]
+INFO 2025-10-06 16:09:05,335 documents 7 281473374875680 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:09:05,374 _transport 7 281473374875680 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:09:05,376 _transport 7 281473374875680 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:10:06,598 documents 9 281473433366560 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:10:06,642 _transport 9 281473433366560 PUT http://es01:9200/documents [status:400 duration:0.005s]
+INFO 2025-10-06 16:10:06,645 _transport 9 281473433366560 POST http://es01:9200/documents/_refresh [status:200 duration:0.002s]
+INFO 2025-10-06 16:10:07,314 documents 10 281473241145376 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:10:07,391 _transport 10 281473241145376 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:10:07,392 _transport 10 281473241145376 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:10:08,293 documents 7 281473782550560 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:10:08,334 _transport 7 281473782550560 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:10:08,335 _transport 7 281473782550560 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:11:09,473 documents 9 281473411858464 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:11:09,513 _transport 9 281473411858464 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:11:09,514 _transport 9 281473411858464 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:11:10,166 documents 10 281473590304800 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:11:10,214 _transport 10 281473590304800 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:11:10,216 _transport 10 281473590304800 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:11:11,027 documents 7 281473843716128 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:11:11,067 _transport 7 281473843716128 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:11:11,068 _transport 7 281473843716128 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:12:12,189 documents 9 281473472884768 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:12:12,229 _transport 9 281473472884768 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:12:12,231 _transport 9 281473472884768 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:12:12,885 documents 10 281473485340704 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:12:12,933 _transport 10 281473485340704 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:12:12,934 _transport 10 281473485340704 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:12:13,749 documents 7 281473785434144 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:12:13,789 _transport 7 281473785434144 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:12:13,790 _transport 7 281473785434144 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:13:14,964 documents 9 281473739358240 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:13:15,007 _transport 9 281473739358240 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:13:15,008 _transport 9 281473739358240 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:13:15,701 documents 10 281473579196448 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:13:15,750 _transport 10 281473579196448 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:13:15,752 _transport 10 281473579196448 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:13:16,616 documents 7 281472918851616 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:13:16,661 _transport 7 281472918851616 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:13:16,663 _transport 7 281472918851616 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:14:17,875 documents 9 281473375629344 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:14:17,915 _transport 9 281473375629344 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:14:17,916 _transport 9 281473375629344 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:14:18,611 documents 10 281473093550112 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:14:18,663 _transport 10 281473093550112 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:14:18,664 _transport 10 281473093550112 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:14:19,506 documents 7 281473103822880 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:14:19,546 _transport 7 281473103822880 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:14:19,547 _transport 7 281473103822880 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:15:20,710 documents 9 281473139900448 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:15:20,751 _transport 9 281473139900448 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:15:20,752 _transport 9 281473139900448 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:15:21,457 documents 10 281473582911520 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:15:21,511 _transport 10 281473582911520 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:15:21,512 _transport 10 281473582911520 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:15:22,366 documents 7 281473648914464 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:15:22,406 _transport 7 281473648914464 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:15:22,407 _transport 7 281473648914464 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:16:23,539 documents 9 281472850964512 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:16:23,582 _transport 9 281472850964512 PUT http://es01:9200/documents [status:400 duration:0.003s]
+INFO 2025-10-06 16:16:23,584 _transport 9 281472850964512 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:16:24,301 documents 10 281473683800096 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:16:24,353 _transport 10 281473683800096 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:16:24,355 _transport 10 281473683800096 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
+INFO 2025-10-06 16:16:25,238 documents 7 281473529421856 Successfully connected to Elasticsearch at http://es01:9200
+INFO 2025-10-06 16:16:25,281 _transport 7 281473529421856 PUT http://es01:9200/documents [status:400 duration:0.002s]
+INFO 2025-10-06 16:16:25,282 _transport 7 281473529421856 POST http://es01:9200/documents/_refresh [status:200 duration:0.001s]
