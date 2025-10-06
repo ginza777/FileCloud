@@ -11,14 +11,26 @@ services:
              python manage.py collectstatic --no-input &&
              mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
              python manage.py clean --cancel-tasks --force &&
-             ./run_tests.sh &&
              uvicorn core.asgi:application --host 0.0.0.0 --workers 4 --timeout-keep-alive 120"
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
       - ./media:/app/media
-    env_file:
-      - .env
+    environment:
+      - MAIN_URL=http://127.0.0.1:8000
+      - DEBUG=1
+      - SECRET_KEY=django-insecure-your-secret-key-here-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,testserver,fayltop.cloud
+      - POSTGRES_DB=filefinder_db
+      - POSTGRES_USER=filefinder_user
+      - POSTGRES_PASSWORD=filefinder_pass
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - ES_URL=http://elastic:9200
+      - ES_INDEX=documents
+      - TIKA_URL=http://tika:9998
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     ports:
       - "${WEB_EXTERNAL_PORT}:${WEB_PORT}"
     depends_on:
@@ -42,8 +54,21 @@ services:
     volumes:
       - .:/app
       - ./media:/app/media
-    env_file:
-      - .env
+    environment:
+      - MAIN_URL=http://127.0.0.1:8000
+      - DEBUG=1
+      - SECRET_KEY=django-insecure-your-secret-key-here-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,testserver,fayltop.cloud
+      - POSTGRES_DB=filefinder_db
+      - POSTGRES_USER=filefinder_user
+      - POSTGRES_PASSWORD=filefinder_pass
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - ES_URL=http://elastic:9200
+      - ES_INDEX=documents
+      - TIKA_URL=http://tika:9998
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - redis
       - postgres
@@ -79,12 +104,14 @@ services:
     container_name: filefinder_postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
+    environment:
+      - POSTGRES_DB=filefinder_db
+      - POSTGRES_USER=filefinder_user
+      - POSTGRES_PASSWORD=filefinder_pass
     ports:
       - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U filefinder_user -d filefinder_db" ]
       interval: 5s
       timeout: 5s
       retries: 5

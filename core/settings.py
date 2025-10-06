@@ -68,7 +68,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 # Ruxsat berilgan hostlar - server nomlari
 # Production'da faqat haqiqiy domain nomlari qo'shilishi kerak
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,fayltop.cloud').split(',') if os.getenv('ALLOWED_HOSTS') else ['localhost', '127.0.0.1', 'fayltop.cloud']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver,fayltop.cloud').split(',') if os.getenv('ALLOWED_HOSTS') else ['localhost', '127.0.0.1', 'testserver', 'fayltop.cloud']
 
 
 # =============================================================================
@@ -346,8 +346,11 @@ CELERY_RESULT_EXPIRES = 3600  # 1 soat
 # Celery beat scheduler
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
-# Main URL configuration
-MAIN_URL = os.getenv('MAIN_URL', 'http://127.0.0.1:8000')
+# Main URL configuration - Auto-detect environment
+if DEBUG:
+    MAIN_URL = os.getenv('MAIN_URL', 'http://127.0.0.1:8000')
+else:
+    MAIN_URL = os.getenv('MAIN_URL', 'https://fayltop.cloud')
 
 # External Services Configuration
 ES_URL = os.getenv('ES_URL', 'http://localhost:9200')

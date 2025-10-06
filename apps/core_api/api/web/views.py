@@ -4,7 +4,8 @@ Handles web interface API endpoints
 """
 from django.shortcuts import render
 from django.conf import settings
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import F, Q
@@ -49,6 +50,7 @@ def index_view(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def search_documents(request):
     """API endpoint for searching documents with pagination"""
     query = request.GET.get('q', '')
@@ -175,7 +177,8 @@ def search_documents(request):
         )
 
 
-@api_view(['GET']) 
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def recent_documents(request):
     """API endpoint for getting recent documents"""
     documents = Document.objects.filter(
@@ -187,6 +190,7 @@ def recent_documents(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def top_downloads(request):
     """API endpoint for getting top downloaded files with pagination"""
     try:
@@ -240,6 +244,7 @@ def top_downloads(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def increment_view_count(request, product_id):
     """API endpoint to increment view count for a product"""
     try:
@@ -261,6 +266,7 @@ def increment_view_count(request, product_id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def document_images(request, document_id):
     """API endpoint to get document images"""
     try:
@@ -278,6 +284,7 @@ def document_images(request, document_id):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def increment_download_count(request, product_id):
     """API endpoint to increment download count for a product"""
     try:

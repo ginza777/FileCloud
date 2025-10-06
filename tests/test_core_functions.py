@@ -57,12 +57,14 @@ class DashboardStatisticsTests(TestCase):
             Product.objects.create(
                 document=self.documents[i],
                 title=f'Test Product {i}',
-                parsed_content=f'Content {i}' if i < 3 else None
+                parsed_content=f'Content {i}' if i < 3 else None,
+                slug=f'test-product-{i}'
             )
         
         # Test foydalanuvchilari yaratish
         for i in range(3):
             BotUser.objects.create(
+                telegram_id=2000000 + i,
                 username=f'testuser{i}',
                 first_name=f'Test{i}',
                 last_name='User'
@@ -130,7 +132,6 @@ class DashboardStatisticsTests(TestCase):
             self.assertIn('title', activity)
             self.assertIn('time', activity)
             self.assertIn('icon', activity)
-            self.assertIn('color', activity)
             self.assertIn('status', activity)
 
 

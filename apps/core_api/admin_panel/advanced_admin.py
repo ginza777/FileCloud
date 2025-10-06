@@ -110,24 +110,17 @@ class AdvancedDocumentAdmin(admin.ModelAdmin):
         )
     
     def status_badge(self, obj):
-        """Holatni Jazzmin default ranglar bilan ko'rsatish"""
+        """Holatni oddiy ko'rinishda ko'rsatish"""
         if obj.completed:
-            css_class = 'badge badge-success'
-            text = 'Tugatilgan'
+            text = '✅ Tugatilgan'
         elif any(status == 'failed' for status in [obj.download_status, obj.parse_status, obj.index_status, obj.telegram_status]):
-            css_class = 'badge badge-danger'
-            text = 'Xatolik'
+            text = '❌ Xatolik'
         elif any(status == 'processing' for status in [obj.download_status, obj.parse_status, obj.index_status, obj.telegram_status]):
-            css_class = 'badge badge-warning'
-            text = 'Jarayonda'
+            text = '⏳ Jarayonda'
         else:
-            css_class = 'badge badge-secondary'
-            text = 'Kutilmoqda'
+            text = '⏸️ Kutilmoqda'
         
-        return format_html(
-            '<span class="{}">{}</span>',
-            css_class, text
-        )
+        return text
     status_badge.short_description = 'Holat'
     
     def parse_file_url_short(self, obj):
@@ -138,7 +131,7 @@ class AdvancedDocumentAdmin(admin.ModelAdmin):
     parse_file_url_short.short_description = 'Fayl URL'
     
     def progress_bar(self, obj):
-        """Jarayon foizini progress bar ko'rinishida ko'rsatish"""
+        """Jarayon foizini oddiy ko'rinishda ko'rsatish"""
         total_steps = 4
         completed_steps = sum([
             obj.download_status == 'completed',
@@ -148,21 +141,14 @@ class AdvancedDocumentAdmin(admin.ModelAdmin):
         ])
         
         percentage = (completed_steps / total_steps) * 100
-        
-        return format_html(
-            '<div style="width: 100px; background: #e9ecef; border-radius: 10px; overflow: hidden;">'
-            '<div style="width: {}%; background: #667eea; height: 8px; transition: width 0.3s ease;"></div>'
-            '</div>',
-            percentage
-        )
+        return f"{completed_steps}/{total_steps} ({percentage:.0f}%)"
     progress_bar.short_description = 'Jarayon'
     
     def actions_column(self, obj):
         """Har bir qator uchun action tugmalari"""
         return format_html(
-            '<a href="/admin/files/document/{}/change/" class="button" style="padding: 4px 8px; font-size: 11px; margin: 2px;">Tahrirlash</a> '
-            '<a href="/admin/files/document/{}/delete/" class="button" style="padding: 4px 8px; font-size: 11px; margin: 2px; background: #ff4757;">O\'chirish</a>',
-            obj.id, obj.id
+            '<a href="/admin/files/document/{}/change/" class="btn btn-sm btn-primary">Tahrirlash</a>',
+            obj.id
         )
     actions_column.short_description = 'Amallar'
     
@@ -330,6 +316,15 @@ class AdvancedProductAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'created_at', 'updated_at']
     list_per_page = 50
     
+    def product_status(self, obj):
+        """Mahsulot holati: Parsed/Empty/No Document"""
+        if obj.parsed_content and obj.parsed_content.strip():
+            return 'Parsed'
+        if obj.document:
+            return 'Empty'
+        return 'No Document'
+    product_status.short_description = 'Status'
+
     def title_short(self, obj):
         """Sarlavhani qisqartirilgan ko'rinishda ko'rsatish"""
         if len(obj.title) > 50:
@@ -358,29 +353,29 @@ class AdvancedProductAdmin(admin.ModelAdmin):
 class AdvancedUserAdmin(admin.ModelAdmin):
     """Advanced Bot User Admin"""
     
-    list_display = ['id', 'full_name', 'username', 'phone_number', 'is_active_badge', 'created_at', 'last_activity']
-    list_filter = ['is_active', 'created_at', 'last_activity']
-    search_fields = ['full_name', 'username', 'phone_number']
+    list_display = ['id', 'full_name', 'username', 'is_active_badge', 'created_at', 'last_activity']
+    list_filter = ['is_blocked', 'created_at']
+    search_fields = ['first_name', 'last_name', 'username']
     readonly_fields = ['id', 'created_at', 'updated_at']
     list_per_page = 50
     
     def is_active_badge(self, obj):
-        """Faollik holatini Jazzmin default ranglar bilan ko'rsatish"""
-        if obj.is_active:
-            css_class = 'badge badge-success'
-            text = 'Faol'
+        """Faollik holatini oddiy ko'rinishda ko'rsatish"""
+        if getattr(obj, 'is_blocked', False):
+            return '🚫 Blocked'
         else:
-            css_class = 'badge badge-danger'
-            text = 'No faol'
-        
-        return format_html(
-            '<span class="{}">{}</span>',
-            css_class, text
-        )
+            return '✅ Active'
     is_active_badge.short_description = 'Holat'
 
+    def last_activity(self, obj):
+        return getattr(obj, 'last_active', None)
+    last_activity.short_description = 'Oxirgi faollik'
 
-# Register advanced admins
-admin.site.register(Document, AdvancedDocumentAdmin)
-admin.site.register(Product, AdvancedProductAdmin)
-admin.site.register(BotUser, AdvancedUserAdmin)
+
+# Register advanced admins (only if not already registered)
+try:
+    admin.site.register(Product, AdvancedProductAdmin)
+    admin.site.register(BotUser, AdvancedUserAdmin)
+except admin.sites.AlreadyRegistered:
+    # Models already registered, skip
+    pass

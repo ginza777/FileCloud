@@ -231,16 +231,10 @@ class FileFinderAdminSite(admin.AdminSite):
     @staff_member_required
     def dashboard_view(self, request):
         """
-        Advanced admin dashboard.
+        Advanced admin dashboard - admin_dashboard.py dan import qilish.
         """
-        context = {
-            'title': 'FileFinder Dashboard',
-            'stats': self.get_admin_statistics(),
-            'recent_activities': self.get_recent_activities(),
-            'quick_actions': self.get_quick_actions(),
-            'system_health': self.get_system_health(),
-        }
-        return render(request, 'admin/dashboard.html', context)
+        from .admin_dashboard import admin_dashboard
+        return admin_dashboard(request)
     
     @staff_member_required
     def stats_api(self, request):

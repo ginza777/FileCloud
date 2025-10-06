@@ -34,6 +34,8 @@ from apps.bot.models import User, Broadcast, BroadcastRecipient
 logger = logging.getLogger(__name__)
 
 
+from django.contrib.admin.views.decorators import staff_member_required
+
 @staff_member_required
 def admin_dashboard(request):
     """
@@ -71,43 +73,25 @@ def admin_dashboard(request):
             'title': 'Hujjatlar',
             'description': 'Barcha hujjatlarni ko\'rish',
             'icon': 'fas fa-file-alt',
-            'color': '#667eea',
             'url': '/admin/files/document/'
         },
         {
             'title': 'Mahsulotlar',
             'description': 'Mahsulotlarni boshqarish',
             'icon': 'fas fa-box',
-            'color': '#2ed573',
             'url': '/admin/files/product/'
         },
         {
             'title': 'Foydalanuvchilar',
             'description': 'Bot foydalanuvchilari',
             'icon': 'fas fa-users',
-            'color': '#ffa502',
             'url': '/admin/bot/user/'
         },
         {
             'title': 'Xatoliklar',
             'description': 'Tizim xatoliklari',
             'icon': 'fas fa-exclamation-triangle',
-            'color': '#ff4757',
             'url': '/admin/files/documenterror/'
-        },
-        {
-            'title': 'Parse Progress',
-            'description': 'Parse jarayoni',
-            'icon': 'fas fa-cogs',
-            'color': '#3742fa',
-            'url': '/admin/files/parseprogress/'
-        },
-        {
-            'title': 'Celery Tasks',
-            'description': 'Background tasks',
-            'icon': 'fas fa-tasks',
-            'color': '#764ba2',
-            'url': '/admin/django_celery_results_taskresult/'
         }
     ]
     
@@ -150,7 +134,7 @@ def admin_dashboard(request):
         'system_health': system_health,
     }
     
-    return render(request, 'admin/dashboard.html', context)
+    return render(request, 'admin/index.html', context)
 
 
 def calculate_main_statistics():
@@ -182,12 +166,7 @@ def calculate_main_statistics():
         telegram_failed=Count('id', filter=Q(telegram_status='failed')),
         tika_parsed=Count('id', filter=Q(json_data__isnull=False)),
         indexed_documents=Count('id', filter=Q(index_status='completed')),
-        pipeline_running=Count('id', filter=Q(
-            Q(download_status='processing') | 
-            Q(parse_status='processing') | 
-            Q(index_status='processing') | 
-            Q(telegram_status='processing')
-        ))
+        pipeline_running=Count('id', filter=Q(pipeline_running=True))
     )
     
     # Mahsulotlar va foydalanuvchilar soni
@@ -341,7 +320,6 @@ def get_recent_activities():
             'title': f"Yangi mahsulot: {product.title[:50]}...",
             'time': product.created_at.strftime('%H:%M, %d.%m.%Y'),
             'icon': '📄',
-            'color': '#28a745',
             'status': 'success'
         })
     
@@ -352,7 +330,6 @@ def get_recent_activities():
             'title': f"Xatolik: {error.error_type}",
             'time': error.created_at.strftime('%H:%M, %d.%m.%Y'),
             'icon': '⚠️',
-            'color': '#dc3545',
             'status': 'danger'
         })
     
@@ -363,7 +340,6 @@ def get_recent_activities():
             'title': f"Parse jarayoni: {progress.last_page} sahifa",
             'time': progress.last_run_at.strftime('%H:%M, %d.%m.%Y'),
             'icon': '⚙️',
-            'color': '#17a2b8',
             'status': 'info'
         })
     except ParseProgress.DoesNotExist:
@@ -376,7 +352,6 @@ def get_recent_activities():
             'title': f"Yangi foydalanuvchi: {user.full_name}",
             'time': user.created_at.strftime('%H:%M, %d.%m.%Y'),
             'icon': '👤',
-            'color': '#6c757d',
             'status': 'secondary'
         })
     

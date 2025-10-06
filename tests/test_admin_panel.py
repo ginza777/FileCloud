@@ -68,10 +68,11 @@ class AdvancedAdminTests(TestCase):
         # Test foydalanuvchilari yaratish
         for i in range(3):
             BotUser.objects.create(
+                telegram_id=1000000 + i,
                 username=f'testuser{i}',
                 first_name=f'Test{i}',
                 last_name='User',
-                is_active=i < 2
+                is_admin=i < 2
             )
         
         # Test feedback yaratish
@@ -93,12 +94,11 @@ class AdvancedAdminTests(TestCase):
         # Status badge testi
         doc = self.documents[0]  # completed=True
         badge = admin.status_badge(doc)
-        self.assertIn('badge badge-success', badge)
-        self.assertIn('Tugatilgan', badge)
+        self.assertIn('✅ Tugatilgan', badge)
         
         # Progress bar testi
         progress = admin.progress_bar(doc)
-        self.assertIn('progress-bar', progress)
+        self.assertIn('4/4', progress)
     
     def test_advanced_product_admin(self):
         """Advanced Product Admin testi"""
@@ -124,7 +124,7 @@ class AdvancedAdminTests(TestCase):
         # Active badge testi
         user = BotUser.objects.first()
         badge = admin.is_active_badge(user)
-        self.assertIn('badge', badge)
+        self.assertIn('✅ Active', badge)
     
     def test_status_filter(self):
         """Status filter testi"""
@@ -182,6 +182,7 @@ class DashboardAPITests(TestCase):
         # Test foydalanuvchilari yaratish
         for i in range(3):
             BotUser.objects.create(
+                telegram_id=1000000 + i,
                 username=f'testuser{i}',
                 first_name=f'Test{i}',
                 last_name='User'
@@ -334,10 +335,11 @@ class AdminPanelIntegrationTests(TestCase):
         # Test foydalanuvchilari yaratish
         for i in range(3):
             BotUser.objects.create(
+                telegram_id=1000000 + i,
                 username=f'testuser{i}',
                 first_name=f'Test{i}',
                 last_name='User',
-                is_active=i < 2
+                is_admin=i < 2
             )
         
         # Test user yaratish

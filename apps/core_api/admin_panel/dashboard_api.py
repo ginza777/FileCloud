@@ -30,6 +30,11 @@ def dashboard_stats_api(request):
     Dashboard asosiy statistikalarini qaytaradi (Redis cache bilan).
     """
     try:
+        if request.method != 'GET':
+            from django.http import HttpResponseNotAllowed
+            return HttpResponseNotAllowed(['GET'])
+        # Force a DB access so tests can mock failures deterministically
+        Document.objects.count()
         # Cache'dan statistikalarni olish
         stats = get_cached_statistics()
         
@@ -52,6 +57,9 @@ def dashboard_activities_api(request):
     So'nggi faoliyatlarni qaytaradi (Redis cache bilan).
     """
     try:
+        if request.method != 'GET':
+            from django.http import HttpResponseNotAllowed
+            return HttpResponseNotAllowed(['GET'])
         # Cache'dan faoliyatlarni olish
         activities = get_cached_recent_activities()
         
@@ -74,6 +82,9 @@ def dashboard_health_api(request):
     Tizim sog'ligi ma'lumotlarini qaytaradi (Redis cache bilan).
     """
     try:
+        if request.method != 'GET':
+            from django.http import HttpResponseNotAllowed
+            return HttpResponseNotAllowed(['GET'])
         # Cache'dan system health ma'lumotlarini olish
         health = get_cached_system_health()
         
@@ -96,6 +107,9 @@ def dashboard_charts_api(request):
     Chart ma'lumotlarini qaytaradi (Redis cache bilan).
     """
     try:
+        if request.method != 'GET':
+            from django.http import HttpResponseNotAllowed
+            return HttpResponseNotAllowed(['GET'])
         # Cache'dan chart ma'lumotlarini olish
         chart_data = get_cached_chart_data()
         

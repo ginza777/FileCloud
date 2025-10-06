@@ -298,9 +298,7 @@ class Document(models.Model):
             self.index_status = 'completed'
             self.telegram_status = 'completed'
             self.delete_status = 'completed'
-        else:
-            # Ideal holatda bo'lmasa, completed=False
-            self.completed = False
+        # Ideal holatda bo'lmasa, completed maydonini o'zgartirmaymiz
 
         super().save(*args, **kwargs)
 
@@ -334,7 +332,7 @@ class Product(models.Model):
     - download_count: Yuklab olishlar soni
     - file_size: Fayl hajmi
     """
-    id = models.IntegerField(
+    id = models.AutoField(
         primary_key=True, 
         verbose_name="Product ID",
         help_text="Mahsulotning noyob identifikatori"
@@ -351,6 +349,8 @@ class Product(models.Model):
         help_text="Hujjatdan parse qilingan matn kontenti"
     )
     slug = models.TextField(
+        blank=True,
+        null=True,
         unique=True, 
         verbose_name="Slug", 
         db_index=True,
@@ -396,6 +396,7 @@ class Product(models.Model):
         verbose_name = "Product"
         verbose_name_plural = "Products"
         ordering = ['-created_at']
+
 
     def __str__(self):
         """

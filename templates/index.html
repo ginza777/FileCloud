@@ -32,6 +32,30 @@
         .gradient-bg { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); }
         .ignite-glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
         .ignite-btn { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); color: white; }
+        
+        /* Mobile Search Form Optimizations */
+        @media (max-width: 640px) {
+            #searchInput {
+                padding: 12px 16px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            #searchBtn {
+                padding: 12px 20px;
+                font-size: 14px;
+                min-height: 44px; /* Touch target */
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #searchInput {
+                padding: 10px 14px;
+                font-size: 15px;
+            }
+            #searchBtn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -66,10 +90,10 @@
                 <h1 class="text-4xl md:text-6xl font-extrabold mb-4 animate-fadeInUp" style="animation-delay: 0.1s;">FayltopAi fayl qidiruv</h1>
                 <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto text-white/90 animate-fadeInUp" style="animation-delay: 0.2s;">Sifatli va tayyor ishlardan foydalaning, vaqt va kuchingizni tejang.</p>
 
-                <div class="max-w-3xl mx-auto bg-white/20 backdrop-blur-md rounded-full p-2 animate-fadeInUp" style="animation-delay: 0.3s;">
+                <div class="max-w-3xl mx-auto animate-fadeInUp" style="animation-delay: 0.3s;">
                     <form id="searchForm" class="flex flex-col sm:flex-row gap-2" onsubmit="performSearch(event)">
-                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="w-full px-6 py-3 rounded-full text-dark focus:outline-none focus:ring-2 focus:ring-sky-400 text-base">
-                        <button id="searchBtn" type="submit" class="w-full sm:w-auto bg-primary text-white px-8 py-3 rounded-full hover:bg-sky-600 transition font-semibold text-base">Qidirish</button>
+                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="w-full px-4 sm:px-6 py-2 sm:py-3 rounded-full text-dark focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm sm:text-base bg-white/90 backdrop-blur-sm">
+                        <button id="searchBtn" type="submit" class="w-full sm:w-auto bg-primary text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full hover:bg-sky-600 transition font-semibold text-sm sm:text-base">Qidirish</button>
                     </form>
                 </div>
 
@@ -214,10 +238,10 @@
 
         // --- GLOBAL VARIABLES & CONFIG ---
         const API_BASE = '{{ MAIN_URL }}';
-        const TOP_FILES_API = `${API_BASE}/api/files/top-downloads/`;
-        const SEARCH_API = `${API_BASE}/api/files/search/`;
-        const DOCUMENT_IMAGES_API = (docId) => `${API_BASE}/api/files/${docId}/images/`;
-        const FEEDBACK_API = `${API_BASE}/api/files/feedback/`;
+        const TOP_FILES_API = `${API_BASE}/api/web/top-downloads/`;
+        const SEARCH_API = `${API_BASE}/api/web/search/`;
+        const DOCUMENT_IMAGES_API = (docId) => `${API_BASE}/api/web/${docId}/images/`;
+        const FEEDBACK_API = `${API_BASE}/api/web/feedback/`;
         const filesPerPage = 9;
         let isDeepMode = false;
         let currentFileId = null;

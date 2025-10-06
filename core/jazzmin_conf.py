@@ -35,7 +35,7 @@ JAZZMIN_SETTINGS = {
     ############
     "topmenu_links": [
         {"name": "Dashboard", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "API Docs", "url": "/api/docs/", "new_window": True},
+        {"name": "API Docs", "url": "/swagger/", "new_window": True},
         {"model": "auth.User"},
     ],
 
@@ -43,7 +43,7 @@ JAZZMIN_SETTINGS = {
     # User Menu #
     #############
     "usermenu_links": [
-        {"name": "API Documentation", "url": "/api/docs/", "new_window": True},
+        {"name": "API Documentation", "url": "/swagger/", "new_window": True},
         {"model": "auth.user"}
     ],
 
@@ -150,25 +150,25 @@ JAZZMIN_SETTINGS = {
 }
 
 JAZZMIN_UI_TWEAKS = {
-    "show_ui_builder": True,
+    "show_ui_builder": False,
     "navbar_small_text": False,
     "footer_small_text": False,
-    "body_small_text": True,
+    "body_small_text": False,
     "brand_small_text": False,
-    "brand_colour": "navbar-indigo",
-    "accent": "accent-success",
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
     "navbar": "navbar-dark",
     "no_navbar_border": False,
     "navbar_fixed": True,
     "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-lime",
+    "sidebar": "sidebar-dark-primary",
     "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": True,
-    "sidebar_nav_child_indent": True,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
     "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": True,
+    "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "button_classes": {
         "primary": "btn-primary",
@@ -178,5 +178,5 @@ JAZZMIN_UI_TWEAKS = {
         "danger": "btn-danger",
         "success": "btn-success"
     },
-    "actions_sticky_top": True
+    "actions_sticky_top": False
 }
