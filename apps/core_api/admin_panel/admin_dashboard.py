@@ -25,6 +25,8 @@ from datetime import datetime, timedelta
 import json
 import logging
 
+from cacheops import cached_as, cached_view
+
 from apps.files.models import (
     Document, Product, DocumentError, ParseProgress, 
     DocumentImage, SearchQuery
@@ -437,53 +439,26 @@ def get_system_health():
         }
 
 
-# Redis Cache Functions
+# Redis Cache Functions with Cacheops
+@cached_as(Document, timeout=300)  # Cache for 5 minutes, auto-invalidate on Document changes
 def get_cached_statistics():
-    """Redis cache bilan asosiy statistikalarni olish"""
-    cache_key = 'dashboard_main_statistics'
-    cached_stats = cache.get(cache_key)
-    
-    if cached_stats is None:
-        logger.info("Cache miss for main statistics, calculating...")
-        cached_stats = calculate_main_statistics()
-        # 5 daqiqa cache
-        cache.set(cache_key, cached_stats, 300)
-    else:
-        logger.debug("Cache hit for main statistics")
-    
-    return cached_stats
+    """Cacheops bilan asosiy statistikalarni olish - avtomatik invalidation"""
+    logger.info("Calculating main statistics (cacheops)...")
+    return calculate_main_statistics()
 
 
+@cached_as(Document, Product, timeout=600)  # Cache for 10 minutes, auto-invalidate on changes
 def get_cached_chart_data():
-    """Redis cache bilan chart ma'lumotlarini olish"""
-    cache_key = 'dashboard_chart_data'
-    cached_data = cache.get(cache_key)
-    
-    if cached_data is None:
-        logger.info("Cache miss for chart data, calculating...")
-        cached_data = prepare_chart_data()
-        # 10 daqiqa cache
-        cache.set(cache_key, cached_data, 600)
-    else:
-        logger.debug("Cache hit for chart data")
-    
-    return cached_data
+    """Cacheops bilan chart ma'lumotlarini olish - avtomatik invalidation"""
+    logger.info("Calculating chart data (cacheops)...")
+    return prepare_chart_data()
 
 
+@cached_as(Product, User, timeout=120)  # Cache for 2 minutes, auto-invalidate on changes
 def get_cached_recent_activities():
-    """Redis cache bilan so'nggi faoliyatlarni olish"""
-    cache_key = 'dashboard_recent_activities'
-    cached_activities = cache.get(cache_key)
-    
-    if cached_activities is None:
-        logger.info("Cache miss for recent activities, calculating...")
-        cached_activities = get_recent_activities()
-        # 2 daqiqa cache
-        cache.set(cache_key, cached_activities, 120)
-    else:
-        logger.debug("Cache hit for recent activities")
-    
-    return cached_activities
+    """Cacheops bilan so'nggi faoliyatlarni olish - avtomatik invalidation"""
+    logger.info("Calculating recent activities (cacheops)...")
+    return get_recent_activities()
 
 
 def invalidate_dashboard_cache():

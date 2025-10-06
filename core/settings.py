@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken', # Token authentication
     'django_celery_results', # Celery task results
     'django_celery_beat',    # Celery periodic tasks
+    'cacheops',              # ORM cache with automatic invalidation
 ]
 
 MIDDLEWARE = [
@@ -122,6 +123,9 @@ MIDDLEWARE = [
     
     # Authentication middleware
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    
+    # Cacheops middleware - ORM cache
+    'cacheops.middleware.CacheMiddleware',
     
     # Message middleware - flash messages
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -474,6 +478,41 @@ LOGGING = {
         },
     },
 }
+
+# =============================================================================
+# CACHEOPS CONFIGURATION - ORM Cache with automatic invalidation
+# =============================================================================
+
+CACHEOPS_REDIS = {
+    "host": "redis",
+    "port": 6379,
+    "db": 1,  # Use separate DB for cacheops
+    "socket_timeout": 3,
+}
+
+# Cache configuration for different models
+CACHEOPS = {
+    # Files app models - cache for 1 hour
+    "files.*": {"ops": "all", "timeout": 3600},
+    "files.document": {"ops": "all", "timeout": 3600},
+    "files.product": {"ops": "all", "timeout": 3600},
+    
+    # Bot app models - cache for 30 minutes
+    "bot.*": {"ops": "all", "timeout": 1800},
+    "bot.user": {"ops": "all", "timeout": 1800},
+    
+    # Core API models - cache for 1 hour
+    "core_api.*": {"ops": "all", "timeout": 3600},
+    
+    # Django built-in models - cache for 1 hour
+    "auth.*": {"ops": "all", "timeout": 3600},
+    "contenttypes.*": {"ops": "all", "timeout": 3600},
+}
+
+# Cacheops settings
+CACHEOPS_DEGRADE_ON_FAILURE = True  # Continue without cache if Redis fails
+CACHEOPS_ENABLED = True
+CACHEOPS_FAKE = False  # Use real caching in production
 
 # Create logs directory if it doesn't exist
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
