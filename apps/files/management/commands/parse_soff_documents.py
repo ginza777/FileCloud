@@ -119,7 +119,8 @@ class Command(BaseCommand):
         """
         Asosiy pars qilish jarayoni.
         """
-        # !!! KEY ERROR TUZATILDI: 'start-page' o'rniga 'start_page' ishlatildi
+        # !!! KEY ERROR TUZATILDI !!!
+        # start_page = options['start-page'] o'rniga:
         start_page = options['start_page']
         end_page = options['end_page']
         limit = options['limit']
@@ -292,8 +293,7 @@ class Command(BaseCommand):
                 )
                 self.stdout.write(f"  - Yangi qo'shilganlar: {page_documents}")
                 self.stdout.write(f"  - O'tkazib yuborildi (ID mavjud): {total_skipped_exists}")
-                self.stdout.write(f"  - O'tkazib yuborildi (Yaroqsiz URL): {total_skipped_url}")
-
+                self.stdout.write(self.style.ERROR(f"  - O'tkazib yuborildi (Yaroqsiz URL): {total_skipped_url}")) # Xato rangda aks ettirilishi uchun
 
                 # Keyingi sahifaga o'tish
                 page += 1
@@ -326,9 +326,9 @@ class Command(BaseCommand):
         # Yakuniy hisobot
         self.stdout.write(
             self.style.SUCCESS(
-                f"\n=== Pars qilish yakunlandi ==="
+                f"\n{'=' * 20} PARSING YAKUNLANDI {'=' * 20}\n"
+                f"Jami yangi hujjatlar: {total_documents}\n"
+                f"Jami o'tkazib yuborilganlar (Mavjud/URL): {total_skipped_exists + total_skipped_url}\n"
+                f"Oxirgi muvaffaqiyatli sahifa: {progress.last_page}\n"
             )
         )
-        self.stdout.write(f"Jami yangi hujjatlar: {total_documents}")
-        self.stdout.write(f"Jami o'tkazib yuborilganlar (Mavjud/URL): {total_skipped_exists + total_skipped_url}")
-        self.stdout.write(f"Oxirgi muvaffaqiyatli sahifa: {page - 1}")

@@ -219,7 +219,8 @@ def generate_document_images_task(self, document_id: str, max_pages: int = 5):
     return f"Successfully generated {len(images)} images for document {document_id}."
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3, name='apps.files.tasks.process_document_pipeline')
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3,
+             name='apps.files.tasks.process_document_pipeline')
 def process_document_pipeline(self, document_id):
     """
     Hujjatni to'liq pipeline orqali qayta ishlaydi:
@@ -228,7 +229,7 @@ def process_document_pipeline(self, document_id):
     3. Index - Elasticsearch'ga indekslash
     4. Telegram - Telegram'ga yuborish
     5. Delete - Vaqtinchalik faylni o'chirish
-    
+
     Args:
         document_id: Hujjat ID'si (str)
     """
@@ -238,24 +239,20 @@ def process_document_pipeline(self, document_id):
         logger.error(f"Document {document_id} not found in pipeline.")
         return
 
-    # Agar pipeline allaqachon ishlayotgan bo'lsa, yangi taskni o'tkazib yuborish
-    if doc.pipeline_running and (timezone.now() - doc.updated_at).total_seconds() < 3600: # 1 soatdan kam vaqt o'tgan bo'lsa
+    if doc.pipeline_running and (timezone.now() - doc.updated_at).total_seconds() < 3600:
         logger.warning(f"Pipeline for document {document_id} is already running. Skipping new task.")
         return
 
     doc.pipeline_running = True
     doc.save(update_fields=['pipeline_running'])
 
-    # Initialize file_path to avoid NameError in finally block
     file_path = None
 
     try:
         # --- FAYL YO'LINI ANIQLASH ---
         file_name = os.path.basename(urlparse(doc.parse_file_url).path)
-
-        # Downloads directory (media/downloads)
         downloads_dir = os.path.join(settings.MEDIA_ROOT, 'downloads')
-        os.makedirs(downloads_dir, exist_ok=True) # Papka mavjudligini tekshirish
+        os.makedirs(downloads_dir, exist_ok=True)
         file_path = os.path.join(downloads_dir, file_name)
 
         # --- BOSQICHMA-BOSQICH BAJARISH ---
@@ -266,15 +263,12 @@ def process_document_pipeline(self, document_id):
                 logger.info(f"[1. Yuklash] Boshlandi: {document_id} -> {file_path}")
                 doc.download_status = 'processing'
                 doc.save(update_fields=['download_status'])
-                
+
                 with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                     r.raise_for_status()
                     with open(file_path, "wb") as f:
                         for chunk in r.iter_content(chunk_size=8192):
                             f.write(chunk)
-
-                # Fayl to'g'ridan-to'g'ri downloads papkasiga yuklandi
-                logger.info(f"[1. Download] Fayl downloads papkasiga yuklandi: {file_path}")
 
                 doc.download_status = 'completed'
                 doc.save(update_fields=['download_status'])
@@ -289,8 +283,6 @@ def process_document_pipeline(self, document_id):
         if doc.parse_status != 'completed':
             try:
                 logger.info(f"[2. Parse] Boshlandi: {document_id}")
-                
-                # Fayl downloads papkasida
                 if not os.path.exists(file_path):
                     raise FileNotFoundError(f"Parse qilish uchun fayl topilmadi: {file_path}")
 
@@ -305,8 +297,6 @@ def process_document_pipeline(self, document_id):
                 doc.parse_status = 'completed'
                 doc.save(update_fields=['parse_status'])
                 logger.info(f"[2. Parse] Muvaffaqiyatli: {document_id}")
-                
-                # Parse qilgandan keyin faylni o'chirmaymiz, chunki Telegram stage'da kerak bo'ladi
             except Exception as e:
                 doc.parse_status = 'failed'
                 doc.save(update_fields=['parse_status'])
@@ -337,12 +327,9 @@ def process_document_pipeline(self, document_id):
         if doc.telegram_status != 'completed':
             try:
                 logger.info(f"[4. Telegram] Boshlandi: {document_id}")
-                
-                # Agar fayl yo'q bo'lsa, uni qayta yuklashga harakat qilamiz
                 if not os.path.exists(file_path):
                     logger.warning(f"[4. Telegram] Fayl yo'q, qayta yuklashga harakat qilamiz: {file_path}")
                     try:
-                        # Faylni qayta yuklash
                         with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
                             r.raise_for_status()
                             with open(file_path, "wb") as f:
@@ -350,13 +337,13 @@ def process_document_pipeline(self, document_id):
                                     f.write(chunk)
                         logger.info(f"[4. Telegram] Fayl qayta yuklandi: {file_path}")
                     except Exception as download_error:
-                        raise FileNotFoundError(f"Telegramga yuborish uchun fayl topilmadi va qayta yuklash muvaffaqiyatsiz: {file_path} - {download_error}")
+                        raise FileNotFoundError(
+                            f"Telegramga yuborish uchun fayl topilmadi va qayta yuklash muvaffaqiyatsiz: {file_path} - {download_error}")
 
-                # Fayl hajmini tekshirish
                 file_size = os.path.getsize(file_path)
-
                 if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:
                     doc.telegram_status = 'skipped'
+                    doc.save(update_fields=['telegram_status'])
                     logger.warning(f"[4. Telegram] Fayl hajmi katta (>49MB), o'tkazib yuborildi: {doc.id}")
                 else:
                     from .telegram_tasks import wait_for_telegram_rate_limit
@@ -380,40 +367,9 @@ def process_document_pipeline(self, document_id):
                     else:
                         raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
 
-                # IDEAL HOLAT TEKSHIRUVI (4 shart)
-                has_parsed_content = (
-                        hasattr(doc, 'product') and
-                        doc.product is not None and
-                        doc.product.parsed_content is not None and
-                        doc.product.parsed_content.strip() != ''
-                )
-
-                has_telegram_file = (
-                        doc.telegram_file_id is not None and
-                        doc.telegram_file_id.strip() != ''
-                )
-
-                is_indexed = (doc.index_status == 'completed')
-                pipeline_not_running = (not doc.pipeline_running)
-
-                is_ideal_state = (
-                        has_parsed_content and has_telegram_file and
-                        is_indexed and pipeline_not_running
-                )
-
-                if is_ideal_state:
-                    # IDEAL HOLAT: Barcha statuslarni completed qilamiz
-                    doc.completed = True
-                    doc.pipeline_running = False
-                    doc.download_status = 'completed'
-                    doc.parse_status = 'completed'
-                    doc.index_status = 'completed'
-                    doc.telegram_status = 'completed'
-                    doc.delete_status = 'completed'
-                    doc.save()  # Barcha fieldlarni saqlash uchun update_fields ni olib tashlaymiz
-                    logger.info(f"[PIPELINE COMPLETED] ✅ Hujjat yakunlandi: {document_id}")
-                else:
-                    doc.save(update_fields=['telegram_file_id', 'telegram_status'])
+                # # O'CHIRILDI: Keraksiz va takrorlanuvchi "Ideal Holat" tekshiruvi.
+                # # Bu mantiq endi faqat modelning save() metodida bo'ladi.
+                doc.save(update_fields=['telegram_file_id', 'telegram_status'])
 
             except Exception as e:
                 doc.telegram_status = 'failed'
@@ -421,17 +377,11 @@ def process_document_pipeline(self, document_id):
                 log_document_error(doc, 'telegram_send', e, self.request.retries + 1)
                 raise
 
-        # Barcha bosqichlar muvaffaqiyatli o'tdi
-        # Oxirgi save - completed statusini tekshirish uchun
-        doc = Document.objects.get(id=document_id)
-        doc.save()  # Model save metodini chaqiramiz
         logger.info(f"--- [PIPELINE SUCCESS] ✅ Hujjat ID: {document_id} ---")
 
     except Exception as pipeline_error:
-        # Vazifa qayta urinishga yuborilganda bu yerga keladi
         logger.error(
             f"[PIPELINE RETRYING] {document_id}: {type(pipeline_error).__name__}. Urinish {self.request.retries + 1}/{self.max_retries + 1}")
-        # Agar maksimal urinishlar soniga yetsa, pipeline'ni to'xtatamiz
         if self.request.retries >= self.max_retries:
             logger.error(f"[PIPELINE FINAL FAIL] {document_id} barcha urinishlardan so'ng ham muvaffaqiyatsiz bo'ldi.")
             with transaction.atomic():
@@ -439,60 +389,48 @@ def process_document_pipeline(self, document_id):
                 doc.pipeline_running = False
                 doc.save(update_fields=['pipeline_running'])
             log_document_error(doc, 'other', f"Pipeline final fail: {pipeline_error}", self.request.retries + 1)
-        raise  # Celery'ga xatolikni uzatish shart
+        raise
 
     finally:
-        # 5. DELETE
-        # Bu blok har doim (xatolik bo'lsa ham, bo'lmasa ham) ishlaydi
+        # 5. DELETE va YAKUNIY SAQLASH
         try:
             doc = Document.objects.get(id=document_id)
 
-            # Agar hujjat ideal holatga kelgan bo'lsa, faylni o'chiramiz
             has_parsed_content = (
-                    hasattr(doc, 'product') and
-                    doc.product is not None and
-                    doc.product.parsed_content is not None and
-                    doc.product.parsed_content.strip() != ''
+                    hasattr(doc,
+                            'product') and doc.product and doc.product.parsed_content and doc.product.parsed_content.strip() != ''
             )
-
             is_ideal_state = (
-                    doc.telegram_file_id is not None and doc.telegram_file_id.strip() != '' and
-                    has_parsed_content
+                    doc.telegram_file_id and doc.telegram_file_id.strip() != '' and has_parsed_content
             )
 
-            # Agar fayl mavjud bo'lsa va...
             if file_path and os.path.exists(file_path):
-                # ...hujjat ideal holatga kelgan bo'lsa YOKI...
-                # ...vazifa barcha qayta urinishlardan so'ng ham muvaffaqiyatsiz bo'lsa YOKI...
-                # ...hujjat bajarilmay qolgan bo'lsa (pending holatda)
                 should_delete = (
-                        is_ideal_state or
-                        (self.request.retries >= self.max_retries) or
-                        (
-                                doc.parse_status == 'pending' and doc.index_status == 'pending' and doc.telegram_status == 'pending')
+                        is_ideal_state or (self.request.retries >= self.max_retries)
                 )
-
                 if should_delete:
-                    # Faylni o'chiramiz
-                    if os.path.exists(file_path):
-                        try:
-                            os.remove(file_path)
-                            logger.info(f"[DELETE] Fayl o'chirildi: {file_path}")
-                        except:
-                            pass
-                    
-                    doc.delete_status = 'completed'
+                    try:
+                        os.remove(file_path)
+                        doc.delete_status = 'completed'
+                        logger.info(f"[DELETE] Fayl o'chirildi: {file_path}")
+                    except OSError as e:
+                        logger.warning(f"[DELETE FAILED] Faylni o'chirishda xatolik: {file_path}, {e}")
+                        doc.delete_status = 'failed'
 
-            # Pipeline'ni yakunlaymiz (qulfni ochamiz)
+            # Pipeline'ni yakunlaymiz (qulfni ochamiz) va oxirgi holatni saqlaymiz.
             doc.pipeline_running = False
-            doc.save(update_fields=['delete_status', 'pipeline_running'])
+
+            # O'ZGARTIRILDI: update_fields olib tashlandi.
+            # Bu chaqiruv Document.save() metodidagi "Ideal Holat" mantiqini ishga tushiradi
+            # va `completed=True` holatini to'g'ri saqlaydi.
+            doc.save()
+
             logger.info(f"[PIPELINE UNLOCK] {document_id} pipeline'dan qulf olindi.")
 
         except Document.DoesNotExist:
             logger.warning(f"Finally blokida hujjat topilmadi: {document_id}")
         except Exception as final_error:
             logger.error(f"[FINALLY BLOCK ERROR] {document_id}: {final_error}")
-            # Xatolik bo'lsa ham pipeline_running ni False qilishga harakat qilamiz
             try:
                 Document.objects.filter(id=document_id).update(pipeline_running=False)
                 logger.info(f"[PIPELINE FORCE UNLOCK] {document_id} pipeline'dan majburiy qulf olindi.")
