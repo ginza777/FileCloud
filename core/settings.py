@@ -124,9 +124,6 @@ MIDDLEWARE = [
     # Authentication middleware
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     
-    # Cacheops middleware - ORM cache
-    'cacheops.middleware.CacheMiddleware',
-    
     # Message middleware - flash messages
     'django.contrib.messages.middleware.MessageMiddleware',
     
