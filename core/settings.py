@@ -181,6 +181,15 @@ if 'test' in sys.argv:
     }
 
 
+ADMIN_OPTIMIZATIONS = {
+    'ENABLE_CACHE': True,
+    'CACHE_TIMEOUT': 300,  # 5 daqiqa
+    'PAGINATION_SIZE': 25,
+    'ENABLE_SELECT_RELATED': True,
+    'ENABLE_PREFETCH_RELATED': True,
+    'ENABLE_QUERYSET_OPTIMIZATION': True,
+}
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
