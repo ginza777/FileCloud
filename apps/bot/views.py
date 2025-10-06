@@ -233,10 +233,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
 
     # Check if there's a file ID parameter (deep linking)
     if context.args and len(context.args) > 0:
-        file_id = context.args[0]
-        logger.info(f"Start command with file_id: {file_id}")
+        file_id_arg = context.args[0]
+        logger.info(f"Start command with file_id_arg: {file_id_arg}")
+        
+        # Extract file ID from download_ prefix
+        if file_id_arg.startswith('download_'):
+            file_id = file_id_arg.replace('download_', '')
+        else:
+            file_id = file_id_arg
+            
+        logger.info(f"Extracted file_id: {file_id}")
+        
         try:
-            document = await Document.objects.select_related('product').aget(id=file_id)
+            document = await sync_to_async(Document.objects.select_related('product').get)(id=file_id)
 
             # Fayl tayyor va yuborish mumkin bo'lsa
             if document.completed and document.telegram_file_id:
