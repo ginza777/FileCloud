@@ -3,21 +3,11 @@ SOFF.UZ Parser Command
 ======================
 
 Bu komanda SOFF.UZ saytidan ilmiy hujjatlarni pars qiladi.
-Saytning API'sidan foydalanib, barcha mavjud hujjatlarni yuklab oladi.
+Yaroqsiz URL'li va bazada mavjud ID'li (Product) elementlarni SKIP qiladi.
 
-Ishlatish:
-    python manage.py parse_soff_documents
-    python manage.py parse_soff_documents --start-page 10 --end-page 20
-    python manage.py parse_soff_documents --limit 100
-
-Xususiyatlari:
-- Avtomatik token yangilash
-- Sahifa bo'yicha pars qilish
-- Xatoliklarni boshqarish
-- Progress tracking
-- Database transaction boshqaruvi
-
-MUHIM: Yangi API tuzilmasiga moslashtirildi.
+MUHIM TUZATISHLAR:
+1. Bazada ID bo'yicha mavjud bo'lsa, skip qilish.
+2. Har bir item alohida tranzaksiyada, xatoliklar bir-biriga ta'sir qilmaydi.
 """
 
 # apps/files/management/commands/parsing/parse_soff_documents.py
@@ -26,7 +16,7 @@ import re
 import time
 import requests
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import transaction, IntegrityError
 # Modellar va utility funksiyalaringizni to'g'ri import qilganingizga ishonch hosil qiling
 from apps.files.models import Document, Product, SiteToken, ParseProgress
 from apps.files.utils import get_valid_soff_token
@@ -35,18 +25,10 @@ from apps.files.utils import get_valid_soff_token
 SOFF_BUILD_ID_HOLDER = "{build_id}"
 BASE_API_URL_TEMPLATE = f"https://soff.uz/_next/data/{SOFF_BUILD_ID_HOLDER}/scientific-resources/all.json"
 
-# =======================================================================
+# ... (parse_file_size, extract_file_url, create_slug funksiyalari o'zgarishsiz qoladi)
 
 def parse_file_size(file_size_str):
-    """
-    Fayl hajmini string formatdan (masalan, '3.49 MB') baytga o'giradi.
-
-    Args:
-        file_size_str (str): Fayl hajmi stringi (masalan, "3.49 MB", "1.2 GB")
-
-    Returns:
-        int: Fayl hajmi baytlarda
-    """
+    """Fayl hajmini string formatdan (masalan, '3.49 MB') baytga o'giradi."""
     if not file_size_str:
         return 0
     match = re.match(r'(\d+\.?\d*)\s*(MB|GB|KB)', file_size_str, re.IGNORECASE)
@@ -62,16 +44,12 @@ def parse_file_size(file_size_str):
     return 0
 
 def extract_file_url(poster_url):
-    """
-    Poster URL'dan asosiy fayl URL'ini ajratib oladi (yangilangan API talabi).
-    """
+    """Poster URL'dan asosiy fayl URL'ini ajratib oladi."""
     if not poster_url:
         return None
-    # UUID (file ID) ni ajratib olish
     match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)
     if match:
         file_id = match.group(1)
-        # Fayl kengaytmasini ajratib olish
         file_ext_match = re.search(
             r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|PPT|DOC|DOCX|PPTX|PDF|XLS|XLSX|odt|ods|odp)(?:_page|$)',
             poster_url,
@@ -79,15 +57,11 @@ def extract_file_url(poster_url):
         )
         if file_ext_match:
             file_extension = file_ext_match.group(1)
-            # Standart media fayl URL'ini shakllantirish
             return f"https://d2co7bxjtnp5o.cloudfront.net/media/documents/{file_id}.{file_extension}"
     return None
 
 def create_slug(title):
-    """
-    Sarlavhadan slug yaratadi (URL uchun).
-    """
-    # O'zbek harflarini ingliz harflariga o'giradi
+    """Sarlavhadan slug yaratadi (URL uchun)."""
     translit_map = {
         'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
         'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
@@ -101,7 +75,6 @@ def create_slug(title):
     for cyr, lat in translit_map.items():
         slug = slug.replace(cyr, lat)
 
-    # Faqat harflar, raqamlar va tire qoldiradi
     slug = re.sub(r'[^a-z0-9\s-]', '', slug)
     slug = re.sub(r'\s+', '-', slug)
     slug = re.sub(r'-+', '-', slug)
@@ -145,8 +118,8 @@ class Command(BaseCommand):
         """
         Asosiy pars qilish jarayoni.
         """
-        start_page = options['start_page']
-        end_page = options['end_page']
+        start_page = options['start-page']
+        end_page = options['end-page']
         limit = options['limit']
         delay = options['delay']
 
@@ -172,11 +145,16 @@ class Command(BaseCommand):
         if created:
             self.stdout.write("Yangi progress obyekti yaratildi")
         else:
+            # Agar start_page berilmasa, oxirgi to'xtagan joydan davom ettiramiz
+            if options['start-page'] == 1:
+                start_page = progress.last_page + 1
             self.stdout.write(f"Mavjud progress: sahifa {progress.last_page}")
 
         # 3. Sahifalarni pars qilish
         page = start_page
         total_documents = 0
+        total_skipped_url = 0
+        total_skipped_exists = 0
 
         while True:
             if end_page and page > end_page:
@@ -186,12 +164,11 @@ class Command(BaseCommand):
                 self.stdout.write(f"Limit yetildi: {limit} hujjat")
                 break
 
-            self.stdout.write(f"Sahifa {page} pars qilinmoqda...")
+            self.stdout.write(f"\n{'=' * 10} Sahifa {page} pars qilinmoqda... {'=' * 10}")
 
             try:
                 # API so'rovini yuborish
                 api_url = BASE_API_URL_TEMPLATE.format(build_id=token)
-                # 'slug' va 'search' kerak emas. Faqat 'page' yetarli.
                 params = {'page': page}
 
                 response = requests.get(api_url, params=params, timeout=30)
@@ -199,35 +176,55 @@ class Command(BaseCommand):
 
                 data = response.json()
 
-                # Yangi API strukturasi bo'yicha ma'lumotlarni olish
-                # pageProps -> productsData -> results
                 page_props = data.get('pageProps', {})
-                items = page_props.get('productsData', {}).get('results', []) # <--- BU YER YANGILANDI
+                items = page_props.get('productsData', {}).get('results', [])
 
                 if not items:
-                    self.stdout.write(f"Sahifa {page} bo'sh - pars qilish tugadi")
+                    self.stdout.write(self.style.SUCCESS(f"Sahifa {page} da ma'lumot topilmadi. Parsing yakunlandi."))
                     break
 
                 # Hujjatlarni bazaga saqlash
                 page_documents = 0
-                with transaction.atomic():
-                    for item in items:
-                        if limit and total_documents >= limit:
-                            break
 
-                        # Fayl URL'ini yangi usul bilan ajratib olish
-                        file_url = extract_file_url(item.get("poster_url"))
+                # Sahifadagi barcha item ID'larini yig'ib olamiz
+                item_ids = [item.get('id') for item in items if item.get('id') is not None]
+                # Bazada mavjud bo'lgan Product ID'larini bir so'rovda tekshiramiz
+                existing_product_ids = set(Product.objects.filter(id__in=item_ids).values_list('id', flat=True))
 
-                        if not file_url:
-                            self.stdout.write(
-                                self.style.WARNING(f"Hujjat ({item.get('id', 'N/A')}) uchun yaroqsiz URL - o'tkazib yuborildi.")
-                            )
-                            continue
 
-                        try:
-                            # Document obyektini yaratish/olish
+                # Har bir elementni alohida tranzaksiyada qayta ishlash
+                for item in items:
+                    if limit and total_documents >= limit:
+                        break
+
+                    item_id = item.get('id')
+
+                    # 1. ID mavjudligini tekshirish va skip qilish
+                    if item_id is None:
+                        continue
+
+                    if item_id in existing_product_ids:
+                        self.stdout.write(f"    ℹ️ Hujjat ({item_id}) ID bazada mavjud. Skip qilindi.")
+                        total_skipped_exists += 1
+                        continue # Keyingi itemga o'tish
+
+                    # 2. Yaroqsiz URL ni tekshirish va skip qilish
+                    file_url = extract_file_url(item.get("poster_url"))
+
+                    if not file_url:
+                        self.stdout.write(
+                            self.style.WARNING(f"    ⚠️ Hujjat ({item_id}) uchun yaroqsiz URL. Skip qilindi.")
+                        )
+                        total_skipped_url += 1
+                        continue
+
+                    try:
+                        # 3. Yaratish (Document va Product)
+                        with transaction.atomic():
+
+                            # Document yaratish (unique constraint faqat parse_file_url bo'yicha)
                             document, doc_created = Document.objects.get_or_create(
-                                parse_file_url=file_url, # <-- extract_file_url() dan keladi
+                                parse_file_url=file_url,
                                 defaults={
                                     'download_status': 'pending',
                                     'parse_status': 'pending',
@@ -235,44 +232,66 @@ class Command(BaseCommand):
                                     'telegram_status': 'pending',
                                     'delete_status': 'pending',
                                     'pipeline_running': False,
-                                    'completed': False
+                                    'completed': False,
+                                    # json_data ni ham saqlab qo'yamiz
+                                    'json_data': item
                                 }
                             )
 
                             if doc_created:
-                                # Product obyektini yaratish
+                                title = item['title']
+                                slug = create_slug(title)
+
+                                # Product yaratish (Doc_ID va Slug bo'yicha unique bo'lishi mumkin)
                                 Product.objects.create(
+                                    id=item_id, # API ID Product ID sifatida
                                     document=document,
-                                    # Product ID'sini API'dan olish
-                                    id=item.get('id'),
-                                    title=item['title'],
-                                    slug=create_slug(item['title']),
+                                    title=title,
+                                    slug=slug,
                                     parsed_content=item.get('description', ''),
-                                    # Fayl hajmini document ichidan olish
                                     file_size=parse_file_size(item.get('document', {}).get('file_size', '')),
                                     view_count=0,
                                     download_count=0
                                 )
+
                                 page_documents += 1
                                 total_documents += 1
+                                self.stdout.write(f"    ➕ Yangi hujjat qo'shildi: {title} (ID: {item_id})")
+                            else:
+                                # Document allaqachon parse_file_url bo'yicha mavjud
+                                self.stdout.write(f"    ℹ️ Hujjat ({item_id}) Document allaqachon URL bo'yicha mavjud. Skip.")
+                                total_skipped_exists += 1
 
-                        except Exception as e:
-                            self.stdout.write(
-                                self.style.WARNING(f"Hujjat saqlashda xatolik: {e}. ID: {item.get('id', 'N/A')}")
-                            )
-                            continue
+
+                    except IntegrityError as e:
+                        # Bu yerda duplikat slug/ID xatosi ushlanadi
+                        self.stdout.write(
+                            self.style.WARNING(f"    ❌ Hujjat saqlashda IntegrityError (Duplikat): {e}. ID: {item_id}. Skip qilindi.")
+                        )
+                        total_skipped_exists += 1
+                        continue
+                    except Exception as e:
+                        # Boshqa kutilmagan xatoliklar
+                        self.stdout.write(
+                            self.style.ERROR(f"    ❌ Hujjat saqlashda kutilmagan xatolik: {e}. ID: {item_id}")
+                        )
+                        continue
+
 
                 # Progress yangilash
-                # parse.py dan farqli o'laroq, bu yerda update_progress() funksiyasi yo'q, shuning uchun last_page ni to'g'ridan-to'g'ri yangilaymiz.
                 progress.last_page = page
                 progress.total_pages_parsed += 1
                 progress.save()
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Sahifa {page} muvaffaqiyatli: {page_documents} hujjat qo'shildi"
+                        f"\n--- Sahifa {page} Statistikasi ---"
                     )
                 )
+                self.stdout.write(f"  - Yangi qo'shilganlar: {page_documents}")
+                self.stdout.write(f"  - O'tkazib yuborildi (ID mavjud): {total_skipped_exists}")
+                self.stdout.write(f"  - O'tkazib yuborildi (Yaroqsiz URL): {total_skipped_url}")
+
 
                 # Keyingi sahifaga o'tish
                 page += 1
@@ -282,12 +301,10 @@ class Command(BaseCommand):
                     time.sleep(delay)
 
             except requests.exceptions.HTTPError as e:
-                # 404 xatosi token eskirganligini anglatishi mumkin, shu sababli to'xtatish
                 if e.response.status_code == 404:
                     self.stdout.write(
                         self.style.ERROR(f"API so'rovida xatolik: 404 Not Found. Token eskirgan bo'lishi mumkin.")
                     )
-                    # Loop ni qayta boshlash uchun token yangilanishini kutish mumkin, lekin hozircha to'xtatamiz
                     break
                 self.stdout.write(
                     self.style.ERROR(f"API so'rovida HTTP xatoligi: {e}")
@@ -310,5 +327,6 @@ class Command(BaseCommand):
                 f"\n=== Pars qilish yakunlandi ==="
             )
         )
-        self.stdout.write(f"Jami hujjatlar: {total_documents}")
+        self.stdout.write(f"Jami yangi hujjatlar: {total_documents}")
+        self.stdout.write(f"Jami o'tkazib yuborilganlar (Mavjud/URL): {total_skipped_exists + total_skipped_url}")
         self.stdout.write(f"Oxirgi muvaffaqiyatli sahifa: {page - 1}")
