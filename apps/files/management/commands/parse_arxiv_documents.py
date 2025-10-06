@@ -3,30 +3,37 @@ Arxiv.UZ Parser Command
 =======================
 
 Bu komanda Arxiv.UZ saytidan ilmiy hujjatlarni pars qiladi.
-Turli kategorialar bo'yicha hujjatlarni yuklab oladi.
+Turli kategorialar (Hujjat turlari va Fanlar) bo'yicha hujjatlarni yuklab oladi.
 
-Ishlatish:
-    python manage.py parse_arxiv_documents
-    python manage.py parse_arxiv_documents --category "matematika"
-    python manage.py parse_arxiv_documents --limit 50
+MUHIM: 500 Server Error xatosini tuzatish uchun API so'rov mantig'i yangilandi.
+Endi ma'lumotlar ikki darajali (BASE_URL + SUB_CATEGORY) asosida olinadi.
 """
 
 import requests
 import time
 import logging
+import re
 from math import ceil
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
+# apps.files.models o'rniga model yo'lini to'g'irlang, agar kerak bo'lsa
 from apps.files.models import Document, Product, SiteToken, ParseProgress
 from apps.files.tasks.document_processing import process_document_pipeline
 
 logger = logging.getLogger(__name__)
 
-# Asosiy URL'lar
-BASE_URLS = ["https://arxiv.uz/documents/all/"]
+# Asosiy URL'lar (BASE_URL: Hujjat turi)
+BASE_URLS = [
+    "https://arxiv.uz/documents/dars-ishlanmalar/",
+    "https://arxiv.uz/documents/diplom-ishlar/",
+    "https://arxiv.uz/documents/darsliklar/",
+    "https://arxiv.uz/documents/slaydlar/",
+    "https://arxiv.uz/documents/referatlar/",
+    "https://arxiv.uz/documents/kurs-ishlari/",
+]
 
-# Kategorialar ro'yxati
+# SUB-Kataloglar (SUB_CATEGORY: Fan nomi)
 CATEGORIES = [
     "adabiyot", "algebra", "anatomiya", "arxitektura", "astronomiya", "biologiya",
     "biotexnologiya", "botanika", "chizmachilik", "chqbt", "davlat-tilida-ish-yuritish",
@@ -41,28 +48,27 @@ CATEGORIES = [
     "sanoat-texnologiyasi", "sotsiologiya", "statistika", "texnologiya", "tibbiyot",
     "tog-texnologiyasi", "transport", "turizm", "umumiy-fizika", "umumiy-kimyo",
     "umumiy-matematika", "umumiy-texnologiya", "xalqaro-huquq", "xizmat-ko-rsatish",
-    "zootexnika", "matematika", "texnika", "tabiiy-fanlar", "ijtimoiy-fanlar"
+    "zootexnika", "matematika", "texnika", "tabiiy-fanlar", "ijtimoiy-fanlar",
+    # Qo'shimcha fanlar ishlaydigan koddan
+    "musiqa", "nemis-tili", "o-qish", "odobnoma", "pedagogik-psixologiya", "prezident-asarlari",
+    "qishloq-va-o-rmon-xo-jaligi", "radiotexnika", "rus-tili-va-adabiyoti", "san-at",
+    "siyosatshunoslik", "suv-xo-jaligi", "tabiatshunoslik", "tarix", "tasviriy-san-at",
+    "to-qimachilik", "valeologiya", "xayot-faoliyati-xavfsizligi", "zoologiya"
 ]
 
 
 class Command(BaseCommand):
     """
     Arxiv.UZ saytidan ilmiy hujjatlarni pars qilish komandasi.
-    
-    Bu komanda:
-    1. Arxiv.UZ saytining turli kategorialarini tekshiradi
-    2. Har bir kategoriyadagi hujjatlarni yuklab oladi
-    3. Hujjatlarni bazaga saqlaydi
-    4. Parsing pipeline'ini ishga tushiradi
     """
-    
+
     help = "Arxiv.UZ saytidan ilmiy hujjatlarni pars qiladi"
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--category',
             type=str,
-            help='Muayyan kategoriyani pars qilish (masalan: "matematika")'
+            help='Muayyan fan nomini pars qilish (masalan: "adabiyot")'
         )
         parser.add_argument(
             '--limit',
@@ -81,26 +87,23 @@ class Command(BaseCommand):
         """Asosiy pars qilish jarayoni."""
         category = options.get('category')
         limit = options.get('limit')
-        delay = options.get('delay')  # Endi delay har bir API so'rovidan keyin ishlatiladi
+        delay = options.get('delay')
 
         self.stdout.write(self.style.SUCCESS("--- Arxiv.uz parsing jarayoni boshlandi ---"))
 
-        # SiteToken dan PHPSESSID ni olish
+        # 1. PHPSESSID ni olish
         try:
-            # SiteToken 'arxiv' nomini ishlatish shart
             site_token = SiteToken.objects.get(name='arxiv')
             phpsessid = site_token.auth_token
-            # Token bo'lmasa, chiqish yoki default qiymat berish (masalan: default PHPSESSID)
             if not phpsessid:
-                self.stdout.write(self.style.WARNING("⚠️ SiteToken 'arxiv' da auth_token bo'sh!"))
+                self.stdout.write(self.style.ERROR("❌ SiteToken 'arxiv' da auth_token bo'sh!"))
                 return
         except SiteToken.DoesNotExist:
             self.stdout.write(self.style.ERROR("❌ SiteToken 'arxiv' topilmadi!"))
             return
 
-        # Headers va cookies sozlash
+        # 2. Headers va cookies sozlash
         headers = {
-            # Bularning barchasi API'ga so'rov yuborish uchun muhim
             'accept': 'application/json, text/plain, */*',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36',
             'sec-fetch-mode': 'cors',
@@ -111,68 +114,55 @@ class Command(BaseCommand):
             'PHPSESSID': phpsessid,
         }
 
-        # Progress ni olish (bu yerda faqat statlar uchun ishlatiladi)
-        progress = ParseProgress.objects.filter(last_page__gte=0).first()
-        if not progress:
-            progress, _ = ParseProgress.objects.get_or_create(defaults={'last_page': 0, 'total_pages_parsed': 0})
+        # 3. Kategorialarni aniqlash
+        urls_to_process = BASE_URLS # Hujjat turlari (darsliklar, referatlar...)
 
-        # Kategoriyalarni filterlash
-        # BASE_URLS (hujjat turlari) ni aniqlash
-        urls_to_process = BASE_URLS
-        if category:
-            # Agar 'category' berilsa, faqat o'sha SUB-CATEGORY ni ishlatamiz
-            categories_to_parse = [category]
+        if category and category not in CATEGORIES:
+            self.stdout.write(self.style.ERROR(f"Noma'lum kategoriya: {category}"))
+            return
 
-        else:
-            categories_to_parse = CATEGORIES
+        categories_to_parse = [category] if category else CATEGORIES # Fan nomlari
 
-        # Statistika uchun hisoblagichlar
+        # 4. Statistika
         total_documents_processed = 0
         new_documents_created = 0
         documents_queued_for_processing = 0
+        page_size = 10 # Har bir sahifadagi elementlar soni
 
-        # Asosiy tur bo'yicha loop (darsliklar/, referatlar/ kabi)
+        # 5. Parsing jarayoni (Ikkita loop: Hujjat turi + Fan nomi)
         for base_url in urls_to_process:
             if limit and total_documents_processed >= limit:
                 break
 
-            self.stdout.write(f"\n📁 Kategoriya Turi: {base_url.split('/')[-2]}")
+            self.stdout.write(f"\n📁 Hujjat Turi: {base_url.split('/')[-2]}")
 
-            # Sub-kategoriya bo'yicha loop (matematika, fizika kabi)
             for sub_category in categories_to_parse:
                 if limit and total_documents_processed >= limit:
                     break
 
-                self.stdout.write(f"  📂 Sub-kategoriya: {sub_category}")
+                self.stdout.write(f"  📂 Fan nomi: {sub_category}")
 
-                # Referer'ni dinamik sozlash (API to'g'ri ishlashi uchun zarur)
-                headers['referer'] = f"https://arxiv.uz/uz/documents/{sub_category}/{sub_category}"
+                # Referer API so'rovi uchun shart!
+                headers['referer'] = f"https://arxiv.uz/uz/documents/{base_url.split('/')[-2]}/{sub_category}"
 
                 page = 1
-                page_size = 10
-
                 while True:
                     if limit and total_documents_processed >= limit:
                         break
 
-                    # API URL'ini yaratish
-                    # base_url + sub_category API so'rovini hosil qiladi
+                    # API URL'ini yaratish (Ishlaydigan kod kabi)
                     api_url = f"{base_url}{sub_category}?page={page}&pageSize={page_size}"
 
                     try:
                         self.stdout.write(f"    📄 Sahifa {page}: {api_url}")
 
-                        time.sleep(delay)  # Kutish
+                        time.sleep(delay)
 
                         response = requests.get(api_url, headers=headers, cookies=cookies, timeout=15)
-                        response.raise_for_status()
+                        response.raise_for_status() # 500 xatosini shu yerda ushlaydi
 
-                        try:
-                            data = response.json()
-                        except ValueError as e:
-                            self.stdout.write(self.style.ERROR(f"    ❌ Sahifa {page} dan JSON xatosi: {e}"))
-                            break  # Keyingi sub-kategoriyaga o'tish
-
+                        # JSON ma'lumotlarini olish
+                        data = response.json()
                         documents = data.get("documents", [])
                         total_items = data.get("total", 0)
 
@@ -180,7 +170,7 @@ class Command(BaseCommand):
                             self.stdout.write(f"    ℹ️  Sahifa {page} da hujjatlar yo'q.")
                             break
 
-                        # Hujjatlarni qayta ishlash
+                        # Hujjatlarni qayta ishlash va bazaga saqlash
                         with transaction.atomic():
                             for doc_data in documents:
                                 if limit and total_documents_processed >= limit:
@@ -193,31 +183,29 @@ class Command(BaseCommand):
                                 category_slug = doc_data.get("category", {}).get("slug")
                                 subject_slug = doc_data.get("subject", {}).get("slug")
 
-                                # Download URL ni yaratish (ishlaydigan kod kabi)
+                                # Download URL ni yaratish
                                 download_url = None
                                 if slug and category_slug and subject_slug:
                                     download_url = f"https://arxiv.uz/uz/download/{category_slug}/{subject_slug}/{slug}"
 
                                 if not download_url:
-                                    self.stdout.write(self.style.WARNING(f"    ⚠️ Download URL yaratilmadi: {title}"))
-                                    continue
+                                     self.stdout.write(self.style.WARNING(f"    ⚠️ Download URL yaratilmadi: {title}"))
+                                     continue
 
-                                # Mavjud hujjatni tekshirish (faqat slug orqali)
+                                # Mavjud hujjatni slug orqali tekshirish
                                 try:
                                     existing_doc = Document.objects.get(json_data__slug=slug)
 
-                                    # Yangilash
+                                    # Yangilash mantig'i (Productni ham)
                                     existing_doc.json_data = doc_data
                                     existing_doc.parse_file_url = download_url
                                     existing_doc.save()
 
-                                    # Productni yangilash
                                     if hasattr(existing_doc, 'product'):
                                         existing_doc.product.title = title
                                         existing_doc.product.slug = slug
                                         existing_doc.product.save()
 
-                                    # Qayta ishlash navbatiga qo'shish (yangilangan bo'lsa)
                                     process_document_pipeline.apply_async(args=[existing_doc.id])
 
                                     self.stdout.write(f"    ✅ Yangilandi: {title}")
@@ -233,25 +221,23 @@ class Command(BaseCommand):
                                         delete_status='pending'
                                     )
 
-                                    # Yangi Product yaratish
-                                    # Product ID'si sifatida doc_id ni ishlatish maqsadga muvofiq
+                                    # Product ID'sini API dan kelgan doc_id ni ishlatish
                                     Product.objects.create(
-                                        id=doc_id,  # API dan kelgan ID ni ishlatish
+                                        id=doc_id,
                                         title=title,
                                         slug=slug,
                                         document=new_doc
                                     )
 
-                                    # Celery orqali qayta ishlash uchun navbatga qo'shish
                                     process_document_pipeline.apply_async(args=[new_doc.id])
 
                                     new_documents_created += 1
                                     documents_queued_for_processing += 1
-                                    self.stdout.write(f"    ➕ Yangi: {title} (ID: {new_doc.id})")
+                                    self.stdout.write(f"    ➕ Yangi: {title}")
 
                                 total_documents_processed += 1
 
-                        # Sahifani tekshirish
+                        # Sahifa ma'lumotlarini tekshirish
                         total_pages = ceil(total_items / page_size)
                         self.stdout.write(f"    📊 Sahifa {page}/{total_pages}, Jami: {total_items}")
 
@@ -260,13 +246,25 @@ class Command(BaseCommand):
 
                         page += 1
 
-                    except requests.RequestException as e:
-                        self.stdout.write(self.style.ERROR(f"    ❌ Sahifa {page} da so'rov xatosi: {e}"))
-                        time.sleep(5)  # Xato bo'lsa ko'proq kutish
-                        break  # Keyingi sub-kategoriyaga o'tish
+                    except requests.exceptions.HTTPError as e:
+                        self.stdout.write(self.style.ERROR(f"    ❌ HTTP xatosi (Sahifa {page}): {e}"))
+                        time.sleep(5)
+                        break
+                    except requests.exceptions.RequestException as e:
+                        self.stdout.write(self.style.ERROR(f"    ❌ Tarmoq xatosi (Sahifa {page}): {e}"))
+                        time.sleep(5)
+                        break
+                    except ValueError as e:
+                        self.stdout.write(self.style.ERROR(f"    ❌ JSON Decode xatosi (Sahifa {page}): {e}"))
+                        time.sleep(5)
+                        break
+                    except Exception as e:
+                        self.stdout.write(self.style.ERROR(f"    ❌ Kutilmagan xato (Sahifa {page}): {e}"))
+                        time.sleep(5)
+                        break
 
-                self.stdout.write(f"  ✅ Sub-kategoriya tugadi: {sub_category}")
-                time.sleep(delay)  # Sub-kategoriyalar orasida kutish
+                self.stdout.write(f"  ✅ Fan nomi tugadi: {sub_category}")
+                time.sleep(delay)
 
         self.stdout.write(self.style.SUCCESS("\n--- JARAYON YAKUNLANDI: STATISTIKA ---"))
         self.stdout.write(f"📊 Jami qayta ishlangan hujjatlar: {total_documents_processed}")
