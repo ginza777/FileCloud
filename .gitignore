@@ -34,6 +34,8 @@ env/
 ENV/
 
 # Loglar va vaqtinchalik fayllar
+logs/
+*.log
 # Node (agar front bor bo'lsa)
 node_modules/
 
