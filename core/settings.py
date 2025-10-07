@@ -165,27 +165,23 @@ DATABASES = {
     }
 }
 
-# PostgreSQL database (Production va Test muhiti uchun)
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('POSTGRES_DB', 'filefinder_db'),
-#         'USER': os.getenv('POSTGRES_USER', 'filefinder_user'),
-#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'filefinder_pass'),
-#         'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
-#         'PORT': os.getenv('POSTGRES_PORT', '5432'),
-#         'CONN_MAX_AGE': 600,  # Connection pooling uchun
-#         'OPTIONS': {
-#             'connect_timeout': 10,
-#         },
-#     }
-# }
 
-# Test muhiti uchun alohida sozlamalar
-if 'test' in sys.argv:
-    DATABASES['default']['TEST'] = {
-        'NAME': 'test_filefinder_db',  # Test uchun alohida database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'filefinder_db'),
+        'USER': os.getenv('POSTGRES_USER', 'sherzamon'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'filefinder_pass'),
+        'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'CONN_MAX_AGE': 600,  # Connection pooling uchun
+        'OPTIONS': {
+            'connect_timeout': 10,
+        },
     }
+}
+
+
 
 
 ADMIN_OPTIMIZATIONS = {

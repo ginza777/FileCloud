@@ -37,7 +37,7 @@ services:
     container_name: filefinder_celery
     command: >
       sh -c "mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
-             celery -A core worker --loglevel=info --concurrency=4"
+             celery -A core worker --loglevel=info --concurrency=12"
     volumes:
       - .:/app
       - ./media:/app/media

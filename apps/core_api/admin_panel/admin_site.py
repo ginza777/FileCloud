@@ -59,8 +59,6 @@ class FileFinderAdminSite(admin.AdminSite):
             'recent_activities': recent_activities,
             'quick_actions': quick_actions,
             'system_health': system_health,
-            'has_dashboard': True,
-            'dashboard_url': reverse('admin:admin_dashboard'),
         })
         
         return super().index(request, extra_context)
@@ -150,12 +148,6 @@ class FileFinderAdminSite(admin.AdminSite):
         """
         return [
             {
-                'title': '📊 Dashboard',
-                'url': reverse('admin:admin_dashboard'),
-                'description': 'Loyiha statistikasi',
-                'color': '#667eea'
-            },
-            {
                 'title': '📄 Hujjatlar',
                 'url': reverse('admin:files_document_changelist'),
                 'description': 'Barcha hujjatlar',
@@ -221,20 +213,11 @@ class FileFinderAdminSite(admin.AdminSite):
         """
         urls = super().get_urls()
         custom_urls = [
-            path('dashboard/', self.admin_view(self.dashboard_view), name='admin_dashboard'),
             path('api/stats/', self.admin_view(self.stats_api), name='admin_stats_api'),
             path('api/activities/', self.admin_view(self.activities_api), name='admin_activities_api'),
             path('api/health/', self.admin_view(self.health_api), name='admin_health_api'),
         ]
         return custom_urls + urls
-    
-    @staff_member_required
-    def dashboard_view(self, request):
-        """
-        Advanced admin dashboard - admin_dashboard.py dan import qilish.
-        """
-        from .admin_dashboard import admin_dashboard
-        return admin_dashboard(request)
     
     @staff_member_required
     def stats_api(self, request):
