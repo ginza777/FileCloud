@@ -83,7 +83,7 @@ services:
     ports:
       - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U filefinder_user -d filefinder_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U sherzamon -d filefinder_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
