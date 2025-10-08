@@ -3,7 +3,8 @@
 # statik manbalar (dev rejim)
 /static/
 /staticfiles/
-
+logs
+logs/django.log
 # Maxfiy ma'lumotlar
 .env
 *.env

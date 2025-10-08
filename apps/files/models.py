@@ -259,20 +259,23 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Hujjat saqlash metodini override qiladi.
-        
-        Bu metod:
-        - Ideal holat qoidasini tekshiradi
-        - Parse content va Telegram file mavjudligini tekshiradi
-        - Pipeline holatini yangilaydi
-        - Completed holatini avtomatik belgilaydi
-        
+        Hujjat saqlash metodini override qiladi va ideal holatni tekshiradi.
+
         Ideal holat qoidasi:
-        1. document.product.parsed_content mavjud va bo'sh emas
-        2. telegram_file_id mavjud va bo'sh emas  
-        3. pipeline_running = False
-        4. index_status = 'completed'
+        1. document.product.parsed_content mavjud va bo'sh emas.
+        2. telegram_file_id mavjud va bo'sh emas.
         """
+        # Faqat 'update_fields' ishlatilayotganda, barcha maydonlarni yuklamaslik
+        # uchun product'ni alohida olishimiz mumkin.
+        if 'product' not in self.__dict__:
+            # Agar product yuklanmagan bo'lsa, uni DB'dan olishga urinib ko'ramiz
+            try:
+                self.product
+            except Product.DoesNotExist:
+                # Agar product mavjud bo'lmasa, uni yaratmagunimizcha has_parsed_content
+                # False bo'ladi
+                pass
+
         has_parsed_content = (
                 hasattr(self, 'product') and
                 self.product is not None and
@@ -285,20 +288,26 @@ class Document(models.Model):
                 self.telegram_file_id.strip() != ''
         )
 
-        is_indexed = (self.index_status == 'completed')
-        pipeline_not_running = (not self.pipeline_running)
-
-        # BARCHA 4 SHART bajarilgan bo'lsa - IDEAL HOLAT
-        if has_parsed_content and has_telegram_file and is_indexed:
-            # Completed = True va barcha statuslarni completed qilish
+        # IDEAL HOLAT TEKSHIRUVI
+        if has_parsed_content and has_telegram_file:
+            # Holat ideal bo'lsa, barcha statuslarni 'completed' qilamiz
             self.completed = True
-            self.pipeline_running = False
+            self.pipeline_running = False  # Pipeline ishini to'xtatamiz
             self.download_status = 'completed'
             self.parse_status = 'completed'
             self.index_status = 'completed'
             self.telegram_status = 'completed'
             self.delete_status = 'completed'
-        # Ideal holatda bo'lmasa, completed maydonini o'zgartirmaymiz
+        else:
+            # Agar ideal holat bo'lmasa, pipeline'ni qayta ishga tushirish uchun
+            # barcha statuslarni 'pending' holatiga qaytaramiz.
+            self.completed = False
+            self.pipeline_running = False  # Yangi ishni boshlashdan oldin qulfni ochamiz
+            self.download_status = 'pending'
+            self.parse_status = 'pending'
+            self.index_status = 'pending'
+            self.telegram_status = 'pending'
+            self.delete_status = 'pending'
 
         super().save(*args, **kwargs)
 
