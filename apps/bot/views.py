@@ -239,7 +239,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
         
         # Extract file ID from download_ prefix
         if file_id_arg.startswith('download_'):
-            file_id = file_id_arg.replace('download_', '')
+            file_id = file_id_arg.split('_', 1)[1]
         else:
             file_id = file_id_arg
             
@@ -536,7 +536,7 @@ async def increment_view_count_callback(update, context, user, language):
         
         # Faylni yuborish
         await send_file_by_callback(update, context, user, language)
-        
+
     except Exception as e:
         logger.error(f"View count increment error: {e}")
         await send_file_by_callback(update, context, user, language)
