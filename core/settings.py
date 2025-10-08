@@ -489,17 +489,27 @@ LOGGING = {
             'propagate': False,
         },
         'apps.files': {
-            'handlers': ['file', 'console'],
+            'handlers': ['file', 'console', 'celery_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.bot': {
-            'handlers': ['file', 'console'],
+            'handlers': ['file', 'console', 'celery_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.core_api': {
-            'handlers': ['file', 'console'],
+            'handlers': ['file', 'console', 'celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.files.tasks': {
+            'handlers': ['file', 'console', 'celery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.files.tasks.document_processing': {
+            'handlers': ['file', 'console', 'celery_file'],
             'level': 'INFO',
             'propagate': False,
         },
