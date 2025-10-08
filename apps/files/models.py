@@ -14,7 +14,7 @@ Modellar:
 - SearchQuery: Qidiruv so'rovlari
 - DocumentImage: Hujjat rasmlari
 """
-
+from datetime import timedelta
 import uuid
 from django.db import models
 
