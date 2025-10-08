@@ -14,9 +14,10 @@ Modellar:
 - SearchQuery: Qidiruv so'rovlari
 - DocumentImage: Hujjat rasmlari
 """
-from datetime import timedelta
 import uuid
+from datetime import timedelta
 from django.db import models
+from django.utils import timezone
 
 
 def upload_to(instance, filename):
@@ -57,22 +58,22 @@ class ParseProgress(models.Model):
         help_text="Parse progress ID'si"
     )
     last_page = models.IntegerField(
-        default=0, 
+        default=0,
         verbose_name="Last Parsed Page",
         help_text="Oxirgi parse qilingan sahifa raqami"
     )
     total_pages_parsed = models.IntegerField(
-        default=0, 
+        default=0,
         verbose_name="Total Pages Parsed",
         help_text="Jami parse qilingan sahifalar soni"
     )
     last_run_at = models.DateTimeField(
-        auto_now=True, 
+        auto_now=True,
         verbose_name="Last Run At",
         help_text="Oxirgi parse jarayoni boshlangan vaqt"
     )
     created_at = models.DateTimeField(
-        auto_now_add=True, 
+        auto_now_add=True,
         verbose_name="Created At",
         help_text="Parse progress yaratilgan vaqt"
     )
@@ -124,7 +125,7 @@ class ParseProgress(models.Model):
         self.total_pages_parsed += 1
         self.save()
 
-from django.utils import timezone
+
 class Document(models.Model):
     """
     Hujjat ma'lumotlarini saqlash uchun asosiy model.
@@ -147,7 +148,7 @@ class Document(models.Model):
     - telegram_file_id: Telegram fayl ID'si
     - pipeline_running: Pipeline ishlayotganmi
     """
-    
+
     STATUS_CHOICES = [
         ('pending', 'Kutilmoqda'),
         ('processing', 'Jarayonda'),
@@ -157,97 +158,97 @@ class Document(models.Model):
     ]
 
     id = models.UUIDField(
-        primary_key=True, 
-        default=uuid.uuid4, 
-        editable=False, 
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
         db_index=True,
         help_text="Hujjatning noyub identifikatori"
     )
 
     parse_file_url = models.TextField(
-        blank=True, 
-        null=True, 
+        blank=True,
+        null=True,
         verbose_name="File URL",
         help_text="Hujjat faylining to'g'ridan-to'g'ri havolasi"
     )
-    
+
     # Status fields - Jarayon holatlari
     download_status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='pending',
-        verbose_name="Yuklab olish holati", 
+        verbose_name="Yuklab olish holati",
         db_index=True,
         help_text="Hujjat yuklab olish jarayoni holati"
     )
     parse_status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='pending',
-        verbose_name="Parse qilish holati", 
+        verbose_name="Parse qilish holati",
         db_index=True,
         help_text="Hujjat parse qilish jarayoni holati"
     )
     index_status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='pending',
-        verbose_name="Indekslash holati", 
+        verbose_name="Indekslash holati",
         db_index=True,
         help_text="Hujjat indekslash jarayoni holati"
     )
     telegram_status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='pending',
-        verbose_name="Telegram holati", 
+        verbose_name="Telegram holati",
         db_index=True,
         help_text="Telegram'ga yuborish jarayoni holati"
     )
     delete_status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='pending',
-        verbose_name="O'chirish holati", 
+        verbose_name="O'chirish holati",
         db_index=True,
         help_text="Hujjat o'chirish jarayoni holati"
     )
 
     completed = models.BooleanField(
-        default=False, 
-        verbose_name="Barchasi tugatildimi?", 
+        default=False,
+        verbose_name="Barchasi tugatildimi?",
         db_index=True,
         help_text="Hujjat barcha jarayonlardan o'tganmi"
     )
 
     telegram_file_id = models.CharField(
-        blank=True, 
-        null=True, 
+        blank=True,
+        null=True,
         verbose_name="Telegram File ID",
-        help_text="Telegram kanaliga yuborilgandan keyin fayl ID'si", 
+        help_text="Telegram kanaliga yuborilgandan keyin fayl ID'si",
         db_index=True,
         max_length=500
     )
     created_at = models.DateTimeField(
-        auto_now_add=True, 
-        verbose_name="Created At", 
+        auto_now_add=True,
+        verbose_name="Created At",
         db_index=True,
         help_text="Hujjat yaratilgan vaqt"
     )
     updated_at = models.DateTimeField(
-        auto_now=True, 
-        verbose_name="Updated At", 
+        auto_now=True,
+        verbose_name="Updated At",
         db_index=True,
         help_text="Hujjat oxirgi yangilangan vaqt"
     )
     json_data = models.JSONField(
-        blank=True, 
-        null=True, 
+        blank=True,
+        null=True,
         verbose_name="JSON Data",
         help_text="Hujjat bilan bog'liq qo'shimcha JSON ma'lumotlar"
     )
     pipeline_running = models.BooleanField(
-        default=False, 
+        default=False,
         db_index=True,
         help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi"
     )
@@ -342,11 +343,11 @@ class Document(models.Model):
         Agar barcha status maydonlari 'completed' bo'lsa, completed=True ga o'zgartiring va saqlang.
         """
         if (
-            self.download_status == 'completed' and
-            self.parse_status == 'completed' and
-            self.index_status == 'completed' and
-            self.telegram_status == 'completed' and
-            self.delete_status == 'completed'
+                self.download_status == 'completed' and
+                self.parse_status == 'completed' and
+                self.index_status == 'completed' and
+                self.telegram_status == 'completed' and
+                self.delete_status == 'completed'
         ):
             if not self.completed:
                 self.completed = True
@@ -374,61 +375,61 @@ class Product(models.Model):
     - file_size: Fayl hajmi
     """
     id = models.AutoField(
-        primary_key=True, 
+        primary_key=True,
         verbose_name="Product ID",
         help_text="Mahsulotning noyub identifikatori"
     )
     title = models.TextField(
-        verbose_name="Title", 
+        verbose_name="Title",
         db_index=True,
         help_text="Mahsulot sarlavhasi"
     )
     parsed_content = models.TextField(
-        blank=True, 
-        null=True, 
+        blank=True,
+        null=True,
         verbose_name="Parsed Content",
         help_text="Hujjatdan parse qilingan matn kontenti"
     )
     slug = models.TextField(
         blank=True,
         null=True,
-        unique=True, 
-        verbose_name="Slug", 
+        unique=True,
+        verbose_name="Slug",
         db_index=True,
         help_text="URL uchun slug (masalan: 'matematika-darsligi')"
     )
     document = models.OneToOneField(
-        Document, 
-        on_delete=models.CASCADE, 
-        related_name='product', 
+        Document,
+        on_delete=models.CASCADE,
+        related_name='product',
         verbose_name="Document",
         help_text="Bog'langan hujjat"
     )
     view_count = models.PositiveIntegerField(
-        default=0, 
-        verbose_name="View Count", 
+        default=0,
+        verbose_name="View Count",
         db_index=True,
         help_text="Mahsulotni ko'rishlar soni"
     )
     download_count = models.PositiveIntegerField(
-        default=0, 
-        verbose_name="Download Count", 
+        default=0,
+        verbose_name="Download Count",
         db_index=True,
         help_text="Mahsulotni yuklab olishlar soni"
     )
     file_size = models.PositiveBigIntegerField(
-        default=0, 
+        default=0,
         verbose_name="File Size (bytes)",
         help_text="Fayl hajmi baytlarda"
     )
     created_at = models.DateTimeField(
-        auto_now_add=True, 
-        verbose_name="Created At", 
+        auto_now_add=True,
+        verbose_name="Created At",
         db_index=True,
         help_text="Mahsulot yaratilgan vaqt"
     )
     updated_at = models.DateTimeField(
-        auto_now=True, 
+        auto_now=True,
         verbose_name="Updated At",
         help_text="Mahsulot oxirgi yangilangan vaqt"
     )
@@ -437,7 +438,6 @@ class Product(models.Model):
         verbose_name = "Product"
         verbose_name_plural = "Products"
         ordering = ['-created_at']
-
 
     def __str__(self):
         """
@@ -463,25 +463,25 @@ class SiteToken(models.Model):
     - token: Asosiy token
     - auth_token: Autentifikatsiya token'i
     """
-    
+
     NAME_CHOICES = [
         ('soff', 'soff'),
         ('arxiv', 'arxiv'),
     ]
 
     name = models.CharField(
-        choices=NAME_CHOICES, 
-        unique=True, 
+        choices=NAME_CHOICES,
+        unique=True,
         max_length=100,
         help_text="Sayt nomi (soff yoki arxiv)"
     )
     token = models.CharField(
-        unique=True, 
+        unique=True,
         max_length=300,
         help_text="Asosiy autentifikatsiya token'i"
     )
     auth_token = models.TextField(
-        blank=True, 
+        blank=True,
         null=True,
         help_text="Qo'shimcha autentifikatsiya token'i"
     )
@@ -520,7 +520,7 @@ class DocumentError(models.Model):
     - error_message: Xatolik xabari
     - celery_attempt: Celery urinish raqami
     """
-    
+
     ERROR_TYPE_CHOICES = [
         ('download', 'Yuklab olish xatoligi'),
         ('telegram_send', 'Telegramga yuborish xatoligi'),
@@ -531,17 +531,17 @@ class DocumentError(models.Model):
     ]
 
     document = models.ForeignKey(
-        Document, 
-        on_delete=models.CASCADE, 
-        related_name='errors', 
+        Document,
+        on_delete=models.CASCADE,
+        related_name='errors',
         verbose_name="Document",
         db_index=True,
         help_text="Xatolik yuz bergan hujjat"
     )
     error_type = models.CharField(
-        max_length=20, 
-        choices=ERROR_TYPE_CHOICES, 
-        verbose_name="Xatolik turi", 
+        max_length=20,
+        choices=ERROR_TYPE_CHOICES,
+        verbose_name="Xatolik turi",
         db_index=True,
         help_text="Xatolikning turi"
     )
@@ -550,13 +550,13 @@ class DocumentError(models.Model):
         help_text="Xatolikning batafsil tavsifi"
     )
     celery_attempt = models.PositiveIntegerField(
-        default=1, 
+        default=1,
         verbose_name="Celery urinish raqami",
         help_text="Bu xatolik qaysi urinishda yuz bergani"
     )
     created_at = models.DateTimeField(
-        auto_now_add=True, 
-        verbose_name="Yaratilgan vaqt", 
+        auto_now_add=True,
+        verbose_name="Yaratilgan vaqt",
         db_index=True,
         help_text="Xatolik yuz bergan vaqt"
     )
@@ -593,29 +593,29 @@ class SearchQuery(models.Model):
     - is_deep_search: Chuqur qidiruvmi
     """
     user = models.ForeignKey(
-        'bot.User', 
-        on_delete=models.CASCADE, 
-        related_name='search_queries', 
+        'bot.User',
+        on_delete=models.CASCADE,
+        related_name='search_queries',
         db_index=True,
         help_text="Qidiruv qilgan foydalanuvchi"
     )
     query_text = models.CharField(
-        max_length=500, 
+        max_length=500,
         db_index=True,
         help_text="Qidiruv so'rovi matni"
     )
     found_results = models.BooleanField(
-        default=False, 
+        default=False,
         db_index=True,
         help_text="Qidiruv natijalari topildimi"
     )
     is_deep_search = models.BooleanField(
-        default=False, 
+        default=False,
         db_index=True,
         help_text="Chuqur qidiruv rejimi ishlatildimi"
     )
     created_at = models.DateTimeField(
-        auto_now_add=True, 
+        auto_now_add=True,
         db_index=True,
         help_text="Qidiruv amalga oshirilgan vaqt"
     )
@@ -664,8 +664,8 @@ class DocumentImage(models.Model):
     - created_at: Yaratilgan vaqt
     """
     document = models.ForeignKey(
-        Document, 
-        on_delete=models.CASCADE, 
+        Document,
+        on_delete=models.CASCADE,
         related_name='images',
         help_text="Rasm tegishli bo'lgan hujjat"
     )
