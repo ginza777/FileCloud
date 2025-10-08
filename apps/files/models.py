@@ -124,7 +124,7 @@ class ParseProgress(models.Model):
         self.total_pages_parsed += 1
         self.save()
 
-
+from django.utils import timezone
 class Document(models.Model):
     """
     Hujjat ma'lumotlarini saqlash uchun asosiy model.
@@ -259,50 +259,67 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Hujjat saqlash metodini override qiladi va ideal holatni tekshiradi.
-
-        Ideal holat qoidasi:
-        1. document.product.parsed_content mavjud va bo'sh emas.
-        2. telegram_file_id mavjud va bo'sh emas.
+        Hujjat saqlash metodini override qiladi va holatni yakuniy,
+        kengaytirilgan mantiq asosida belgilaydi.
         """
-        # Faqat 'update_fields' ishlatilayotganda, barcha maydonlarni yuklamaslik
-        # uchun product'ni alohida olishimiz mumkin.
-        if 'product' not in self.__dict__:
-            # Agar product yuklanmagan bo'lsa, uni DB'dan olishga urinib ko'ramiz
-            try:
-                self.product
-            except Product.DoesNotExist:
-                # Agar product mavjud bo'lmasa, uni yaratmagunimizcha has_parsed_content
-                # False bo'ladi
-                pass
+        # --- YANGI QO'SHIMCHA TEKSHIRUVLAR ---
+
+        # 1. Qotib qolgan pipeline'ni tekshirish
+        is_stuck = self.pipeline_running and (timezone.now() - self.updated_at > timedelta(minutes=2))
+
+        # 2. Xatolik statusi borligini tekshirish
+        has_failed_status = 'failed' in [
+            self.download_status,
+            self.parse_status,
+            self.index_status,
+            self.telegram_status,
+            self.delete_status
+        ]
+
+        # product bog'liqligini xatoliksiz tekshirish
+        try:
+            product = self.product
+        except Product.DoesNotExist:
+            product = None
 
         has_parsed_content = (
-                hasattr(self, 'product') and
-                self.product is not None and
-                self.product.parsed_content is not None and
-                self.product.parsed_content.strip() != ''
+                product is not None and
+                product.parsed_content and
+                product.parsed_content.strip() != ''
         )
 
         has_telegram_file = (
-                self.telegram_file_id is not None and
+                self.telegram_file_id and
                 self.telegram_file_id.strip() != ''
         )
 
-        # IDEAL HOLAT TEKSHIRUVI
-        if has_parsed_content and has_telegram_file:
-            # Holat ideal bo'lsa, barcha statuslarni 'completed' qilamiz
+        # --- YAKUNIY MANTIQ BLOKI ---
+
+        # Agar hujjat qotib qolgan yoki xatolikka uchragan bo'lsa, uni "Ideal Emas" deb topib,
+        # qayta ishlash uchun to'liq reset qilamiz.
+        if is_stuck or has_failed_status:
+            self.completed = False
+            self.pipeline_running = False  # Qulfni ochish
+            self.download_status = 'pending'
+            self.parse_status = 'pending'
+            self.index_status = 'pending'
+            self.telegram_status = 'pending'
+            self.delete_status = 'pending'
+
+        # Agar yuqoridagi shartlar bajarilmasa, asosiy mantiqni tekshiramiz
+        elif has_parsed_content and has_telegram_file:
+            # IDEAL HOLAT
             self.completed = True
-            self.pipeline_running = False  # Pipeline ishini to'xtatamiz
+            self.pipeline_running = False
             self.download_status = 'completed'
             self.parse_status = 'completed'
             self.index_status = 'completed'
             self.telegram_status = 'completed'
             self.delete_status = 'completed'
         else:
-            # Agar ideal holat bo'lmasa, pipeline'ni qayta ishga tushirish uchun
-            # barcha statuslarni 'pending' holatiga qaytaramiz.
+            # IDEAL BO'LMAGAN BOSHLANG'ICH HOLAT
             self.completed = False
-            self.pipeline_running = False  # Yangi ishni boshlashdan oldin qulfni ochamiz
+            self.pipeline_running = False  # Har ehtimolga qarshi qulfni ochish
             self.download_status = 'pending'
             self.parse_status = 'pending'
             self.index_status = 'pending'
