@@ -197,3 +197,161 @@ def get_arxiv_session_id():
     except SiteToken.DoesNotExist:
         logger.error("❌ SiteToken 'arxiv' topilmadi! Fayllarni yuklab bo'lmaydi.")
         return None
+
+
+def validate_arxiv_session(phpsessid):
+    """
+    Arxiv.uz sessiyasining haqiqiyligini tekshiradi.
+    
+    Args:
+        phpsessid (str): PHPSESSID cookie qiymati
+        
+    Returns:
+        bool: Sessiya haqiqiy bo'lsa True, aks holda False
+    """
+    if not phpsessid:
+        return False
+        
+    try:
+        session = requests.Session()
+        session.cookies.set('PHPSESSID', phpsessid)
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://arxiv.uz/uz'
+        })
+        
+        # User info endpoint orqali sessiya haqiqiyligini tekshirish
+        response = session.get('https://arxiv.uz/user/info', timeout=10)
+        
+        if response.status_code == 200:
+            user_data = response.json()
+            # Agar user ma'lumotlari mavjud bo'lsa, sessiya haqiqiy
+            if user_data.get('id') and user_data.get('name'):
+                logger.info(f"✅ Arxiv.uz sessiyasi haqiqiy. User: {user_data.get('name')}")
+                return True
+                
+        logger.warning(f"❌ Arxiv.uz sessiyasi eskirgan yoki noto'g'ri. Status: {response.status_code}")
+        return False
+        
+    except Exception as e:
+        logger.error(f"❌ Arxiv.uz sessiya tekshirishda xatolik: {e}")
+        return False
+
+
+def login_to_arxiv():
+    """
+    Arxiv.uz ga avtomatik login qilib, yangi PHPSESSID olish va saqlash.
+    
+    Returns:
+        str: Yangi PHPSESSID muvaffaqiyatli bo'lsa, None xatolik paytida
+    """
+    try:
+        # Login ma'lumotlari
+        username = "bozzi"
+        password = "bozzi123"
+        
+        logger.info("🔐 Arxiv.uz ga avtomatik login qilish...")
+        
+        # Session yaratish
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://arxiv.uz',
+            'Referer': 'https://arxiv.uz/uz'
+        })
+        
+        # 1. Asosiy sahifani yuklab, session olish
+        main_response = session.get('https://arxiv.uz/uz', timeout=10)
+        if main_response.status_code != 200:
+            logger.error(f"❌ Asosiy sahifa yuklashda xatolik: {main_response.status_code}")
+            return None
+        
+        # 2. Login so'rovini yuborish
+        form_data = {
+            'username': username,
+            'password': password
+        }
+        
+        login_response = session.post(
+            'https://arxiv.uz/user/login',
+            data=form_data,
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': 'https://arxiv.uz/uz'
+            },
+            timeout=10
+        )
+        
+        if login_response.status_code != 200:
+            logger.error(f"❌ Login muvaffaqiyatsiz: {login_response.status_code}")
+            return None
+        
+        # 3. PHPSESSID ni olish
+        phpsessid = None
+        for cookie in session.cookies:
+            if cookie.name == 'PHPSESSID':
+                phpsessid = cookie.value
+                break
+        
+        if not phpsessid:
+            logger.error("❌ Login dan keyin PHPSESSID topilmadi!")
+            return None
+        
+        # 4. Sessiya haqiqiyligini tekshirish
+        if not validate_arxiv_session(phpsessid):
+            logger.error("❌ Yangi PHPSESSID ham ishlamayapti!")
+            return None
+        
+        # 5. Database ga saqlash (agar mumkin bo'lsa)
+        try:
+            site_token, created = SiteToken.objects.update_or_create(
+                name='arxiv',
+                defaults={'auth_token': phpsessid}
+            )
+            
+            action = "yaratildi" if created else "yangilandi"
+            logger.info(f"✅ Arxiv.uz PHPSESSID muvaffaqiyatli {action}: {phpsessid[:20]}...")
+        except Exception as db_error:
+            logger.warning(f"⚠️ Database ga saqlashda xatolik: {db_error}")
+            logger.info(f"✅ PHPSESSID olingan (database saqlanmadi): {phpsessid[:20]}...")
+        
+        return phpsessid
+        
+    except Exception as e:
+        logger.error(f"❌ Arxiv.uz avtomatik login da xatolik: {e}")
+        return None
+
+
+def get_valid_arxiv_session():
+    """
+    Haqiqiy arxiv.uz PHPSESSID ni olish. Agar sessiya eskirgan bo'lsa, avtomatik yangilaydi.
+    
+    Returns:
+        str: Haqiqiy PHPSESSID muvaffaqiyatli bo'lsa, None xatolik paytida
+    """
+    try:
+        # Database dan PHPSESSID ni olish (agar mumkin bo'lsa)
+        try:
+            phpsessid = get_arxiv_session_id()
+        except Exception as db_error:
+            logger.warning(f"⚠️ Database ulanishi yo'q: {db_error}")
+            logger.info("🔄 Avtomatik login qilish...")
+            return login_to_arxiv()
+        
+        if not phpsessid:
+            logger.warning("⚠️ Arxiv.uz PHPSESSID topilmadi! Avtomatik login qilish...")
+            return login_to_arxiv()
+            
+        if validate_arxiv_session(phpsessid):
+            return phpsessid
+        else:
+            logger.warning("⚠️ Arxiv.uz sessiyasi eskirgan! Avtomatik yangilash...")
+            return login_to_arxiv()
+            
+    except Exception as e:
+        logger.error(f"❌ Arxiv.uz sessiya olishda xatolik: {e}")
+        return None

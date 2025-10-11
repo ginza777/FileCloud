@@ -30,7 +30,7 @@ from tika import parser as tika_parser
 from urllib3.util.retry import Retry
 
 from ..models import Document, DocumentImage, DocumentError
-from ..utils import make_retry_session, get_arxiv_session_id
+from ..utils import make_retry_session, get_valid_arxiv_session
 
 # PIL, pdf2image va requests kutubxonalarini import qilish
 try:
@@ -131,7 +131,20 @@ def generate_document_images_task(self, document_id: str, max_pages: int = 5):
 
         # 1. Faylni yuklab olish
         logger.info(f"[IMAGES|DOWNLOAD] DocID: {document_id} | Manba: {doc.parse_file_url} -> {work_path}")
-        with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
+        
+        # Standart, qayta urinishli session yaratamiz
+        session = make_retry_session()
+        
+        # Agar URL arxiv.uz'ga tegishli bo'lsa, cookie qo'shamiz
+        if 'arxiv.uz' in doc.parse_file_url:
+            phpsessid = get_valid_arxiv_session()
+            if phpsessid:
+                session.cookies.set('PHPSESSID', phpsessid)
+                logger.info(f"[IMAGES|DOWNLOAD_AUTH] DocID: {document_id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
+            else:
+                raise Exception("Arxiv.uz PHPSESSID topilmadi yoki eskirgan, yuklab bo'lmaydi.")
+        
+        with session.get(doc.parse_file_url, stream=True, timeout=180) as r:
             r.raise_for_status()
             with open(work_path, 'wb') as f:
                 for chunk in r.iter_content(8192):
@@ -255,15 +268,14 @@ def process_document_pipeline(self, document_id):
 
                 # Agar URL arxiv.uz'ga tegishli bo'lsa, cookie qo'shamiz
                 if 'arxiv.uz' in doc.parse_file_url:
-                    # Bu funksiya utils.py faylidan import qilinishi kerak
-                    phpsessid = get_arxiv_session_id()
+                    phpsessid = get_valid_arxiv_session()
                     if phpsessid:
                         session.cookies.set('PHPSESSID', phpsessid)
                         logger.info(
                             f"[PIPELINE|DOWNLOAD_AUTH] DocID: {document_id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
                     else:
-                        # Agar token topilmasa, xatolik berib, vazifani to'xtatamiz
-                        raise Exception("Arxiv.uz PHPSESSID topilmadi, yuklab bo'lmaydi.")
+                        # Agar token topilmasa yoki eskirgan bo'lsa, xatolik berib, vazifani to'xtatamiz
+                        raise Exception("Arxiv.uz PHPSESSID topilmadi yoki eskirgan, yuklab bo'lmaydi.")
 
                 # Tayyorlangan session bilan so'rovni yuborish
                 with session.get(doc.parse_file_url, stream=True, timeout=180) as r:  #
@@ -340,7 +352,20 @@ def process_document_pipeline(self, document_id):
             try:
                 if not os.path.exists(file_path):
                     logger.warning(f"[PIPELINE|TELEGRAM_RE-DOWNLOAD] DocID: {document_id} | Fayl yo'q, qayta yuklanmoqda.")
-                    with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
+                    
+                    # Standart, qayta urinishli session yaratamiz
+                    session = make_retry_session()
+                    
+                    # Agar URL arxiv.uz'ga tegishli bo'lsa, cookie qo'shamiz
+                    if 'arxiv.uz' in doc.parse_file_url:
+                        phpsessid = get_valid_arxiv_session()
+                        if phpsessid:
+                            session.cookies.set('PHPSESSID', phpsessid)
+                            logger.info(f"[PIPELINE|TELEGRAM_RE-DOWNLOAD_AUTH] DocID: {document_id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
+                        else:
+                            raise Exception("Arxiv.uz PHPSESSID topilmadi yoki eskirgan, yuklab bo'lmaydi.")
+                    
+                    with session.get(doc.parse_file_url, stream=True, timeout=180) as r:
                         r.raise_for_status()
                         with open(file_path, "wb") as f:
                             for chunk in r.iter_content(chunk_size=8192):
