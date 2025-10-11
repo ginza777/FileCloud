@@ -42,6 +42,7 @@ AWAIT_BROADCAST_MESSAGE = 0
 FIFTY_MB_IN_BYTES = 50 * 1024 * 1024
 PAGE_SIZE = 10
 
+
 # --- Dashboard Functions ---
 
 @staff_member_required
@@ -56,7 +57,7 @@ def admin_dashboard_demo(request):
         return HttpResponse("Demo dashboard not found. Please ensure dashboard_demo.html exists.")
 
 
-@staff_member_required  
+@staff_member_required
 def admin_dashboard_live(request):
     """Render the live dashboard"""
     try:
@@ -69,6 +70,7 @@ def admin_dashboard_live(request):
         # If there's an error, show demo instead
         return admin_dashboard_demo(request)
 
+
 # --- Broadcast Functions ---
 
 @get_user
@@ -77,6 +79,7 @@ async def start_broadcast_conversation(update: Update, context: ContextTypes.DEF
     """Reklama uchun xabar yuborishni boshlaydi."""
     await update.message.reply_text("Reklama uchun xabarni forward qiling. Bekor qilish: /cancel")
     return AWAIT_BROADCAST_MESSAGE
+
 
 @get_user
 @admin_only
@@ -90,6 +93,7 @@ async def receive_broadcast_message(update: Update, context: ContextTypes.DEFAUL
     ])
     await update.message.reply_text("Ushbu xabar barcha foydalanuvchilarga yuborilsinmi?", reply_markup=keyboard)
     return ConversationHandler.END
+
 
 @get_user
 @admin_only
@@ -113,12 +117,14 @@ async def handle_broadcast_confirmation(update: Update, context: ContextTypes.DE
     start_broadcast_task.delay(broadcast.id)
     await query.edit_message_text(f"✅ Reklama (ID: {broadcast.id}) navbatga qo'yildi!")
 
+
 @get_user
 @admin_only
 async def cancel_broadcast_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE, user, language) -> int:
     """Suhbatni bekor qiladi."""
     await update.message.reply_text("Reklama yaratish bekor qilindi.")
     return ConversationHandler.END
+
 
 # --- Admin Panel Functions ---
 
@@ -214,15 +220,18 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user:
     """Help handler for bot commands."""
     await update.message.reply_text(translation.help_message[language])
 
+
 @get_user
 async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
     """About handler for bot information."""
     await update.message.reply_text(translation.about_message[language])
 
+
 @get_user
 async def share_bot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
     """Share bot handler."""
     await update.message.reply_text(translation.share_bot_text[language])
+
 
 @update_or_create_user
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
@@ -236,15 +245,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
     if context.args and len(context.args) > 0:
         file_id_arg = context.args[0]
         logger.info(f"Start command with file_id_arg: {file_id_arg}")
-        
+
         # Extract file ID from download_ prefix
         if file_id_arg.startswith('download_'):
             file_id = file_id_arg.split('_', 1)[1]
         else:
             file_id = file_id_arg
-            
+
         logger.info(f"Extracted file_id: {file_id}")
-        
+
         try:
             document = await sync_to_async(Document.objects.select_related('product').get)(id=file_id)
 
@@ -254,7 +263,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
                 await sync_to_async(lambda: Product.objects.filter(id=document.product.id).update(
                     download_count=F('download_count') + 1
                 ))()
-                
+
                 await context.bot.send_document(
                     chat_id=user.telegram_id,
                     document=document.telegram_file_id,
@@ -264,7 +273,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
                 logger.info(f"File sent successfully to user {user.telegram_id}")
             else:
                 # Fayl hali tayyor emas yoki yuborib bo'lmaydi
-                logger.warning(f"File not available: completed={document.completed}, telegram_file_id={bool(document.telegram_file_id)}")
+                logger.warning(
+                    f"File not available: completed={document.completed}, telegram_file_id={bool(document.telegram_file_id)}")
                 await update.message.reply_text(translation.file_not_found[language])
 
         except Document.DoesNotExist:
@@ -336,6 +346,7 @@ async def toggle_search_mode(update, context, user, language):
         else translation.normal_search_mode_on[language]
     )
     await update.message.reply_text(response_text)
+
 
 # --- Qidiruv va Fayllar Bilan Ishlash ---
 @update_or_create_user
@@ -435,6 +446,7 @@ async def main_text_handler(update, context, user, language):
     else:
         await update.message.reply_text(translation.search_no_results[language].format(query=query_text))
 
+
 @get_user
 async def handle_search_pagination(update, context, user, language):
     query = update.callback_query
@@ -445,7 +457,8 @@ async def handle_search_pagination(update, context, user, language):
     callback_parts = query.data.split('_')
     if len(callback_parts) >= 4:
         # New format: search_{mode}_{page}_{query_text}
-        _, search_mode, page_number_str, query_text = callback_parts[0], callback_parts[1], callback_parts[2], '_'.join(callback_parts[3:])
+        _, search_mode, page_number_str, query_text = callback_parts[0], callback_parts[1], callback_parts[2], '_'.join(
+            callback_parts[3:])
     elif len(callback_parts) == 3:
         # Old format: search_{mode}_{page} - fallback to context
         _, search_mode, page_number_str = callback_parts
@@ -453,11 +466,11 @@ async def handle_search_pagination(update, context, user, language):
     else:
         await query.edit_message_text(translation.search_no_results[language].format(query=""))
         return
-    
+
     if not query_text:
         await query.edit_message_text(translation.search_no_results[language].format(query=""))
         return
-        
+
     page_number = int(page_number_str)
 
     # Build ES query using correct fields - same as main search for consistency
@@ -520,6 +533,7 @@ async def handle_search_pagination(update, context, user, language):
     reply_markup = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
     await query.edit_message_text(text=response_text, reply_markup=reply_markup)
 
+
 @get_user
 async def increment_view_count_callback(update, context, user, language):
     """
@@ -527,19 +541,20 @@ async def increment_view_count_callback(update, context, user, language):
     """
     query = update.callback_query
     document_uuid = query.data.split('_')[1]
-    
+
     try:
         # Ko'rishlar sonini oshirish
         await sync_to_async(lambda: Product.objects.filter(document_id=document_uuid).update(
             view_count=F('view_count') + 1
         ))()
-        
+
         # Faylni yuborish
         await send_file_by_callback(update, context, user, language)
 
     except Exception as e:
         logger.error(f"View count increment error: {e}")
         await send_file_by_callback(update, context, user, language)
+
 
 @get_user
 async def send_file_by_callback(update, context, user, language):
@@ -557,7 +572,7 @@ async def send_file_by_callback(update, context, user, language):
             await sync_to_async(lambda: Product.objects.filter(id=document.product.id).update(
                 download_count=F('download_count') + 1
             ))()
-            
+
             await context.bot.send_document(
                 chat_id=user.telegram_id,
                 document=document.telegram_file_id,

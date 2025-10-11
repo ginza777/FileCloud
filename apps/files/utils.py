@@ -187,3 +187,13 @@ def get_valid_soff_token():
     except Exception as e:
         logger.error(f"Error checking/getting SOFF token: {str(e)}")
         return None
+def get_arxiv_session_id():
+    """
+    Ma'lumotlar bazasidan arxiv.uz uchun PHPSESSID ni oladi.
+    """
+    try:
+        site_token = SiteToken.objects.get(name='arxiv')
+        return site_token.auth_token
+    except SiteToken.DoesNotExist:
+        logger.error("❌ SiteToken 'arxiv' topilmadi! Fayllarni yuklab bo'lmaydi.")
+        return None

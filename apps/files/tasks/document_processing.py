@@ -30,7 +30,7 @@ from tika import parser as tika_parser
 from urllib3.util.retry import Retry
 
 from ..models import Document, DocumentImage, DocumentError
-from ..utils import make_retry_session
+from ..utils import make_retry_session, get_arxiv_session_id
 
 # PIL, pdf2image va requests kutubxonalarini import qilish
 try:
@@ -239,27 +239,50 @@ def process_document_pipeline(self, document_id):
         file_path = os.path.join(downloads_dir, file_name)
 
         # 1. DOWNLOAD
-        if doc.download_status == 'completed':
-            logger.info(f"[PIPELINE|DOWNLOAD_SKIP] DocID: {document_id} | Status allaqachon 'completed'.")
+        # 1. DOWNLOAD
+        if doc.download_status == 'completed':  #
+            logger.info(f"[PIPELINE|DOWNLOAD_SKIP] DocID: {document_id} | Status allaqachon 'completed'.")  #
         else:
-            logger.info(f"[PIPELINE|DOWNLOAD] DocID: {document_id} | Manzil: {file_path}")
+            logger.info(f"[PIPELINE|DOWNLOAD] DocID: {document_id} | Manzil: {file_path}")  #
             try:
-                doc.download_status = 'processing'
-                doc.save(update_fields=['download_status'])
-                with make_retry_session().get(doc.parse_file_url, stream=True, timeout=180) as r:
-                    r.raise_for_status()
-                    with open(file_path, "wb") as f:
-                        for chunk in r.iter_content(chunk_size=8192):
-                            f.write(chunk)
-                doc.download_status = 'completed'
-                doc.save(update_fields=['download_status'])
-                logger.info(f"[PIPELINE|DOWNLOAD_SUCCESS] DocID: {document_id}")
+                doc.download_status = 'processing'  #
+                doc.save(update_fields=['download_status'])  #
+
+                # --- YECHIM: AVTORIZATSIYA (AUTH) MANTIG'I ---
+
+                # Standart, qayta urinishli session yaratamiz
+                session = make_retry_session()  #
+
+                # Agar URL arxiv.uz'ga tegishli bo'lsa, cookie qo'shamiz
+                if 'arxiv.uz' in doc.parse_file_url:
+                    # Bu funksiya utils.py faylidan import qilinishi kerak
+                    phpsessid = get_arxiv_session_id()
+                    if phpsessid:
+                        session.cookies.set('PHPSESSID', phpsessid)
+                        logger.info(
+                            f"[PIPELINE|DOWNLOAD_AUTH] DocID: {document_id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
+                    else:
+                        # Agar token topilmasa, xatolik berib, vazifani to'xtatamiz
+                        raise Exception("Arxiv.uz PHPSESSID topilmadi, yuklab bo'lmaydi.")
+
+                # Tayyorlangan session bilan so'rovni yuborish
+                with session.get(doc.parse_file_url, stream=True, timeout=180) as r:  #
+                    r.raise_for_status()  # 403 xatosini shu yerda ushlaydi #
+                    with open(file_path, "wb") as f:  #
+                        for chunk in r.iter_content(chunk_size=8192):  #
+                            f.write(chunk)  #
+
+                # --- YECHIM TUGADI ---
+
+                doc.download_status = 'completed'  #
+                doc.save(update_fields=['download_status'])  #
+                logger.info(f"[PIPELINE|DOWNLOAD_SUCCESS] DocID: {document_id}")  #
             except Exception as e:
-                logger.error(f"[PIPELINE|DOWNLOAD_FAIL] DocID: {document_id} | Xato: {e}", exc_info=True)
-                doc.download_status = 'failed'
-                doc.save(update_fields=['download_status'])
-                log_document_error(doc, 'download', e, self.request.retries + 1)
-                raise
+                logger.error(f"[PIPELINE|DOWNLOAD_FAIL] DocID: {document_id} | Xato: {e}", exc_info=True)  #
+                doc.download_status = 'failed'  #
+                doc.save(update_fields=['download_status'])  #
+                log_document_error(doc, 'download', e, self.request.retries + 1)  #
+                raise  #
 
         # 2. PARSE (TIKA)
         if doc.parse_status == 'completed':
