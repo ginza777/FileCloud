@@ -2,13 +2,12 @@
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q
-from django.utils import timezone
-from datetime import timedelta
 from apps.files.models import Document
 from django.db import transaction
 
+
 class Command(BaseCommand):
-    help = "Hujjatlar holatini (jumladan, qotib qolgan va xatoliklarni) yakuniy mantiq asosida to'liq tuzatadi"
+    help = "Hujjatlar holatini yangi, soddalashtirilgan mantiq asosida to'liq tuzatadi"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -21,64 +20,71 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
 
         self.stdout.write(self.style.SUCCESS("╔════════════════════════════════════════════════════════════════╗"))
-        self.stdout.write(self.style.SUCCESS("║     🔧 HUJJAT STATUSINI KENGAYTIRILGAN TEKSHIRISH VA TUZATISH    ║"))
+        self.stdout.write(self.style.SUCCESS("║       🔧 HUJJAT STATUSINI SODDALASHTIRILGAN TEKSHIRISH         ║"))
         self.stdout.write(self.style.SUCCESS("╚════════════════════════════════════════════════════════════════╝\n"))
+        self.stdout.write("Yangi qoida: Agar telegram_id mavjud va parse_status='completed' bo'lsa -> IDEAL.\n"
+                          "Aks holda -> Boshlang'ich holatga qaytariladi.\n")
 
         if dry_run:
             self.stdout.write(self.style.WARNING("⚠️  DRY RUN REJIMI - Ma'lumotlar bazasiga o'zgarishlar yozilmaydi\n"))
 
-        # --- XATO HOLATLARNI QIDIRISH (KENGAYTIRILGAN) ---
+        # --- XATO HOLATLARNI QIDIRISH (SODDALASHTIRILGAN) ---
 
-        # 1. Ideal bo'lishi kerak, lekin `completed=False` bo'lganlar
-        case_should_be_completed = Q(telegram_file_id__isnull=False) & Q(product__parsed_content__isnull=False) & Q(completed=False)
+        # 1-XATO HOLATI: Ideal bo'lishi kerak, lekin `completed=False` bo'lganlar
+        case_should_be_completed = Q(telegram_file_id__isnull=False) & Q(parse_status='completed') & Q(completed=False)
 
-        # 2. Ideal bo'lmasligi kerak, lekin `completed=True` bo'lganlar
-        case_should_be_pending = (Q(telegram_file_id__isnull=True) | Q(product__parsed_content__isnull=True)) & Q(completed=True)
+        # 2-XATO HOLATI: Ideal bo'lmasligi kerak, lekin `completed=True` bo'lganlar
+        case_should_be_pending = (Q(telegram_file_id__isnull=True) | ~Q(parse_status='completed')) & Q(completed=True)
 
-        # 3. 'failed' statusiga ega bo'lganlar (ular reset qilinishi kerak)
-        failed_statuses = (
-            Q(download_status='failed') | Q(parse_status='failed') |
-            Q(index_status='failed') | Q(telegram_status='failed') |
-            Q(delete_status='failed')
-        )
-
-        # 4. Pipeline'da 2 daqiqadan ko'p qotib qolganlar
-        two_minutes_ago = timezone.now() - timedelta(minutes=2)
-        stuck_pipeline = Q(pipeline_running=True) & Q(updated_at__lt=two_minutes_ago)
-
-        # Barcha turdagi xato hujjatlarni topish
+        # Ikkala turdagi xato hujjatlarni topish
         docs_to_fix = Document.objects.filter(
-            case_should_be_completed | case_should_be_pending | failed_statuses | stuck_pipeline
-        ).distinct().select_related('product') # .distinct() bir xil hujjat ikki marta chiqishini oldini oladi
+            case_should_be_completed | case_should_be_pending
+        ).distinct()
 
         total_to_fix = docs_to_fix.count()
 
         if total_to_fix == 0:
-            self.stdout.write(self.style.SUCCESS("✅ Barcha hujjatlar to'g'ri holatda. Tuzatishga hojat yo'q!"))
+            self.stdout.write(self.style.SUCCESS("✅ Barcha hujjatlar yangi qoidaga mos holatda!"))
             return
 
-        self.stdout.write(f"📊 Jami {total_to_fix} ta noto'g'ri holatdagi (yoki qotib qolgan/xatolikli) hujjat topildi.\n")
+        self.stdout.write(f"📊 Jami {total_to_fix} ta yangi qoidaga mos kelmaydigan hujjat topildi.\n")
 
         self.stdout.write("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                           "📋 TUZATILADIGAN HUJJATLARGA NAMUNA:\n"
                           "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
         for doc in docs_to_fix[:10]:
-            # ... (Foydalanuvchiga tushunarli ma'lumot chiqarish qismi) ...
-            status_line = f"📄 Document ID: {doc.id}"
-            if doc.pipeline_running and (timezone.now() - doc.updated_at > timedelta(minutes=2)):
-                 status_line += self.style.ERROR(" (QOTIB QOLGAN)")
-            elif 'failed' in [doc.download_status, doc.parse_status, doc.index_status, doc.telegram_status, doc.delete_status]:
-                 status_line += self.style.ERROR(" (XATOLIK MAVJUD)")
-            self.stdout.write(status_line)
+            is_ideal_now = bool(doc.telegram_file_id) and doc.parse_status == 'completed'
+
+            self.stdout.write(f"📄 Document ID: {doc.id}")
+            self.stdout.write(
+                f"   ├─ Joriy holat: TG ID: {'✅' if bool(doc.telegram_file_id) else '❌'}, Parse Status: '{doc.parse_status}', Completed: {'✅' if doc.completed else '❌'}")
+
+            if is_ideal_now:
+                # Bu holat case_should_be_completed ga tushadi
+                self.stdout.write(f"   ✨ To'g'ri holat: ✅ completed=True bo'lishi kerak.")
+            else:
+                # Bu holat case_should_be_pending ga tushadi
+                self.stdout.write(f"   ✨ To'g'ri holat: ⚠️  boshlang'ich (pending) holatga qaytarilishi kerak.")
 
         if not dry_run:
-            self.stdout.write("\n\n" + self.style.WARNING("🔧 TUZATISH BOSHLANDI... (Har bir hujjat uchun .save() chaqiriladi)"))
+            self.stdout.write("\n\n" + self.style.WARNING("🔧 TUZATISH BOSHLANDI..."))
 
             fixed_count = 0
             with transaction.atomic():
+                # Barcha topilgan hujjatlarni bitta so'rovda boshlang'ich holatga keltiramiz
+                # Bu ancha tez ishlaydi
+
+                # Ideal bo'lishi kerak bo'lganlarni to'g'rilaymiz
+                docs_to_make_completed = docs_to_fix.filter(case_should_be_completed)
+
+                # Boshqa hamma topilganlarni pending qilamiz
+                docs_to_make_pending = docs_to_fix.filter(case_should_be_pending)
+
+                # UPDATE so'rovlari ancha tezroq ishlaydi, lekin .save() signallarini ishga tushirmaydi.
+                # Bizning holatda .save() dagi mantiq kerak, shuning uchun loopdan foydalanamiz.
                 for doc in docs_to_fix.iterator():
-                    doc.save() # .save() metodidagi kengaytirilgan mantiq barcha ishni bajaradi
+                    doc.save()
                     fixed_count += 1
 
             self.stdout.write(self.style.SUCCESS(f"\n✅ {fixed_count} ta hujjat muvaffaqiyatli tuzatildi."))

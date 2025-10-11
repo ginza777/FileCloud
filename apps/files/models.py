@@ -260,67 +260,37 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Hujjat saqlash metodini override qiladi va holatni yakuniy,
-        kengaytirilgan mantiq asosida belgilaydi.
+        Hujjat holatini yangi, soddalashtirilgan mantiq asosida belgilaydi.
+
+        Yangi qoida:
+        - Agar telegram_file_id mavjud va parse_status='completed' bo'lsa, bu IDEAL holat.
+        - Qolgan barcha holatlarda hujjat BOSHLANG'ICH holatga qaytariladi.
         """
-        # --- YANGI QO'SHIMCHA TEKSHIRUVLAR ---
-
-        # 1. Qotib qolgan pipeline'ni tekshirish
-        is_stuck = self.pipeline_running and (timezone.now() - self.updated_at > timedelta(minutes=2))
-
-        # 2. Xatolik statusi borligini tekshirish
-        has_failed_status = 'failed' in [
-            self.download_status,
-            self.parse_status,
-            self.index_status,
-            self.telegram_status,
-            self.delete_status
-        ]
-
-        # product bog'liqligini xatoliksiz tekshirish
-        try:
-            product = self.product
-        except Product.DoesNotExist:
-            product = None
-
-        has_parsed_content = (
-                product is not None and
-                product.parsed_content and
-                product.parsed_content.strip() != ''
-        )
 
         has_telegram_file = (
                 self.telegram_file_id and
                 self.telegram_file_id.strip() != ''
         )
 
-        # --- YAKUNIY MANTIQ BLOKI ---
+        is_ideal_state = (
+                has_telegram_file and
+                self.parse_status == 'completed'
+        )
 
-        # Agar hujjat qotib qolgan yoki xatolikka uchragan bo'lsa, uni "Ideal Emas" deb topib,
-        # qayta ishlash uchun to'liq reset qilamiz.
-        if is_stuck or has_failed_status:
-            self.completed = False
-            self.pipeline_running = False  # Qulfni ochish
-            self.download_status = 'pending'
-            self.parse_status = 'pending'
-            self.index_status = 'pending'
-            self.telegram_status = 'pending'
-            self.delete_status = 'pending'
-
-        # Agar yuqoridagi shartlar bajarilmasa, asosiy mantiqni tekshiramiz
-        elif has_parsed_content and has_telegram_file:
-            # IDEAL HOLAT
+        # --- YAKUNIY SODDA MANTIQ ---
+        if is_ideal_state:
+            # IDEAL HOLAT ("SKIP")
             self.completed = True
             self.pipeline_running = False
             self.download_status = 'completed'
-            self.parse_status = 'completed'
+            # self.parse_status o'zi 'completed', shuning uchun o'zgartirmaymiz
             self.index_status = 'completed'
             self.telegram_status = 'completed'
             self.delete_status = 'completed'
         else:
-            # IDEAL BO'LMAGAN BOSHLANG'ICH HOLAT
+            # Boshqa barcha holatlar BOSHLANG'ICH HOLATGA QAYTARILADI
             self.completed = False
-            self.pipeline_running = False  # Har ehtimolga qarshi qulfni ochish
+            self.pipeline_running = False
             self.download_status = 'pending'
             self.parse_status = 'pending'
             self.index_status = 'pending'
