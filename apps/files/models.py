@@ -258,46 +258,7 @@ class Document(models.Model):
         verbose_name_plural = "Documents"
         ordering = ['-created_at']
 
-    def save(self, *args, **kwargs):
-        """
-        Hujjat holatini yangi, soddalashtirilgan mantiq asosida belgilaydi.
 
-        Yangi qoida:
-        - Agar telegram_file_id mavjud va parse_status='completed' bo'lsa, bu IDEAL holat.
-        - Qolgan barcha holatlarda hujjat BOSHLANG'ICH holatga qaytariladi.
-        """
-
-        has_telegram_file = (
-                self.telegram_file_id and
-                self.telegram_file_id.strip() != ''
-        )
-
-        is_ideal_state = (
-                has_telegram_file and
-                self.parse_status == 'completed'
-        )
-
-        # --- YAKUNIY SODDA MANTIQ ---
-        if is_ideal_state:
-            # IDEAL HOLAT ("SKIP")
-            self.completed = True
-            self.pipeline_running = False
-            self.download_status = 'completed'
-            # self.parse_status o'zi 'completed', shuning uchun o'zgartirmaymiz
-            self.index_status = 'completed'
-            self.telegram_status = 'completed'
-            self.delete_status = 'completed'
-        else:
-            # Boshqa barcha holatlar BOSHLANG'ICH HOLATGA QAYTARILADI
-            self.completed = False
-            self.pipeline_running = False
-            self.download_status = 'pending'
-            self.parse_status = 'pending'
-            self.index_status = 'pending'
-            self.telegram_status = 'pending'
-            self.delete_status = 'pending'
-
-        super().save(*args, **kwargs)
 
     def __str__(self):
         """
@@ -391,6 +352,24 @@ class Product(models.Model):
         default=0,
         verbose_name="File Size (bytes)",
         help_text="Fayl hajmi baytlarda"
+    )
+    blocked = models.BooleanField(
+        default=False,
+        verbose_name="Blocked",
+        db_index=True,
+        help_text="Mahsulot bloklangan (Access Denied xatolari uchun)"
+    )
+    blocked_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Blocked Reason",
+        help_text="Bloklanish sababi"
+    )
+    blocked_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Blocked At",
+        help_text="Bloklangan vaqt"
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

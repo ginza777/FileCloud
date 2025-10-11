@@ -69,22 +69,40 @@ class Command(BaseCommand):
             else:
                 self.stdout.write("Limit belgilanmagan, barcha nomzodlar tekshiriladi.")
 
-            # Completed=False va pipeline_running=False bo'lgan hujjatlarni topish
+            # Completed=False va pipeline_running=False bo'lgan hujjatlarni topish (blocked productlarga teginmaslik)
             candidate_docs = Document.objects.filter(
                 completed=False,
                 pipeline_running=False
+            ).exclude(
+                product__blocked=True
             ).order_by('created_at')
 
             if limit:
                 candidate_docs = candidate_docs[:limit]
 
             total_candidates = candidate_docs.count()
+            
+            # Blocked productlar sonini hisoblash
+            blocked_count = Document.objects.filter(
+                completed=False,
+                pipeline_running=False
+            ).filter(
+                product__blocked=True
+            ).count()
+            
             self.stdout.write(f"Topilgan nomzod hujjatlar: {total_candidates}")
+            if blocked_count > 0:
+                self.stdout.write(self.style.WARNING(f"⚠️  {blocked_count} ta blocked product o'tkazib yuborildi."))
 
             if total_candidates == 0:
-                self.stdout.write(
-                    self.style.WARNING("Qayta ishlash uchun nomzod hujjatlar topilmadi.")
-                )
+                if blocked_count > 0:
+                    self.stdout.write(
+                        self.style.WARNING("Qayta ishlash uchun nomzod hujjatlar topilmadi (barchasi blocked).")
+                    )
+                else:
+                    self.stdout.write(
+                        self.style.WARNING("Qayta ishlash uchun nomzod hujjatlar topilmadi.")
+                    )
                 return
 
             # Har bir hujjatni qayta ishlash

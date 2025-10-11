@@ -90,8 +90,12 @@ class Command(BaseCommand):
             # Hujjatlarni indekslash
             self.stdout.write("Hujjatlarni indekslash boshlandi...")
             
-            # Completed=True bo'lgan hujjatlarni olish
-            documents = Document.objects.filter(completed=True)
+            # Completed=True va blocked=False bo'lgan hujjatlarni olish
+            documents = Document.objects.filter(
+                completed=True
+            ).exclude(
+                product__blocked=True
+            ).select_related('product')
             total_docs = documents.count()
             
             self.stdout.write(f"Jami indekslash kerak bo'lgan hujjatlar: {total_docs}")

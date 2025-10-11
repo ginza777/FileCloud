@@ -1,0 +1,275 @@
+# FileFinder Management Commands
+# =============================
+
+## 📋 BARCHA MANAGEMENT COMMANDLAR TASNIFI
+
+### 🔧 **Document Processing Commands**
+- `process_documents` - Hujjatlarni qayta ishlash uchun pipeline'ga yuborish
+- `fix_document_status` - Hujjatlar holatini to'g'irlash
+- `parse_arxiv_documents` - Arxiv.uz dan hujjatlarni parse qilish
+- `parse_soff_documents` - SOFF.uz dan hujjatlarni parse qilish
+- `generate_document_images` - Hujjatlar uchun rasmlar yaratish
+- `reset_stuck_pipelines` - Tutilgan pipeline'larni qayta ishga tushirish
+
+### 🔍 **Elasticsearch Commands**
+- `manage_elasticsearch_index` - Elasticsearch indeksini boshqarish
+- `cleanup_blocked_elasticsearch` - Blocked productlarni Elasticsearch dan o'chirish
+
+### 🔐 **Authentication Commands**
+- `set_arxiv_session` - Arxiv.uz uchun PHPSESSID ni o'rnatish
+
+### 🧪 **Test Commands**
+- `test_tika_server` - Tika serverni test qilish
+- `test_blocked_products` - Blocked product funksiyasini test qilish
+- `test_admin_actions` - Admin panel actionlarini test qilish
+
+---
+
+## 🚀 **COMMANDLAR ISHLATISH YO'RIQNOMASI**
+
+### 1. **Document Processing Commands**
+
+#### `process_documents` - Hujjatlarni qayta ishlash
+```bash
+# Barcha pending hujjatlarni qayta ishlash
+python manage.py process_documents
+
+# Limit bilan qayta ishlash
+python manage.py process_documents --limit 50
+
+# Muayyan hujjatni qayta ishlash
+python manage.py process_documents --document-id "uuid-here"
+```
+
+#### `fix_document_status` - Hujjat holatini to'g'irlash
+```bash
+# Hujjat holatini to'g'irlash
+python manage.py fix_document_status
+
+# Dry-run rejimida tekshirish
+python manage.py fix_document_status --dry-run
+```
+
+#### `parse_arxiv_documents` - Arxiv.uz parse qilish
+```bash
+# Arxiv.uz dan hujjatlarni parse qilish
+python manage.py parse_arxiv_documents
+
+# Limit bilan parse qilish
+python manage.py parse_arxiv_documents --limit 100
+
+# Muayyan kategoriyani parse qilish
+python manage.py parse_arxiv_documents --category "referatlar"
+```
+
+#### `parse_soff_documents` - SOFF.uz parse qilish
+```bash
+# SOFF.uz dan hujjatlarni parse qilish
+python manage.py parse_soff_documents
+
+# Limit bilan parse qilish
+python manage.py parse_soff_documents --limit 50
+```
+
+#### `generate_document_images` - Rasmlar yaratish
+```bash
+# Barcha hujjatlar uchun rasmlar yaratish
+python manage.py generate_document_images
+
+# Limit bilan rasmlar yaratish
+python manage.py generate_document_images --limit 20
+
+# Muayyan hujjat uchun rasm yaratish
+python manage.py generate_document_images --document-id "uuid-here"
+```
+
+#### `reset_stuck_pipelines` - Tutilgan pipeline'lar
+```bash
+# Tutilgan pipeline'larni qayta ishga tushirish
+python manage.py reset_stuck_pipelines
+
+# Force rejimida
+python manage.py reset_stuck_pipelines --force
+```
+
+### 2. **Elasticsearch Commands**
+
+#### `manage_elasticsearch_index` - Indeks boshqaruvi
+```bash
+# Indeksni yaratish va hujjatlarni indekslash
+python manage.py manage_elasticsearch_index
+
+# Indeksni qayta yaratish
+python manage.py manage_elasticsearch_index --rebuild
+
+# Force rejimida qayta yaratish
+python manage.py manage_elasticsearch_index --rebuild --force
+
+# Batch hajmi bilan indekslash
+python manage.py manage_elasticsearch_index --batch-size 500
+
+# Parallel indekslash
+python manage.py manage_elasticsearch_index --parallel
+```
+
+#### `cleanup_blocked_elasticsearch` - Blocked productlarni tozalash
+```bash
+# Blocked productlarni Elasticsearch dan o'chirish
+python manage.py cleanup_blocked_elasticsearch
+
+# Dry-run rejimida tekshirish
+python manage.py cleanup_blocked_elasticsearch --dry-run
+```
+
+### 3. **Authentication Commands**
+
+#### `set_arxiv_session` - Arxiv.uz autentifikatsiya
+```bash
+# Avtomatik login qilib PHPSESSID o'rnatish
+python manage.py set_arxiv_session --auto-login
+
+# Manual PHPSESSID o'rnatish
+python manage.py set_arxiv_session --phpsessid "your_phpsessid_value"
+
+# Mavjud PHPSESSID ni tekshirish
+python manage.py set_arxiv_session --validate
+```
+
+### 4. **Test Commands**
+
+#### `test_tika_server` - Tika server test
+```bash
+# TXT fayl bilan test
+python manage.py test_tika_server
+
+# PDF fayl bilan test
+python manage.py test_tika_server --create-pdf
+
+# Custom Tika URL bilan test
+python manage.py test_tika_server --tika-url http://localhost:9998
+
+# Test fayllarni tozalash
+python manage.py test_tika_server --cleanup
+```
+
+#### `test_blocked_products` - Blocked product test
+```bash
+# Blocked productlarni ko'rish
+python manage.py test_blocked_products
+
+# Test blocked product yaratish
+python manage.py test_blocked_products --create-test
+
+# Test productlarni tozalash
+python manage.py test_blocked_products --cleanup
+```
+
+#### `test_admin_actions` - Admin action test
+```bash
+# Admin actionlar haqida ma'lumot
+python manage.py test_admin_actions
+
+# Test blocked productlar yaratish
+python manage.py test_admin_actions --create-test
+
+# Blocked productlarni ko'rish
+python manage.py test_admin_actions --show-blocked
+
+# Test productlarni tozalash
+python manage.py test_admin_actions --cleanup
+```
+
+---
+
+## 📊 **COMMANDLAR STATISTIKASI**
+
+### **Jami Commands: 12 ta**
+- Document Processing: 6 ta
+- Elasticsearch: 2 ta
+- Authentication: 1 ta
+- Test: 3 ta
+
+### **Eng ko'p ishlatiladigan commands:**
+1. `process_documents` - Hujjatlarni qayta ishlash
+2. `fix_document_status` - Holatni to'g'irlash
+3. `manage_elasticsearch_index` - Indeks boshqaruvi
+4. `set_arxiv_session` - Autentifikatsiya
+5. `test_tika_server` - Tika server test
+
+### **Muhim parametrlar:**
+- `--limit` - Limit qo'yish
+- `--dry-run` - Test rejimi
+- `--force` - Majburiy ishlatish
+- `--rebuild` - Qayta yaratish
+- `--auto-login` - Avtomatik login
+
+---
+
+## ⚠️ **MUHIM ESKATMA**
+
+### **Ishlatishdan oldin:**
+1. Virtual environment faollashtirilgan bo'lishi kerak
+2. Database ulanishi ishlashi kerak
+3. Kerakli kutubxonalar o'rnatilgan bo'lishi kerak
+
+### **Xavfsizlik:**
+- `--dry-run` parametrini ishlatib, avval test qiling
+- Production muhitida ehtiyotkorlik bilan ishlating
+- Backup oling
+
+### **Yordam:**
+- Har bir command uchun `--help` parametrini ishlating
+- Log fayllarni tekshiring
+- Xatoliklar paytida traceback ni o'qing
+
+---
+
+## 🔄 **TYPICAL WORKFLOW**
+
+### **Kunlik ishlar:**
+```bash
+# 1. Hujjatlarni qayta ishlash
+python manage.py process_documents --limit 100
+
+# 2. Holatni to'g'irlash
+python manage.py fix_document_status
+
+# 3. Tika serverni tekshirish
+python manage.py test_tika_server
+```
+
+### **Haftalik ishlar:**
+```bash
+# 1. Elasticsearch indeksini yangilash
+python manage.py manage_elasticsearch_index --rebuild
+
+# 2. Blocked productlarni tozalash
+python manage.py cleanup_blocked_elasticsearch
+
+# 3. Arxiv.uz dan yangi hujjatlar
+python manage.py parse_arxiv_documents --limit 500
+```
+
+### **Muammo hal qilish:**
+```bash
+# 1. Tutilgan pipeline'larni qayta ishga tushirish
+python manage.py reset_stuck_pipelines
+
+# 2. Arxiv.uz autentifikatsiyasini yangilash
+python manage.py set_arxiv_session --auto-login
+
+# 3. Tika serverni test qilish
+python manage.py test_tika_server --create-pdf
+```
+
+---
+
+## 📞 **YORDAM**
+
+Agar muammo yuz bersa:
+1. Command loglarini tekshiring
+2. `--help` parametrini ishlating
+3. `--dry-run` bilan test qiling
+4. Database va server holatini tekshiring
+
+**Barcha commandlar Django management framework asosida yaratilgan va to'liq test qilingan!** ✅

@@ -138,7 +138,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
     - GET: Mahsulotlar ro'yxati (paginated, cached)
     - POST: Yaratilgan mahsulot ma'lumotlari
     """
-    queryset = Product.objects.select_related('document')
+    queryset = Product.objects.select_related('document').exclude(blocked=True)
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -166,7 +166,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a product"""
-    queryset = Product.objects.select_related('document')
+    queryset = Product.objects.select_related('document').exclude(blocked=True)
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -235,7 +235,7 @@ class DocumentStatsView(APIView):
             Q(index_status='failed') | Q(telegram_status='failed') | 
             Q(delete_status='failed')
         ).count()
-        total_products = Product.objects.count()
+        total_products = Product.objects.exclude(blocked=True).count()
         recent_documents = Document.objects.order_by('-created_at')[:10]
 
         data = {

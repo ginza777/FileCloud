@@ -42,10 +42,11 @@ class ParseProgressAdmin(admin.ModelAdmin):
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
     """Admin for document management with performance optimizations"""
-    actions = ['set_pipeline_running_to_false']
+    actions = ['set_pipeline_running_to_false', 'unblock_products_for_documents']
     list_display = (
         'id', 'parse_file_url', 'download_status', 'parse_status', 'index_status',
-        'telegram_status', 'delete_status','pipeline_running','completed','telegram_file_id', 'created_at', 'updated_at'
+        'telegram_status', 'delete_status','pipeline_running','completed','telegram_file_id', 
+        'get_product_blocked_status', 'created_at', 'updated_at'
     )
     ordering = ('-created_at',)
     inlines = [ProductInline, DocumentErrorInline, DocumentImageInline]
@@ -54,7 +55,7 @@ class DocumentAdmin(admin.ModelAdmin):
     )
     list_filter = (
         'download_status', 'parse_status', 'index_status', 'telegram_status', 'delete_status',
-        'completed', 'pipeline_running'
+        'completed', 'pipeline_running', 'product__blocked'
     )
     
     # Performance optimizations
@@ -66,11 +67,11 @@ class DocumentAdmin(admin.ModelAdmin):
         """Optimize queryset for better performance"""
         queryset = super().get_queryset(request)
         # Only fetch fields needed for list_display
-        return queryset.only(
+        return queryset.select_related('product').only(
             'id', 'parse_file_url', 'download_status', 'parse_status', 
             'index_status', 'telegram_status', 'delete_status', 
             'pipeline_running', 'completed', 'telegram_file_id', 
-            'created_at', 'updated_at'
+            'created_at', 'updated_at', 'product__blocked'
         )
     
     def get_changelist(self, request, **kwargs):
@@ -82,6 +83,51 @@ class DocumentAdmin(admin.ModelAdmin):
         updated_count = queryset.update(pipeline_running=False)
         self.message_user(request, f'{updated_count} ta hujjat uchun pipeline_running muvaffaqiyatli False ga o\'zgartirildi.')
     set_pipeline_running_to_false.short_description = "Tanlangan hujjatlar uchun pipeline_running ni False qilish"
+    
+    def unblock_products_for_documents(self, request, queryset):
+        """Tanlangan hujjatlarning blocked productlarini unblock qilish"""
+        from apps.files.models import Product
+        
+        # Tanlangan hujjatlarning productlarini topish
+        document_ids = list(queryset.values_list('id', flat=True))
+        blocked_products = Product.objects.filter(
+            document_id__in=document_ids,
+            blocked=True
+        )
+        
+        if not blocked_products.exists():
+            self.message_user(
+                request,
+                "Tanlangan hujjatlarda blocked productlar topilmadi.",
+                level='warning'
+            )
+            return
+        
+        # Blocked productlarni unblock qilish
+        updated_count = blocked_products.update(
+            blocked=False,
+            blocked_reason=None,
+            blocked_at=None
+        )
+        
+        self.message_user(
+            request,
+            f"{updated_count} ta blocked product unblock qilindi."
+        )
+    
+    unblock_products_for_documents.short_description = "Tanlangan hujjatlarning blocked productlarini unblock qilish"
+    
+    def get_product_blocked_status(self, obj):
+        """Product blocked holatini ko'rsatish"""
+        if hasattr(obj, 'product') and obj.product:
+            if obj.product.blocked:
+                return "🔒 Blocked"
+            else:
+                return "✅ Active"
+        return "❓ No Product"
+    
+    get_product_blocked_status.short_description = "Product Status"
+    get_product_blocked_status.admin_order_field = 'product__blocked'
 
 
 # admin.py
@@ -92,11 +138,12 @@ class ProductAdmin(admin.ModelAdmin):
     Optimallashtirilgan Product admin paneli.
     - Ro'yxat va yagona mahsulot sahifalari tez ishlashi uchun sozlangan.
     """
+    actions = ['unblock_products']
 
     # ----------------------------------------------------
     # Ro'yxat Sahifasi Sozlamalari (List View)
     # ----------------------------------------------------
-    list_display = ('id', 'title', 'slug', 'document', 'created_at', 'updated_at')
+    list_display = ('id', 'title', 'slug', 'blocked', 'document', 'created_at', 'updated_at')
     list_display_links = ('id', 'title')
     ordering = ('-created_at',)
 
@@ -106,7 +153,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     # IKKINCHI MUHIM OPTIMIZATSIYA (List View):
     # 'document' (ForeignKey) bo'yicha filtr olib tashlandi. Bu filtr panelini tezlashtiradi.
-    list_filter = ('document__completed', 'created_at', 'updated_at')
+    list_filter = ('blocked', 'document__completed', 'created_at', 'updated_at')
 
     # ----------------------------------------------------
     # Yagona Mahsulot Sahifasi Sozlamalari (Detail/Change View)
@@ -118,11 +165,12 @@ class ProductAdmin(admin.ModelAdmin):
     fields = (
         'title', 'slug', 'document',
         'view_count', 'download_count', 'file_size',
+        'blocked', 'blocked_reason', 'blocked_at',
         'created_at', 'updated_at'
     )
 
     # Vaqt maydonlarini tahrirlashni cheklash.
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'blocked_at')
 
     # 'document' uchun ochiluvchi ro'yxat o'rniga qidiruv maydonini ishlatish.
     # Bu yagona mahsulot sahifasi uchun juda muhim optimizatsiya.
@@ -136,6 +184,20 @@ class ProductAdmin(admin.ModelAdmin):
     # N+1 muammosini hal qilish uchun. Ro'yxatda 'document' ma'lumotlarini
     # bitta so'rovda olishni ta'minlaydi.
     list_select_related = ('document',)
+    
+    def unblock_products(self, request, queryset):
+        """Tanlangan productlarni unblock qilish"""
+        updated_count = queryset.filter(blocked=True).update(
+            blocked=False,
+            blocked_reason=None,
+            blocked_at=None
+        )
+        self.message_user(
+            request,
+            f"{updated_count} ta product unblock qilindi."
+        )
+    
+    unblock_products.short_description = "Tanlangan productlarni unblock qilish"
 
     # Jami yozuvlar sonini hisoblash uchun qo'shimcha so'rov yubormaslik.
     # Katta jadvallarda sezilarli tezlik beradi.

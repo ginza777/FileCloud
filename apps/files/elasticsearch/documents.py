@@ -94,6 +94,11 @@ class DocumentIndex(Document):
         if not document.product:
             return None
 
+        # Blocked productlarni index qilmaslik
+        if document.product.blocked:
+            logger.warning(f"Document {document.id} blocked, skipping Elasticsearch indexing")
+            return None
+
         if not connections.get_connection():
             if not configure_elasticsearch():
                 logger.error("Cannot index document: No Elasticsearch connection")
@@ -129,6 +134,11 @@ class DocumentIndex(Document):
             actions = []
             for doc in documents:
                 if not doc.product:
+                    continue
+                
+                # Blocked productlarni index qilmaslik
+                if doc.product.blocked:
+                    logger.warning(f"Document {doc.id} blocked, skipping bulk indexing")
                     continue
                     
                 action = {
@@ -207,6 +217,43 @@ class DocumentIndex(Document):
                 )
 
         return search.execute()
+
+    @classmethod
+    def delete_blocked_documents(cls):
+        """Blocked productlarni Elasticsearch dan o'chirish"""
+        if not connections.get_connection():
+            if not configure_elasticsearch():
+                logger.error("Cannot delete blocked documents: No Elasticsearch connection")
+                return 0
+
+        try:
+            from apps.files.models import Document, Product
+            
+            # Blocked productli documentlarni topish
+            blocked_docs = Document.objects.filter(
+                product__blocked=True
+            ).values_list('id', flat=True)
+            
+            if not blocked_docs:
+                logger.info("No blocked documents to delete from Elasticsearch")
+                return 0
+            
+            # Elasticsearch dan o'chirish
+            deleted_count = 0
+            for doc_id in blocked_docs:
+                try:
+                    cls.get(id=str(doc_id)).delete()
+                    deleted_count += 1
+                    logger.info(f"Deleted blocked document {doc_id} from Elasticsearch")
+                except Exception as e:
+                    logger.warning(f"Failed to delete document {doc_id} from Elasticsearch: {e}")
+            
+            logger.info(f"Deleted {deleted_count} blocked documents from Elasticsearch")
+            return deleted_count
+            
+        except Exception as e:
+            logger.error(f"Failed to delete blocked documents from Elasticsearch: {e}")
+            return 0
 
 # Initialize the index
 DocumentIndex.init_index()

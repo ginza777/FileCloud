@@ -124,6 +124,8 @@ def search_documents(request):
             # Deep search: search in both title and parsed_content
             products_query = Product.objects.filter(
                 document__completed=True
+            ).exclude(
+                blocked=True
             ).filter(
                 Q(title__icontains=query) | 
                 Q(parsed_content__icontains=query)
@@ -132,6 +134,8 @@ def search_documents(request):
             # Regular search: search in title and slug
             products_query = Product.objects.filter(
                 document__completed=True
+            ).exclude(
+                blocked=True
             ).filter(
                 Q(title__icontains=query) | 
                 Q(slug__icontains=query)

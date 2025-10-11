@@ -29,7 +29,7 @@ from requests.adapters import HTTPAdapter
 from tika import parser as tika_parser
 from urllib3.util.retry import Retry
 
-from ..models import Document, DocumentImage, DocumentError
+from ..models import Document, DocumentImage, DocumentError, Product
 from ..utils import make_retry_session, get_valid_arxiv_session
 
 # PIL, pdf2image va requests kutubxonalarini import qilish
@@ -75,6 +75,46 @@ def log_document_error(document, error_type, error_message, celery_attempt=1):
             f"[ERROR LOGGED] DocID: {document.id} | Type: {error_type} | Attempt: {celery_attempt} | Message: {error_text}")
     except Exception as e:
         logger.error(f"[ERROR LOGGING FAILED] DocID: {document.id} | Error: {e}")
+
+
+def block_product_for_access_denied(document, error_message):
+    """
+    Xatoliklar uchun product ni block qiladi (Access Denied, Timeout, Tika xatolari).
+    
+    Args:
+        document: Document obyekti
+        error_message: Xatolik xabari
+    """
+    try:
+        if hasattr(document, 'product') and document.product:
+            product = document.product
+            product.blocked = True
+            
+            # Xatolik turini aniqlash
+            error_str = str(error_message).lower()
+            if 'access denied' in error_str or '403' in error_str:
+                reason = "Access Denied"
+            elif 'readtimeout' in error_str or 'timeout' in error_str:
+                reason = "Timeout Error"
+            elif 'tika' in error_str or 'localhost:9998' in error_str:
+                reason = "Tika Server Error"
+            elif 'connection' in error_str:
+                reason = "Connection Error"
+            else:
+                reason = "Processing Error"
+            
+            product.blocked_reason = f"{reason}: {str(error_message)[:200]}"
+            product.blocked_at = timezone.now()
+            product.save(update_fields=['blocked', 'blocked_reason', 'blocked_at'])
+            
+            logger.warning(
+                f"[PRODUCT BLOCKED] DocID: {document.id} | ProductID: {product.id} | "
+                f"Title: {product.title[:50]}... | Reason: {reason}"
+            )
+        else:
+            logger.warning(f"[PRODUCT BLOCK SKIP] DocID: {document.id} | Product topilmadi")
+    except Exception as e:
+        logger.error(f"[PRODUCT BLOCK FAILED] DocID: {document.id} | Error: {e}")
 
 
 def add_watermark_to_image(pil_image, text="fayltop.cloud"):
@@ -201,6 +241,19 @@ def generate_document_images_task(self, document_id: str, max_pages: int = 5):
 
     except Exception as e:
         logger.error(f"[IMAGES|FATAL_ERROR] DocID: {document_id} | TaskID: {task_id} | Urinish: {self.request.retries + 1}/{self.max_retries + 1} | Xato: {e}", exc_info=True)
+        
+        # Access Denied va Tika timeout xatolari uchun product ni block qilish
+        error_str = str(e).lower()
+        if ('access denied' in error_str or '403' in error_str or 
+            'readtimeout' in error_str or 'timeout' in error_str or 
+            'tika' in error_str or 'localhost:9998' in error_str):
+            logger.warning(f"[IMAGES|BLOCKING_ERROR] DocID: {document_id} | Product ni block qilish...")
+            try:
+                doc = Document.objects.get(id=document_id)
+                block_product_for_access_denied(doc, e)
+            except Exception as block_error:
+                logger.error(f"[IMAGES|BLOCK_FAILED] DocID: {document_id} | Error: {block_error}")
+        
         raise
 
     finally:
@@ -294,6 +347,15 @@ def process_document_pipeline(self, document_id):
                 doc.download_status = 'failed'  #
                 doc.save(update_fields=['download_status'])  #
                 log_document_error(doc, 'download', e, self.request.retries + 1)  #
+                
+                # Access Denied va timeout xatolari uchun product ni block qilish
+                error_str = str(e).lower()
+                if ('access denied' in error_str or '403' in error_str or 
+                    'readtimeout' in error_str or 'timeout' in error_str or 
+                    'connection' in error_str):
+                    logger.warning(f"[PIPELINE|BLOCKING_ERROR] DocID: {document_id} | Product ni block qilish...")
+                    block_product_for_access_denied(doc, e)
+                
                 raise  #
 
         # 2. PARSE (TIKA)
@@ -320,6 +382,14 @@ def process_document_pipeline(self, document_id):
                 doc.parse_status = 'failed'
                 doc.save(update_fields=['parse_status'])
                 log_document_error(doc, 'parse', e, self.request.retries + 1)
+                
+                # Tika server timeout xatolari uchun product ni block qilish
+                error_str = str(e).lower()
+                if ('readtimeout' in error_str or 'timeout' in error_str or 
+                    'tika' in error_str or 'localhost:9998' in error_str):
+                    logger.warning(f"[PIPELINE|TIKA_TIMEOUT] DocID: {document_id} | Product ni block qilish...")
+                    block_product_for_access_denied(doc, f"Tika Parse Timeout: {e}")
+                
                 raise
 
         # 3. INDEX (ELASTICSEARCH)
@@ -332,6 +402,14 @@ def process_document_pipeline(self, document_id):
                 doc.save(update_fields=['index_status'])
                 es_client = Elasticsearch(settings.ES_URL)
                 product = doc.product
+                
+                # Blocked productlarni Elasticsearch ga index qilmaslik
+                if product.blocked:
+                    logger.warning(f"[PIPELINE|INDEX_SKIP] DocID: {document_id} | Product blocked, Elasticsearch ga index qilinmaydi.")
+                    doc.index_status = 'skipped'
+                    doc.save(update_fields=['index_status'])
+                    return
+                
                 body = {"title": product.title, "slug": product.slug, "parsed_content": product.parsed_content, "document_id": str(doc.id)}
                 es_client.index(index=settings.ES_INDEX, id=str(doc.id), document=body)
                 doc.index_status = 'completed'

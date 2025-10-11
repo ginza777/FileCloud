@@ -196,6 +196,11 @@ class Command(BaseCommand):
                                 try:
                                     existing_doc = Document.objects.get(json_data__slug=slug)
 
+                                    # Blocked productlarga teginmaslik
+                                    if hasattr(existing_doc, 'product') and existing_doc.product.blocked:
+                                        self.stdout.write(f"    ⚠️ Blocked product o'tkazib yuborildi: {title}")
+                                        continue
+
                                     # Yangilash mantig'i (Productni ham)
                                     existing_doc.json_data = doc_data
                                     existing_doc.parse_file_url = download_url
