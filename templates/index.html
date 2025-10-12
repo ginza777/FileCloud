@@ -80,7 +80,7 @@
 
     <main>
         <section class="relative text-white py-20 md:py-28 overflow-hidden bg-sky-500">
-             <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 z-0">
                 <video class="w-full h-full object-cover" autoplay muted loop playsinline poster="{% static 'image_main.png' %}">
                     <source src="{% static 'video_main.mp4' %}" type="video/mp4">
                 </video>
@@ -92,465 +92,233 @@
 
                 <div class="max-w-3xl mx-auto animate-fadeInUp" style="animation-delay: 0.3s;">
                     <form id="searchForm" class="flex flex-col sm:flex-row gap-2" onsubmit="performSearch(event)">
-                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="w-full px-4 sm:px-6 py-2 sm:py-3 rounded-full text-dark focus:outline-none focus:ring-2 focus:ring-sky-400 text-sm sm:text-base bg-white/90 backdrop-blur-sm">
-                        <button id="searchBtn" type="submit" class="w-full sm:w-auto bg-primary text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full hover:bg-sky-600 transition font-semibold text-sm sm:text-base">Qidirish</button>
+                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="flex-1 bg-white/90 text-dark rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm placeholder-gray-400">
+                        <button id="searchBtn" type="submit" class="bg-primary hover:bg-sky-600 text-white font-medium py-3 px-6 rounded-xl transition-colors">Qidirish</button>
                     </form>
+                    <div class="flex items-center justify-center mt-4">
+                        <label class="flex items-center gap-2 text-white cursor-pointer">
+                            <input id="deepToggle" type="checkbox" class="h-5 w-5 text-primary focus:ring-primary rounded">
+                            <span>Chuqur qidiruv</span>
+                        </label>
+                    </div>
+                    <p id="searchInfo" class="text-sm text-white/80 mt-2"><span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish</p>
                 </div>
-
-                <div class="mt-6 flex justify-center items-center gap-4 animate-fadeInUp" style="animation-delay: 0.4s;">
-                    <label for="deepToggle" class="flex items-center gap-3 cursor-pointer select-none">
-                        <span class="text-sm text-white/80">Chuqurlashtirilgan Qidiruv</span>
-                        <div class="relative">
-                            <input id="deepToggle" type="checkbox" class="sr-only peer">
-                            <div class="w-14 h-8 bg-white/30 rounded-full peer-checked:bg-gradient-to-r peer-checked:from-orange-500 peer-checked:to-red-600 transition-colors"></div>
-                            <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
-                        </div>
-                    </label>
-                </div>
-                 <p id="searchInfo" class="mt-4 text-sm text-white/90 animate-fadeInUp" style="animation-delay: 0.5s;"><span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish</p>
             </div>
         </section>
 
-        <section class="py-12 sm:py-16">
-            <div class="container mx-auto px-4">
-                <h2 id="fileSectionTitle" class="text-3xl font-bold mb-8 text-center">Top Fayllar</h2>
-
-                <div id="fileListContainer">
-                    <div id="skeletonLoader" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {% for i in "123456" %}
-                        <div class="bg-white rounded-xl p-5 shadow-md">
-                            <div class="flex items-center mb-4 gap-4">
-                                <div class="w-12 h-12 rounded-lg shimmer"></div>
-                                <div class="flex-1 space-y-2">
-                                    <div class="h-4 bg-gray-200 rounded w-3/4 shimmer"></div>
-                                    <div class="h-3 bg-gray-200 rounded w-1/2 shimmer"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between">
-                                <div class="h-4 bg-gray-200 rounded w-1/4 shimmer"></div>
-                                <div class="h-4 bg-gray-200 rounded w-1/4 shimmer"></div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <div id="errorMessage" class="hidden text-center bg-red-50 border-l-4 border-red-400 text-red-700 p-6 rounded-lg max-w-2xl mx-auto">
-                        <div class="flex items-center justify-center gap-4">
-                            <i data-feather="alert-triangle" class="w-8 h-8"></i>
-                            <div>
-                                <p class="font-bold text-lg">Xatolik yuz berdi</p>
-                                <p class="text-base">Fayllarni yuklab bo'lmadi. Iltimos, keyinroq qayta urinib ko'ring.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="fileGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
-                </div>
-
-                <div id="paginationContainer" class="flex justify-center mt-12"></div>
+        <section class="container mx-auto px-4 py-12">
+            <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">Eng ommabop fayllar</h2>
+            <div id="topFiles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Top files will be populated by JavaScript -->
             </div>
+            <div id="loading" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="shimmer h-48 rounded-xl"></div>
+                <div class="shimmer h-48 rounded-xl"></div>
+                <div class="shimmer h-48 rounded-xl"></div>
+            </div>
+        </section>
+
+        <section class="container mx-auto px-4 py-12">
+            <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">Qidiruv natijalari</h2>
+            <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Search results will be populated by JavaScript -->
+            </div>
+            <div id="pagination" class="flex justify-center gap-4 mt-8"></div>
         </section>
     </main>
 
-    <section class="py-8 bg-white">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-4">
-                <h2 class="text-xl font-semibold">Tayyor mahsulotlardan foydalanish qanday ishlaydi?</h2>
-            </div>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center sm:justify-between gap-4 sm:gap-3 rounded-xl p-3 ignite-glass">
-                <div class="flex items-center justify-center gap-2">
-                    <div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">1</div>
-                    <div class="text-sm text-gray-700 flex items-center gap-2"><i data-feather="search" class="w-4 h-4 text-gray-500"></i><span>Qidiring va tanlang</span></div>
+    <!-- File Preview Modal -->
+    <div id="filePreviewModal" class="ios-modal fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center hidden">
+        <div class="ios-sheet bg-white sm:rounded-2xl w-full sm:max-w-lg p-6 sm:p-8 relative">
+            <button onclick="closeFilePreview()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <i data-feather="x" class="w-6 h-6"></i>
+            </button>
+            <div id="previewContent">
+                <h2 id="previewTitle" class="text-xl font-bold mb-4"></h2>
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="text-sm text-gray-500">Ko'rishlar: <span id="previewViews">0</span></span>
+                    <span class="text-sm text-gray-500">Yuklab olishlar: <span id="previewDownloads">0</span></span>
                 </div>
-                <div class="flex items-center justify-center gap-2">
-                    <div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">2</div>
-                    <div class="text-sm text-gray-700 flex items-center gap-2"><i data-feather="credit-card" class="w-4 h-4 text-gray-500"></i><span>Sotib oling</span></div>
-                </div>
-                <div class="flex items-center justify-center gap-2">
-                    <div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">3</div>
-                    <div class="text-sm text-gray-700 flex items-center gap-2"><i data-feather="download" class="w-4 h-4 text-gray-500"></i><span>Yuklab oling</span></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <div id="filePreviewModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden ios-modal flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-6xl h-5/6 flex flex-col ios-sheet">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 id="previewFileName" class="text-lg sm:text-xl font-semibold text-primary truncate pr-2"></h3>
-                <button onclick="closeFilePreview()" class="text-gray-500 hover:text-gray-700 flex-shrink-0"><i data-feather="x" class="w-6 h-6"></i></button>
-            </div>
-             <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                <div id="previewImagesContainer" class="w-full lg:w-7/12 border-b lg:border-b-0 lg:border-r p-4 overflow-auto space-y-3">
-                    </div>
-                <div class="w-full lg:w-5/12 p-6 overflow-auto">
-                    <div class="mb-6">
-                        <h4 class="text-lg font-semibold mb-2">Fayl Ma'lumotlari</h4>
-                        <div class="space-y-2 text-sm text-gray-600">
-                            <div class="flex justify-between"><span>Format:</span><span id="previewFileType" class="font-medium"></span></div>
-                            <div class="flex justify-between"><span>Hajmi:</span><span id="previewFileSize" class="font-medium"></span></div>
-                            <div class="flex justify-between"><span>Ko'rishlar:</span><span id="previewViews" class="font-medium"></span></div>
-                            <div class="flex justify-between"><span>Yuklab olishlar:</span><span id="previewDownloads" class="font-medium"></span></div>
-                        </div>
-                    </div>
-                    <button id="downloadBtn" onclick="downloadFile()" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-sky-600 transition flex items-center justify-center text-base font-semibold">
-                        <i data-feather="download" class="w-5 h-5 mr-2"></i><span>Telegram orqali yuklab olish</span>
-                    </button>
-                    <p class="text-xs text-gray-500 text-center mt-2">Yuklab olish uchun Telegram botimizdan foydalaning</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a id="downloadBtn" href="#" download class="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-xl transition-colors">
+                        <i data-feather="download" class="w-5 h-5"></i>
+                        Yuklab olish
+                    </a>
+                    <a id="telegramBtn" href="#" class="flex items-center justify-center gap-2 w-full bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 px-4 rounded-xl transition-colors">
+                        <i data-feather="message-circle" class="w-5 h-5"></i>
+                        Telegram orqali yuklash
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <button id="feedbackFab" aria-label="Fikr qoldirish" class="fixed z-50 bottom-5 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition flex items-center justify-center">
-        <i data-feather="message-circle" class="w-7 h-7"></i>
-    </button>
-
-    <div id="feedbackModal" class="fixed inset-0 hidden ios-modal z-50 flex items-end sm:items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50" onclick="closeFeedbackModal()"></div>
-        <div class="w-full sm:max-w-md bg-white rounded-2xl ios-sheet p-4 sm:p-5 relative">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold">Fikr qoldirish</h3>
-                <button id="feedbackClose" class="text-gray-500 hover:text-gray-700" aria-label="Yopish" onclick="closeFeedbackModal()"><i data-feather="x" class="w-5 h-5"></i></button>
-            </div>
-            <form id="feedbackForm" class="space-y-3">
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Ism Familiya</label>
-                    <input id="fbFullName" type="text" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ismingiz va familiyangiz" required>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Aloqa (ixtiyoriy)</label>
-                    <input id="fbContact" type="text" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Telefon, email yoki Telegram">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Xabar</label>
-                    <textarea id="fbMessage" rows="4" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Fikringizni yozing" required></textarea>
-                </div>
-                <button type="submit" class="w-full ignite-btn rounded-lg py-2.5 font-medium">Yuborish</button>
-                <p id="fbResult" class="text-sm"></p>
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="ios-modal fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center hidden">
+        <div class="ios-sheet bg-white sm:rounded-2xl w-full sm:max-w-lg p-6 sm:p-8 relative">
+            <button onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <i data-feather="x" class="w-6 h-6"></i>
+            </button>
+            <h2 class="text-xl font-bold mb-4">Fikr-mulohaza</h2>
+            <form id="feedbackForm" class="flex flex-col gap-4">
+                <input id="fbContact" type="text" placeholder="Ismingiz yoki kontakt" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                <textarea id="fbMessage" placeholder="Fikringizni yozing" rows="4" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                <button type="submit" class="ignite-btn font-medium py-3 px-4 rounded-xl">Yuborish</button>
+                <p id="fbResult" class="text-sm text-center"></p>
             </form>
         </div>
     </div>
 
+    <footer class="bg-dark text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">FaylTop.Cloud</h3>
+                    <p class="text-sm text-gray-300">Tez va oson fayl qidirish xizmati. Sifatli hujjatlarni toping va ulashing.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Havolalar</h3>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li><a href="https://t.me/{{ bot_username }}" target="_blank" class="hover:text-primary">Telegram Bot</a></li>
+                        <li><a href="#" onclick="openFeedbackModal()" class="hover:text-primary">Fikr-mulohaza</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Kontakt</h3>
+                    <p class="text-sm text-gray-300">Telegram: <a href="https://t.me/{{ bot_username }}" target="_blank" class="hover:text-primary">{{ bot_username }}</a></p>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; 2025 FaylTop.Cloud. Barcha huquqlar himoyalangan.
+            </div>
+        </div>
+    </footer>
+
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
         feather.replace();
-
-        // --- GLOBAL VARIABLES & CONFIG ---
-        const API_BASE = '{{ MAIN_URL }}';
-        const TOP_FILES_API = `${API_BASE}/api/web/top-downloads/`;
-        const SEARCH_API = `${API_BASE}/api/web/search/`;
-        const DOCUMENT_IMAGES_API = (docId) => `${API_BASE}/api/web/${docId}/images/`;
-        const FEEDBACK_API = `${API_BASE}/api/web/feedback/`;
-        const filesPerPage = 9;
         let isDeepMode = false;
-        let currentFileId = null;
-        let currentSearchQuery = '';
-        let currentSearchPage = 1;
-        let currentSearchFn = loadTopFiles;
+        const BOT_USERNAME = "{{ bot_username | safe }}".replace('@', '');
 
-        // --- DOM ELEMENTS ---
-        const fileGrid = document.getElementById('fileGrid');
-        const skeletonLoader = document.getElementById('skeletonLoader');
-        const errorMessage = document.getElementById('errorMessage');
-        const fileSectionTitle = document.getElementById('fileSectionTitle');
-        const searchInput = document.getElementById('searchInput');
-
-        // --- UI STATE MANAGEMENT ---
-        function showLoadingState() {
-            skeletonLoader.classList.remove('hidden');
-            fileGrid.classList.add('hidden');
-            errorMessage.classList.add('hidden');
-        }
-
-        function showContentState() {
-            fileGrid.classList.remove('hidden');
-            skeletonLoader.classList.add('hidden');
-            errorMessage.classList.add('hidden');
-        }
-
-        function showErrorState() {
-            errorMessage.classList.remove('hidden');
-            skeletonLoader.classList.add('hidden');
-            fileGrid.classList.add('hidden');
-        }
-
-        // --- API & DATA FETCHING ---
-        async function fetchData(url) {
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP xatosi! Status: ${response.status}`);
-                    return await response.json();
-                } catch (error) {
-                    console.error(`${attempt}-urinishda xatolik (${url}):`, error);
-                    if (attempt === 3) throw error;
-                    await new Promise(res => setTimeout(res, 1000 * attempt));
-                }
-            }
-        }
-
-        async function loadTopFiles(page = 1) {
-            showLoadingState();
-            fileSectionTitle.textContent = "Top Fayllar";
-            currentSearchFn = loadTopFiles;
+        async function loadTopFiles() {
+            const loading = document.getElementById('loading');
+            const topFiles = document.getElementById('topFiles');
+            loading.classList.remove('hidden');
             try {
-                const data = await fetchData(`${TOP_FILES_API}?page=${page}&page_size=${filesPerPage}`);
-                if (data && data.results) {
-                    displayFiles(data.results);
-                    generatePagination(data.total_pages, page, loadTopFiles);
-                    showContentState();
-                } else {
-                    showErrorState();
-                }
-            } catch (error) {
-                console.error('Top fayllarni yuklashda xatolik:', error);
-                showErrorState();
-            }
-        }
-
-        window.performSearch = async function(event, page = 1) {
-            if (event) event.preventDefault();
-            const query = searchInput.value.trim();
-
-            if (!query) {
-                loadTopFiles();
-                return;
-            }
-
-            currentSearchQuery = query;
-            currentSearchPage = page;
-            currentSearchFn = (p) => performSearch(null, p);
-
-            showLoadingState();
-            fileSectionTitle.textContent = `"${query}" uchun natijalar`;
-            const searchUrl = `${SEARCH_API}?q=${encodeURIComponent(query)}&deep=${isDeepMode}&page=${page}&page_size=${filesPerPage}`;
-
-            try {
-                const data = await fetchData(searchUrl);
-                if (data && data.results) {
-                    displayFiles(data.results);
-                    generatePagination(data.total_pages, page, currentSearchFn);
-                    showContentState();
-
-                    // Qidiruv natijalarining sonini ko'rsatish
-                    const resultsCount = data.total || data.results.length;
-                    const searchMode = isDeepMode ? 'chuqurlashtirilgan' : 'oddiy';
-                    const searchInfo = document.createElement('div');
-                    searchInfo.className = 'text-center text-sm text-gray-600 mb-6';
-                    searchInfo.innerHTML = `
-                        <div class="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full">
-                            <span class="font-medium">${resultsCount}</span> ta natija topildi
-                            <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full">${searchMode} qidiruv</span>
-                        </div>
-                    `;
-
-                    // Natijalar sonini ko'rsatish
-                    const existingInfo = document.querySelector('.search-results-info');
-                    if (existingInfo) {
-                        existingInfo.remove();
-                    }
-                    searchInfo.classList.add('search-results-info');
-                    fileGrid.parentNode.insertBefore(searchInfo, fileGrid);
-                } else {
-                    showErrorState();
-                }
-            } catch (error) {
-                console.error('Failed to perform search:', error);
-                showErrorState();
-            }
-        }
-
-        // Pagination uchun handleSearchPagination funksiyasini ham yangilash
-        async function handleSearchPagination(update, context, user, language) {
-            // ...existing code...
-            try {
-                const data = await fetchData(searchUrl);
-                if (data && data.results) {
-                    displayFiles(data.results);
-                    generatePagination(data.total_pages, page, currentSearchFn);
-                    showContentState();
-
-                    // Qidiruv natijalarining sonini ko'rsatish
-                    const resultsCount = data.total || data.results.length;
-                    const searchMode = isDeepMode ? 'chuqurlashtirilgan' : 'oddiy';
-                    const searchInfo = document.createElement('div');
-                    searchInfo.className = 'text-center text-sm text-gray-600 mb-6';
-                    searchInfo.innerHTML = `
-                        <div class="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full">
-                            <span class="font-medium">${resultsCount}</span> ta natija topildi
-                            <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full">${searchMode} qidiruv</span>
-                        </div>
-                    `;
-
-                    // Natijalar sonini ko'rsatish
-                    const existingInfo = document.querySelector('.search-results-info');
-                    if (existingInfo) {
-                        existingInfo.remove();
-                    }
-                    searchInfo.classList.add('search-results-info');
-                    fileGrid.parentNode.insertBefore(searchInfo, fileGrid);
-                } else {
-                    showErrorState();
-                }
-            } catch (error) {
-                console.error('Failed to perform search:', error);
-                showErrorState();
-            }
-        }
-
-        // --- RENDERING ---
-        function createFileCard(file) {
-            const fileType = (file.title.split('.').pop() || 'FILE').substring(0, 4).toUpperCase();
-            const fileSize = file.file_size ? `${(file.file_size / 1024 / 1024).toFixed(2)} MB` : 'N/A';
-            const escapedTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-            return `
-                <div class="bg-white rounded-xl p-4 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                     data-product-id="${file.id}"
-                     onclick="showFilePreview('${file.document_id}', '${escapedTitle}', '${fileType}', '${fileSize}', '${file.view_count || 0}', '${file.download_count || 0}')">
-                    <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 bg-sky-50 text-sky-600 font-bold text-xs flex items-center justify-center rounded-lg flex-shrink-0 group-hover:bg-sky-100 transition-colors">
-                            ${fileType}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="text-sm font-semibold text-gray-800 truncate mb-1" title="${escapedTitle}">${file.title}</h3>
-                            <div class="flex items-center gap-3 text-xs text-gray-500">
-                                <span>${fileSize}</span>
-                                <div class="h-3 w-px bg-gray-200"></div>
-                                <div class="flex items-center gap-1" title="Ko'rishlar"><i data-feather="eye" class="w-3 h-3"></i><span class="views-count">${file.view_count || 0}</span></div>
-                                <div class="flex items-center gap-1" title="Yuklashlar"><i data-feather="download" class="w-3 h-3"></i><span class="downloads-count">${file.download_count || 0}</span></div>
-                            </div>
+                const response = await fetch('/api/web/top-files/');
+                if (!response.ok) throw new Error('Top files yuklanmadi');
+                const files = await response.json();
+                topFiles.innerHTML = files.map(file => `
+                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview(${JSON.stringify(file)})">
+                        <h3 class="text-lg font-semibold truncate">${file.title}</h3>
+                        <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
+                        <div class="flex items-center gap-4 mt-4">
+                            <span class="text-sm text-gray-500">Ko'rishlar: <span class="views-count">${file.view_count}</span></span>
+                            <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
                         </div>
                     </div>
-                </div>
-            `;
-        }
-
-        function displayFiles(files) {
-            if (files.length === 0) {
-                fileGrid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">Hech narsa topilmadi.</div>`;
-                return;
+                `).join('');
+            } catch (error) {
+                topFiles.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
+            } finally {
+                loading.classList.add('hidden');
             }
-            fileGrid.innerHTML = files.map(createFileCard).join('');
-            feather.replace();
         }
 
-        function generatePagination(totalPages, currentPage, pageChangeFn) {
-            const container = document.getElementById('paginationContainer');
-            if (totalPages <= 1) {
-                container.innerHTML = ''; return;
-            }
-            let html = '<div class="flex items-center space-x-1 sm:space-x-2">';
-            const createButton = (page, content, disabled = false, active = false) => {
-                const base = 'w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg border text-sm transition-colors';
-                let state = 'border-gray-300 text-gray-600 hover:bg-gray-50';
-                if (disabled) state = 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50';
-                if (active) state = 'bg-primary text-white border-primary cursor-default';
-                return `<button class="${base} ${state}" ${disabled ? 'disabled' : ''} onclick="!${active} && !${disabled} && handlePageClick(${page})">${content}</button>`;
-            };
-            html += createButton(currentPage - 1, '<i data-feather="chevron-left" class="w-4 h-4"></i>', currentPage === 1);
-            const pages = [...new Set([1, totalPages, currentPage, currentPage-1, currentPage+1].filter(p => p > 0 && p <= totalPages))].sort((a,b) => a-b);
-            let lastPage = 0;
-            pages.forEach(p => {
-                if (p - lastPage > 1) html += '<span class="px-2 text-gray-500 hidden sm:inline">...</span>';
-                html += createButton(p, p, false, p === currentPage);
-                lastPage = p;
-            });
-            html += createButton(currentPage + 1, '<i data-feather="chevron-right" class="w-4 h-4"></i>', currentPage === totalPages);
-            html += '</div>';
-            container.innerHTML = html;
-            feather.replace();
-        }
+        async function performSearch(event, page = 1) {
+            if (event) event.preventDefault();
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
 
-        window.handlePageClick = function(page) {
-            if (page < 1) return;
-            currentSearchFn(page);
-            window.scrollTo({ top: document.getElementById('fileSectionTitle').offsetTop - 80, behavior: 'smooth' });
-        }
-
-        // --- MODAL & INTERACTIONS ---
-        window.showFilePreview = async function(docId, name, type, size, views, downloads) {
-            currentFileId = docId;
-            document.getElementById('previewFileName').textContent = name;
-            document.getElementById('previewFileType').textContent = type;
-            document.getElementById('previewFileSize').textContent = size;
-            document.getElementById('previewViews').textContent = views;
-            document.getElementById('previewDownloads').textContent = downloads;
-
-            const modal = document.getElementById('filePreviewModal');
-            modal.classList.remove('hidden');
-            requestAnimationFrame(() => modal.classList.add('open'));
-            document.body.style.overflow = 'hidden';
-
-            // Ko'rishlar sonini oshirish
-            await incrementViewCount(docId);
-
-            const imagesContainer = document.getElementById('previewImagesContainer');
-            imagesContainer.innerHTML = '<div class="h-40 w-full shimmer rounded-lg"></div><div class="h-40 w-full shimmer rounded-lg"></div>';
+            const searchResults = document.getElementById('searchResults');
+            const pagination = document.getElementById('pagination');
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+            searchResults.innerHTML = '';
+            pagination.innerHTML = '';
 
             try {
-                // API URL manzilini to'g'riladim
-                const data = await fetchData(DOCUMENT_IMAGES_API(docId));
-                if (data.images && data.images.length > 0) {
-                    imagesContainer.innerHTML = data.images.map(img =>
-                        `<img src="${img.url}" alt="Sahifa ${img.page}" class="w-full h-auto rounded-lg shadow-sm mb-3 border">`
-                    ).join('');
-                } else {
-                    imagesContainer.innerHTML = '<p class="text-center text-gray-500 py-10">Rasmli ko\'rinish mavjud emas</p>';
+                const response = await fetch(`/api/web/search/?query=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
+                if (!response.ok) throw new Error('Qidiruv xatosi');
+                const data = await response.json();
+
+                if (data.results.length === 0) {
+                    searchResults.innerHTML = '<p class="text-center text-gray-500">Hech narsa topilmadi.</p>';
+                    return;
                 }
+
+                searchResults.innerHTML = data.results.map(file => `
+                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview(${JSON.stringify(file)})">
+                        <h3 class="text-lg font-semibold truncate">${file.title}</h3>
+                        <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
+                        <div class="flex items-center gap-4 mt-4">
+                            <span class="text-sm text-gray-500">Ko'rishlar: <span class="views-count">${file.view_count}</span></span>
+                            <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
+                        </div>
+                    </div>
+                `).join('');
+
+                pagination.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        ${data.has_previous ? `<button onclick="performSearch(null, ${data.previous_page})" class="px-4 py-2 bg-primary text-white rounded-lg">Oldingi</button>` : ''}
+                        <span class="text-sm font-medium">${data.current_page} / ${data.total_pages}</span>
+                        ${data.has_next ? `<button onclick="performSearch(null, ${data.next_page})" class="px-4 py-2 bg-primary text-white rounded-lg">Keyingi</button>` : ''}
+                    </div>
+                `;
             } catch (error) {
-                console.error("Fayl rasmlarini yuklashda xatolik:", error);
-                imagesContainer.innerHTML = '<p class="text-center text-red-500 py-10">Ma\'lumotlarni yuklab bo\'lmadi.</p>';
+                searchResults.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
+            } finally {
+                loading.classList.add('hidden');
             }
         }
 
-        window.closeFilePreview = function() {
+        function openFilePreview(product) {
+            const modal = document.getElementById('filePreviewModal');
+            const title = document.getElementById('previewTitle');
+            const views = document.getElementById('previewViews');
+            const downloads = document.getElementById('previewDownloads');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const telegramBtn = document.getElementById('telegramBtn');
+
+            title.textContent = product.title;
+            views.textContent = product.view_count;
+            downloads.textContent = product.download_count;
+            downloadBtn.href = `/api/web/${product.id}/download/`;
+            telegramBtn.href = `https://t.me/${BOT_USERNAME}?start=${product.id}`;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('open');
+            incrementViewCount(product.id);
+        }
+
+        function closeFilePreview() {
             const modal = document.getElementById('filePreviewModal');
             modal.classList.remove('open');
-            setTimeout(() => { modal.classList.add('hidden'); }, 520);
-            document.body.style.overflow = 'auto';
-            currentFileId = null;
+            modal.classList.add('hidden');
         }
 
-        window.downloadFile = async function() {
-            if (!currentFileId) return;
-            
-            // Yuklab olishlar sonini oshirish
-            await incrementDownloadCount(currentFileId);
-            
-            window.open(`https://t.me/{{ bot_username }}?start=download_${currentFileId}`, '_blank');
-        }
-
-        // --- FEEDBACK MODAL ---
-        const feedbackModal = document.getElementById('feedbackModal');
-        const feedbackFab = document.getElementById('feedbackFab');
         function openFeedbackModal() {
-            feedbackModal.classList.remove('hidden');
-            requestAnimationFrame(() => feedbackModal.classList.add('open'));
-            document.body.style.overflow = 'hidden';
+            const modal = document.getElementById('feedbackModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('open');
         }
-        window.closeFeedbackModal = function() {
-            feedbackModal.classList.remove('open');
-            setTimeout(() => { feedbackModal.classList.add('hidden'); }, 520);
-            document.body.style.overflow = 'auto';
-        }
-        feedbackFab.addEventListener('click', openFeedbackModal);
 
-        document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+        function closeFeedbackModal() {
+            const modal = document.getElementById('feedbackModal');
+            modal.classList.remove('open');
+            modal.classList.add('hidden');
+        }
+
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const resultEl = document.getElementById('fbResult');
-            resultEl.textContent = 'Yuborilmoqda...';
-            resultEl.className = 'text-sm text-blue-600 text-center';
             try {
-                const response = await fetch(FEEDBACK_API, {
+                const response = await fetch('/api/web/feedback/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({
-                        full_name: document.getElementById('fbFullName').value,
                         contact: document.getElementById('fbContact').value,
                         message: document.getElementById('fbMessage').value,
                     })
@@ -566,7 +334,6 @@
             }
         });
 
-        // --- EVENT LISTENERS ---
         document.getElementById('deepToggle').addEventListener('change', (e) => {
             isDeepMode = e.target.checked;
             const searchInfo = document.getElementById('searchInfo');
@@ -584,7 +351,6 @@
         });
         document.getElementById('filePreviewModal').addEventListener('click', (e) => e.target === e.currentTarget && closeFilePreview());
 
-        // --- COUNTER FUNCTIONS ---
         async function incrementViewCount(productId) {
             try {
                 const response = await fetch(`/api/web/${productId}/view/`, {
@@ -594,10 +360,9 @@
                         'X-CSRFToken': getCsrfToken()
                     }
                 });
-                
+
                 if (response.ok) {
                     console.log('Ko\'rishlar soni oshirildi');
-                    // Ko'rishlar sonini UI'da yangilash
                     updateViewCountInUI(productId);
                 }
             } catch (error) {
@@ -614,10 +379,9 @@
                         'X-CSRFToken': getCsrfToken()
                     }
                 });
-                
+
                 if (response.ok) {
                     console.log('Yuklab olishlar soni oshirildi');
-                    // Yuklab olishlar sonini UI'da yangilash
                     updateDownloadCountInUI(productId);
                 }
             } catch (error) {
@@ -626,14 +390,12 @@
         }
 
         function updateViewCountInUI(productId) {
-            // Modal ichidagi ko'rishlar sonini yangilash
             const viewsElement = document.getElementById('previewViews');
             if (viewsElement) {
                 const currentViews = parseInt(viewsElement.textContent) || 0;
                 viewsElement.textContent = currentViews + 1;
             }
-            
-            // Ro'yxatdagi ko'rishlar sonini yangilash
+
             const fileCard = document.querySelector(`[data-product-id="${productId}"]`);
             if (fileCard) {
                 const viewsSpan = fileCard.querySelector('.views-count');
@@ -645,14 +407,12 @@
         }
 
         function updateDownloadCountInUI(productId) {
-            // Modal ichidagi yuklab olishlar sonini yangilash
             const downloadsElement = document.getElementById('previewDownloads');
             if (downloadsElement) {
                 const currentDownloads = parseInt(downloadsElement.textContent) || 0;
                 downloadsElement.textContent = currentDownloads + 1;
             }
-            
-            // Ro'yxatdagi yuklab olishlar sonini yangilash
+
             const fileCard = document.querySelector(`[data-product-id="${productId}"]`);
             if (fileCard) {
                 const downloadsSpan = fileCard.querySelector('.downloads-count');
@@ -668,10 +428,7 @@
             return token ? token.value : '';
         }
 
-        // --- INITIAL LOAD ---
         loadTopFiles();
-    });
     </script>
 </body>
 </html>
-

@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
-    filters, ConversationHandler,
+    InlineQueryHandler, filters, ConversationHandler,
 )
 
 from .translation import (
@@ -21,7 +21,7 @@ from .views import (
     toggle_search_mode, help_handler, about_handler, share_bot_handler,
     main_text_handler, handle_search_pagination, increment_view_count_callback,
     admin_panel, stats, backup_db, export_users, secret_level,
-    ask_location, location_handler,
+    ask_location, location_handler, inline_query_handler,
     start_broadcast_conversation, receive_broadcast_message,
     cancel_broadcast_conversation, handle_broadcast_confirmation,
     AWAIT_BROADCAST_MESSAGE
@@ -71,6 +71,9 @@ def get_application(token: str) -> Application:
             CallbackQueryHandler(increment_view_count_callback, pattern="^getfile_"),
             CallbackQueryHandler(language_choice_handle, pattern="^language_setting_"),
             CallbackQueryHandler(secret_level, pattern="^SCRT_LVL"),
+
+            # --- Inline Query ---
+            InlineQueryHandler(inline_query_handler),
 
             # --- Tugmalar va Maxsus Xabar Turlari ---
             MessageHandler(filters.Regex(f"^({'|'.join(search.values())}|{'|'.join(deep_search.values())})$"),

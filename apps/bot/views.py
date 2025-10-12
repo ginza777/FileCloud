@@ -5,7 +5,7 @@ from django.db.models import F
 from asgiref.sync import sync_to_async
 from django.core.paginator import Paginator, Page
 from elasticsearch_dsl import Q
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultDocument
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler
 from telegram.error import TelegramError
@@ -41,6 +41,24 @@ from .tasks import start_broadcast_task
 AWAIT_BROADCAST_MESSAGE = 0
 FIFTY_MB_IN_BYTES = 50 * 1024 * 1024
 PAGE_SIZE = 10
+
+# --- Search Cache ---
+from functools import lru_cache
+from django.core.cache import cache
+import hashlib
+
+def get_search_cache_key(query_text, search_mode, page_number):
+    """Generate cache key for search results"""
+    cache_data = f"{query_text}:{search_mode}:{page_number}"
+    return hashlib.md5(cache_data.encode()).hexdigest()
+
+def get_cached_search_results(cache_key):
+    """Get cached search results"""
+    return cache.get(f"search:{cache_key}")
+
+def set_cached_search_results(cache_key, results, timeout=300):  # 5 minutes cache
+    """Cache search results"""
+    cache.set(f"search:{cache_key}", results, timeout)
 
 
 # --- Dashboard Functions ---
@@ -367,61 +385,93 @@ async def main_text_handler(update, context, user, language):
         is_deep_search=(search_mode == 'deep')
     )
 
-    # Build ES query using correct fields from DocumentIndex
+    # Check cache first for faster response
+    cache_key = get_search_cache_key(query_text, search_mode, 1)
+    cached_results = get_cached_search_results(cache_key)
+    
+    if cached_results:
+        # Return cached results immediately
+        total_results, all_doc_ids = cached_results
+        if total_results > 0 and all_doc_ids:
+            # Use cached document IDs
+            files_from_db = await sync_to_async(
+                lambda: list(
+                    Product.objects.select_related('document')
+                    .filter(
+                        document_id__in=all_doc_ids,
+                        document__completed=True,
+                        document__telegram_file_id__isnull=False
+                    )
+                    .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
+                )
+            )()
+            files_map = {str(prod.document_id): prod for prod in files_from_db}
+            products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
+
+            paginator = Paginator(range(total_results), PAGE_SIZE)
+            page_obj = paginator.page(1)
+
+            keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
+            
+            # Enhanced search results message with mode indication
+            search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
+            results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(count=total_results, query=query_text)
+            
+            await update.message.reply_text(
+                results_message,
+                reply_markup=keyboard
+            )
+            return
+        else:
+            await update.message.reply_text(translation.search_no_results[language].format(query=query_text))
+            return
+
+    # Optimized ES query - single query with efficient structure
     s = DocumentIndex.search()
+    
+    # Build optimized query based on search mode
     if search_mode == 'deep':
-        # Deep search: parsed_content, title va slug bilan qidirish va completed=true
-        # Use exact match with higher boost for better results
-        exact_query = Q(
+        # Deep search: optimized multi-field search with reduced complexity
+        final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['parsed_content^6', 'title^8', 'slug^10'],
-            type='phrase',
-            boost=5
-        )
-        fuzzy_query = Q(
-            'multi_match',
-            query=query_text,
-            fields=['parsed_content^3', 'title^4', 'slug^5'],
+            fields=['title^5', 'slug^3', 'parsed_content^1'],
+            type='best_fields',
             fuzziness='AUTO',
-            boost=1
+            prefix_length=2,
+            max_expansions=50
         )
-        final_query = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
-        s = s.highlight('parsed_content', fragment_size=100)
     else:
-        # Normal search: faqat title va slug bilan qidirish va completed=true
-        # Use exact match with higher boost for better results
-        exact_query = Q(
+        # Normal search: fast title and slug only search
+        final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['title^8', 'slug^10'],
-            type='phrase',
-            boost=5
-        )
-        fuzzy_query = Q(
-            'multi_match',
-            query=query_text,
-            fields=['title^4', 'slug^5'],
+            fields=['title^3', 'slug^2'],
+            type='best_fields',
             fuzziness='AUTO',
-            boost=1
+            prefix_length=2,
+            max_expansions=20
         )
-        final_query = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
-    s = s.query(final_query)
-
-    # Filter only completed docs (field exists in index)
-    s = s.filter(Q('term', completed=True))
-
-    # Manual pagination for ES
+    
+    # Apply query and filters in single operation
+    s = s.query(final_query).filter(Q('term', completed=True))
+    
+    # Optimized pagination - get results directly without separate count
     page_size = PAGE_SIZE
     page_number = 1
-    total_results = await sync_to_async(s.count)()
     start_index = (page_number - 1) * page_size
     end_index = start_index + page_size
+    
+    # Execute search with pagination in single call
     search_results = await sync_to_async(lambda: s[start_index:end_index].execute())()
+    total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
     all_doc_ids = [hit.meta.id for hit in search_results]
 
+    # Cache the results for future requests
+    set_cached_search_results(cache_key, (total_results, all_doc_ids))
+
     if total_results > 0 and all_doc_ids:
-        # Fetch products from DB and ensure telegram_file_id present
+        # Optimized DB query - single query with proper indexing
         files_from_db = await sync_to_async(
             lambda: list(
                 Product.objects.select_related('document')
@@ -430,6 +480,7 @@ async def main_text_handler(update, context, user, language):
                     document__completed=True,
                     document__telegram_file_id__isnull=False
                 )
+                .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
             )
         )()
         files_map = {str(prod.document_id): prod for prod in files_from_db}
@@ -439,8 +490,13 @@ async def main_text_handler(update, context, user, language):
         page_obj = paginator.page(page_number)
 
         keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
+        
+        # Enhanced search results message with mode indication
+        search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
+        results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(count=total_results, query=query_text)
+        
         await update.message.reply_text(
-            translation.search_results_found[language].format(count=total_results, query=query_text),
+            results_message,
             reply_markup=keyboard
         )
     else:
@@ -473,49 +529,39 @@ async def handle_search_pagination(update, context, user, language):
 
     page_number = int(page_number_str)
 
-    # Build ES query using correct fields - same as main search for consistency
+    # Optimized ES query - same as main search for consistency
+    s = DocumentIndex.search()
+    
     if search_mode == 'deep':
-        # Deep search: parsed_content, title va slug bilan qidirish va completed=true
-        exact_query = Q(
+        # Deep search: optimized multi-field search
+        q = Q(
             'multi_match',
             query=query_text,
-            fields=['parsed_content^6', 'title^8', 'slug^10'],
-            type='phrase',
-            boost=5
-        )
-        fuzzy_query = Q(
-            'multi_match',
-            query=query_text,
-            fields=['parsed_content^3', 'title^4', 'slug^5'],
+            fields=['title^5', 'slug^3', 'parsed_content^1'],
+            type='best_fields',
             fuzziness='AUTO',
-            boost=1
+            prefix_length=2,
+            max_expansions=50
         )
-        q = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
     else:
-        # Normal search: faqat title va slug bilan qidirish va completed=true
-        exact_query = Q(
+        # Normal search: fast title and slug only search
+        q = Q(
             'multi_match',
             query=query_text,
-            fields=['title^8', 'slug^10'],
-            type='phrase',
-            boost=5
-        )
-        fuzzy_query = Q(
-            'multi_match',
-            query=query_text,
-            fields=['title^4', 'slug^5'],
+            fields=['title^3', 'slug^2'],
+            type='best_fields',
             fuzziness='AUTO',
-            boost=1
+            prefix_length=2,
+            max_expansions=20
         )
-        q = Q('bool', should=[exact_query, fuzzy_query], minimum_should_match=1)
 
-    s = DocumentIndex.search().query(q)
-    s = s.filter(Q('term', completed=True))
+    s = s.query(q).filter(Q('term', completed=True))
 
-    total_results = await sync_to_async(s.count)()
+    # Optimized pagination - single query execution
     start_index = (page_number - 1) * page_size
     end_index = start_index + page_size
     search_results = await sync_to_async(lambda: s[start_index:end_index].execute())()
+    total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
     all_doc_ids = [hit.meta.id for hit in search_results]
 
     paginator = Paginator(range(total_results), page_size)
@@ -525,11 +571,14 @@ async def handle_search_pagination(update, context, user, language):
         Product.objects.filter(document_id__in=page_obj.object_list)
         .select_related('document')
         .filter(document__completed=True, document__telegram_file_id__isnull=False)
+        .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
     )
     files_map = {str(p.document_id): p for p in files_from_db}
     products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
 
-    response_text = translation.search_results_found[language].format(query=query_text, count=total_results)
+    # Enhanced search results message with mode indication
+    search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
+    response_text = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(query=query_text, count=total_results)
     reply_markup = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
     await query.edit_message_text(text=response_text, reply_markup=reply_markup)
 
@@ -597,3 +646,70 @@ async def send_file_by_callback(update, context, user, language):
     except Exception as e:
         logger.exception(f"Fayl yuborishda (file_id orqali) kutilmagan xatolik: {e}")
         await context.bot.send_message(chat_id=user.telegram_id, text="Faylni yuborishda noma'lum xatolik yuz berdi.")
+
+
+@get_user
+async def inline_query_handler(update, context, user, language):
+    """
+    Inline query handler - foydalanuvchi @bot_username query yozganda ishlaydi
+    """
+    query = update.inline_query.query.strip()
+    
+    if not query:
+        # Bo'sh query bo'lsa, hech narsa qaytarmaymiz
+        await update.inline_query.answer([])
+        return
+    
+    try:
+        # Elasticsearch orqali qidirish
+        s = DocumentIndex.search()
+        
+        # Optimized inline search - fast and efficient
+        # Inline queries use optimized deep search for better results
+        final_query = Q(
+            'multi_match',
+            query=query,
+            fields=['title^5', 'slug^3', 'parsed_content^1'],
+            type='best_fields',
+            fuzziness='AUTO',
+            prefix_length=2,
+            max_expansions=30
+        )
+        
+        s = s.query(final_query)
+        s = s.filter(Q('term', completed=True))
+        
+        # Faqat 20 ta natija (Telegram inline query limit)
+        search_results = await sync_to_async(lambda: s[:20].execute())()
+        
+        results = []
+        for hit in search_results:
+            try:
+                # Database dan product ma'lumotlarini olish
+                product = await sync_to_async(Product.objects.select_related('document').get)(
+                    document_id=hit.meta.id,
+                    document__completed=True,
+                    document__telegram_file_id__isnull=False
+                )
+                
+                # Inline query result yaratish
+                result = InlineQueryResultDocument(
+                    id=str(product.document_id),
+                    title=product.title[:64],  # Telegram limit
+                    document_file_id=product.document.telegram_file_id,
+                    caption=f"📄 {product.title}\n👁 {product.view_count} | ⬇️ {product.download_count}",
+                    parse_mode='HTML'
+                )
+                results.append(result)
+                
+            except Product.DoesNotExist:
+                continue
+            except Exception as e:
+                logger.error(f"Inline query result creation error for {hit.meta.id}: {e}")
+                continue
+        
+        await update.inline_query.answer(results)
+        
+    except Exception as e:
+        logger.error(f"Inline query error: {e}")
+        await update.inline_query.answer([])

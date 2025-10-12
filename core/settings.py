@@ -390,7 +390,7 @@ TIKA_URL = os.getenv('TIKA_URL', 'http://tika:9998')
 
 # Telegram Bot Configuration
 BOT_TOKEN = os.getenv('BOT_TOKEN', '')
-BOT_USERNAME = os.getenv('BOT_USERNAME', '@fayltopbot')
+BOT_USERNAME = os.getenv('BOT_USERNAME', 'fayltopbot')
 CHANNEL_ID = os.getenv('CHANNEL_ID', '')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 

@@ -38,6 +38,9 @@ def index_view(request):
 
     from django.conf import settings
     bot_username = getattr(settings, 'BOT_USERNAME', 'FileFinderBot')
+    # Remove @ symbol if present for URL usage
+    if bot_username.startswith('@'):
+        bot_username = bot_username[1:]
     main_url = getattr(settings, 'MAIN_URL', 'http://localhost:8000')
 
     context = {
