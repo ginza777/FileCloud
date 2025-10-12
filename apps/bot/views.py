@@ -589,7 +589,8 @@ async def increment_view_count_callback(update, context, user, language):
     Qidiruv natijalarida fayl tugmasini bosganda ko'rishlar sonini oshirish
     """
     query = update.callback_query
-    document_uuid = query.data.split('_')[1]
+    # Fix callback data parsing - document_id is after "getfile_" prefix
+    document_uuid = query.data.replace('getfile_', '')
 
     try:
         # Ko'rishlar sonini oshirish
@@ -612,31 +613,38 @@ async def send_file_by_callback(update, context, user, language):
     Bu usul ancha tez va faylning serverda mavjud bo'lishini talab qilmaydi.
     """
     query = update.callback_query
-    document_uuid = query.data.split('_')[1]
+    # Fix callback data parsing - document_id is after "getfile_" prefix
+    document_uuid = query.data.replace('getfile_', '')
     await query.answer(text=translation.file_is_being_sent[language])
     try:
+        logger.info(f"Attempting to send file with document_uuid: {document_uuid}")
         document = await Document.objects.select_related('product').aget(id=document_uuid)
+        
         if document.telegram_file_id:
             # Yuklab olishlar sonini oshirish
             await sync_to_async(lambda: Product.objects.filter(id=document.product.id).update(
                 download_count=F('download_count') + 1
             ))()
 
+            logger.info(f"Sending file with telegram_file_id: {document.telegram_file_id}")
             await context.bot.send_document(
                 chat_id=user.telegram_id,
                 document=document.telegram_file_id,
                 caption=f"<b>{document.product.title}</b>",
                 parse_mode=ParseMode.HTML
             )
+            logger.info(f"File sent successfully to user {user.telegram_id}")
         else:
+            logger.warning(f"Document {document_uuid} has no telegram_file_id")
             await context.bot.send_message(
                 chat_id=user.telegram_id,
                 text=translation.file_not_available_for_sending[language]
             )
 
     except Document.DoesNotExist:
+        logger.error(f"Document not found: {document_uuid}")
         await context.bot.send_message(chat_id=user.telegram_id,
-                                       text="Xatolik: Bunday fayl ma'lumotlar bazasida topilmadi.")
+                                       text=translation.file_not_found[language])
     except TelegramError as e:
         logger.error(f"Telegram fayl yuborishda xatolik (file_id orqali): {e}")
         await context.bot.send_message(
@@ -645,7 +653,7 @@ async def send_file_by_callback(update, context, user, language):
         )
     except Exception as e:
         logger.exception(f"Fayl yuborishda (file_id orqali) kutilmagan xatolik: {e}")
-        await context.bot.send_message(chat_id=user.telegram_id, text="Faylni yuborishda noma'lum xatolik yuz berdi.")
+        await context.bot.send_message(chat_id=user.telegram_id, text=translation.file_send_error[language])
 
 
 @get_user

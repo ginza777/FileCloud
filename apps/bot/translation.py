@@ -294,3 +294,10 @@ file_send_error = {
     'en': "❌ Error sending file",
     'tr': "❌ Dosya gönderilirken hata oluştu"
 }
+
+error_occurred = {
+    'uz': "❌ Xatolik yuz berdi",
+    'ru': "❌ Произошла ошибка",
+    'en': "❌ An error occurred",
+    'tr': "❌ Bir hata oluştu"
+}
