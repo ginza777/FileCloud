@@ -5,7 +5,7 @@ from django.db.models import F
 from asgiref.sync import sync_to_async
 from django.core.paginator import Paginator, Page
 from elasticsearch_dsl import Q
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultDocument
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultCachedDocument
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler
 from telegram.error import TelegramError
@@ -431,18 +431,18 @@ async def main_text_handler(update, context, user, language):
     
     # Build optimized query based on search mode
     if search_mode == 'deep':
-        # Deep search: optimized multi-field search with reduced complexity
+        # Deep search: title + parsed_content (no slug)
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['title^5', 'slug^3', 'parsed_content^1'],
+            fields=['title^5', 'parsed_content^1'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
             max_expansions=50
         )
     else:
-        # Normal search: fast title and slug only search
+        # Normal search: title + slug only
         final_query = Q(
             'multi_match',
             query=query_text,
@@ -662,9 +662,11 @@ async def inline_query_handler(update, context, user, language):
     Inline query handler - foydalanuvchi @bot_username query yozganda ishlaydi
     """
     query = update.inline_query.query.strip()
+    logger.info(f"Inline query received: '{query}' from user {user.telegram_id}")
     
     if not query:
         # Bo'sh query bo'lsa, hech narsa qaytarmaymiz
+        logger.info("Empty inline query, returning empty results")
         await update.inline_query.answer([])
         return
     
@@ -673,11 +675,11 @@ async def inline_query_handler(update, context, user, language):
         s = DocumentIndex.search()
         
         # Optimized inline search - fast and efficient
-        # Inline queries use optimized deep search for better results
+        # Inline queries use deep search for better results (title + parsed_content)
         final_query = Q(
             'multi_match',
             query=query,
-            fields=['title^5', 'slug^3', 'parsed_content^1'],
+            fields=['title^5', 'parsed_content^1'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
@@ -700,13 +702,14 @@ async def inline_query_handler(update, context, user, language):
                     document__telegram_file_id__isnull=False
                 )
                 
-                # Inline query result yaratish
-                result = InlineQueryResultDocument(
+                # Inline query result yaratish - cached document format
+                result = InlineQueryResultCachedDocument(
                     id=str(product.document_id),
-                    title=product.title[:64],  # Telegram limit
+                    title=product.title[:64],
                     document_file_id=product.document.telegram_file_id,
-                    caption=f"📄 {product.title}\n👁 {product.view_count} | ⬇️ {product.download_count}",
-                    parse_mode='HTML'
+                    description=f"👁 {product.view_count} | ⬇️ {product.download_count}",
+                    caption=f"📄 {product.title}\n\n👁 Ko'rishlar: {product.view_count}\n⬇️ Yuklab olishlar: {product.download_count}",
+                    parse_mode=ParseMode.HTML
                 )
                 results.append(result)
                 
@@ -716,6 +719,7 @@ async def inline_query_handler(update, context, user, language):
                 logger.error(f"Inline query result creation error for {hit.meta.id}: {e}")
                 continue
         
+        logger.info(f"Inline query returning {len(results)} results for query: '{query}'")
         await update.inline_query.answer(results)
         
     except Exception as e:

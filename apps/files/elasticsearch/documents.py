@@ -198,7 +198,7 @@ class DocumentIndex(Document):
 
         if query:
             if deep:
-                # Deep search: Search in both title and parsed_content with boosted title
+                # Deep search: Search in title and parsed_content with boosted title
                 search = search.query('multi_match',
                     query=query,
                     fields=['title^2', 'parsed_content'],  # Boost title matches
@@ -208,12 +208,12 @@ class DocumentIndex(Document):
                 )
             else:
                 # Regular search: Search in title and slug with boosted title
-                search = search.query('bool',
-                    should=[
-                        {'match': {'title': {'query': query, 'boost': 2}}},
-                        {'match': {'slug': query}}
-                    ],
-                    minimum_should_match=1
+                search = search.query('multi_match',
+                    query=query,
+                    fields=['title^2', 'slug'],  # Boost title matches
+                    operator='or',  # More flexible matching
+                    fuzziness='AUTO',  # Allow fuzzy matching for better results
+                    prefix_length=2  # Optimize fuzzy search performance
                 )
 
         return search.execute()

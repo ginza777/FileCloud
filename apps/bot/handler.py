@@ -109,12 +109,23 @@ async def bot_webhook(request):
 
     try:
         data = json.loads(request.body.decode("utf-8"))
+        
+        # Validate that the data contains required fields
+        if not isinstance(data, dict) or 'update_id' not in data:
+            logger.warning(f"Invalid webhook data received: {data}")
+            return JsonResponse({"status": "invalid update data"}, status=400)
+            
     except json.JSONDecodeError:
         logger.warning("Webhook orqali yaroqsiz JSON qabul qilindi.")
         return JsonResponse({"status": "invalid json"}, status=400)
 
     application = get_application(bot_token)
-    update = Update.de_json(data, application.bot)
+    
+    try:
+        update = Update.de_json(data, application.bot)
+    except Exception as e:
+        logger.error(f"Error parsing update: {e}, data: {data}")
+        return JsonResponse({"status": "error parsing update"}, status=400)
 
     # bot_instance'ni bu yerda contextga qo'shish shart emas.
     # Har bir handler'ga qo'shilgan 'inject_bot_instance' dekoratori

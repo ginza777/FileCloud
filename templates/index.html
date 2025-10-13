@@ -6,18 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FayltopAi fayl qidiruv</title>
     <link rel="icon" type="image/x-icon" href="{% static 'icon.png' %}">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                screens: { 'xs': '475px', 'sm': '640px', 'md': '768px', 'lg': '1024px', 'xl': '1280px', '2xl': '1536px' },
-                extend: {
-                    colors: { primary: '#0ea5e9', secondary: '#06b6d4', dark: '#0f172a', light: '#f8fafc' }
-                }
-            }
-        }
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; color: #0f172a; }
@@ -95,11 +85,13 @@
                         <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="flex-1 bg-white/90 text-dark rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm placeholder-gray-400">
                         <button id="searchBtn" type="submit" class="bg-primary hover:bg-sky-600 text-white font-medium py-3 px-6 rounded-xl transition-colors">Qidirish</button>
                     </form>
-                    <div class="flex items-center justify-center mt-4">
-                        <label class="flex items-center gap-2 text-white cursor-pointer">
-                            <input id="deepToggle" type="checkbox" class="h-5 w-5 text-primary focus:ring-primary rounded">
-                            <span>Chuqur qidiruv</span>
+                    <div class="switch-container">
+                        <span class="switch-label">Oddiy qidiruv</span>
+                        <label class="switch">
+                            <input id="deepToggle" type="checkbox">
+                            <span class="slider"></span>
                         </label>
+                        <span class="switch-label">Chuqur qidiruv</span>
                     </div>
                     <p id="searchInfo" class="text-sm text-white/80 mt-2"><span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish</p>
                 </div>
@@ -140,10 +132,6 @@
                     <span class="text-sm text-gray-500">Yuklab olishlar: <span id="previewDownloads">0</span></span>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-4">
-                    <a id="downloadBtn" href="#" download class="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-xl transition-colors">
-                        <i data-feather="download" class="w-5 h-5"></i>
-                        Yuklab olish
-                    </a>
                     <a id="telegramBtn" href="#" class="flex items-center justify-center gap-2 w-full bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 px-4 rounded-xl transition-colors">
                         <i data-feather="message-circle" class="w-5 h-5"></i>
                         Telegram orqali yuklash
@@ -204,11 +192,14 @@
             const topFiles = document.getElementById('topFiles');
             loading.classList.remove('hidden');
             try {
-                const response = await fetch('/api/web/top-files/');
+                const response = await fetch('/api/web/top-downloads/');
                 if (!response.ok) throw new Error('Top files yuklanmadi');
-                const files = await response.json();
-                topFiles.innerHTML = files.map(file => `
-                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview(${JSON.stringify(file)})">
+                const data = await response.json();
+                const files = data.results || data;
+                topFiles.innerHTML = files.map(file => {
+                    const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    return `
+                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
                         <h3 class="text-lg font-semibold truncate">${file.title}</h3>
                         <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
                         <div class="flex items-center gap-4 mt-4">
@@ -216,7 +207,8 @@
                             <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (error) {
                 topFiles.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
             } finally {
@@ -237,8 +229,8 @@
             pagination.innerHTML = '';
 
             try {
-                const response = await fetch(`/api/web/search/?query=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
-                if (!response.ok) throw new Error('Qidiruv xatosi');
+                const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
+                if (!response.ok) throw new Error(`Qidiruv xatosi: ${response.status}`);
                 const data = await response.json();
 
                 if (data.results.length === 0) {
@@ -246,8 +238,10 @@
                     return;
                 }
 
-                searchResults.innerHTML = data.results.map(file => `
-                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview(${JSON.stringify(file)})">
+                searchResults.innerHTML = data.results.map(file => {
+                    const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    return `
+                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
                         <h3 class="text-lg font-semibold truncate">${file.title}</h3>
                         <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
                         <div class="flex items-center gap-4 mt-4">
@@ -255,7 +249,8 @@
                             <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
 
                 pagination.innerHTML = `
                     <div class="flex items-center gap-2">
@@ -271,23 +266,26 @@
             }
         }
 
-        function openFilePreview(product) {
+        function openFilePreview(productId, title, viewCount, downloadCount, documentId) {
             const modal = document.getElementById('filePreviewModal');
-            const title = document.getElementById('previewTitle');
-            const views = document.getElementById('previewViews');
-            const downloads = document.getElementById('previewDownloads');
-            const downloadBtn = document.getElementById('downloadBtn');
+            const titleEl = document.getElementById('previewTitle');
+            const viewsEl = document.getElementById('previewViews');
+            const downloadsEl = document.getElementById('previewDownloads');
             const telegramBtn = document.getElementById('telegramBtn');
 
-            title.textContent = product.title;
-            views.textContent = product.view_count;
-            downloads.textContent = product.download_count;
-            downloadBtn.href = `/api/web/${product.id}/download/`;
-            telegramBtn.href = `https://t.me/${BOT_USERNAME}?start=${product.id}`;
+            titleEl.textContent = title;
+            viewsEl.textContent = viewCount;
+            downloadsEl.textContent = downloadCount;
+            telegramBtn.href = `https://t.me/${BOT_USERNAME}?start=${documentId}`;
 
+            // Force show modal with multiple methods
             modal.classList.remove('hidden');
             modal.classList.add('open');
-            incrementViewCount(product.id);
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+            
+            incrementViewCount(productId);
         }
 
         function closeFilePreview() {
