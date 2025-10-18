@@ -606,7 +606,6 @@ async def increment_view_count_callback(update, context, user, language):
         await send_file_by_callback(update, context, user, language)
 
 
-@get_user
 async def send_file_by_callback(update, context, user, language):
     """
     Callback orqali faylni Telegramning o'zidagi file_id yordamida yuboradi.
@@ -615,10 +614,12 @@ async def send_file_by_callback(update, context, user, language):
     query = update.callback_query
     # Fix callback data parsing - document_id is after "getfile_" prefix
     document_uuid = query.data.replace('getfile_', '')
+    
     await query.answer(text=translation.file_is_being_sent[language])
     try:
         logger.info(f"Attempting to send file with document_uuid: {document_uuid}")
         document = await Document.objects.select_related('product').aget(id=document_uuid)
+        logger.info(f"Document found: {document.id}, telegram_file_id: {document.telegram_file_id}, telegram_status: {document.telegram_status}")
         
         if document.telegram_file_id:
             # Yuklab olishlar sonini oshirish
@@ -635,10 +636,10 @@ async def send_file_by_callback(update, context, user, language):
             )
             logger.info(f"File sent successfully to user {user.telegram_id}")
         else:
-            logger.warning(f"Document {document_uuid} has no telegram_file_id")
+            logger.warning(f"Document {document_uuid} has no telegram_file_id. Status: {document.telegram_status}")
             await context.bot.send_message(
                 chat_id=user.telegram_id,
-                text=translation.file_not_available_for_sending[language]
+                text=f"❌ Fayl hali Telegram'ga yuborilmagan. Status: {document.telegram_status}"
             )
 
     except Document.DoesNotExist:
@@ -675,15 +676,15 @@ async def inline_query_handler(update, context, user, language):
         s = DocumentIndex.search()
         
         # Optimized inline search - fast and efficient
-        # Inline queries use deep search for better results (title + parsed_content)
+        # Inline queries use regular search for faster results (title + slug only)
         final_query = Q(
             'multi_match',
             query=query,
-            fields=['title^5', 'parsed_content^1'],
+            fields=['title^3', 'slug^2'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
-            max_expansions=30
+            max_expansions=20
         )
         
         s = s.query(final_query)
