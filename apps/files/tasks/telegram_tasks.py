@@ -35,8 +35,8 @@ def wait_for_telegram_rate_limit():
     - Barcha worker'lar uchun umumiy bo'lgan qulf mexanizmini ta'minlaydi
     """
     if not REDIS_AVAILABLE:
-        logger.warning("Redis topilmadi, rate limit uchun 5 soniya kutamiz.")
-        time.sleep(5)
+        logger.warning("Redis topilmadi, rate limit uchun 2 soniya kutamiz.")
+        time.sleep(2)
         return
     
     try:
@@ -47,10 +47,13 @@ def wait_for_telegram_rate_limit():
         lock_key = "telegram_rate_limit_lock"
         last_send_key = "telegram_last_send_time"
         
-        # 1 soniya kutish intervali
+        # 1.0 soniya kutish intervali (rate limit xatoliklarini kamaytirish uchun)
         min_interval = 1.0
         
-        while True:
+        max_wait_time = 10  # Maksimal kutish vaqti
+        wait_count = 0
+        
+        while wait_count < max_wait_time:
             # Lock olishga harakat qilamiz
             if r.set(lock_key, "locked", nx=True, ex=30):  # 30 soniya timeout
                 try:
@@ -76,7 +79,12 @@ def wait_for_telegram_rate_limit():
             else:
                 # Boshqa worker ishlayapti, kichik kutamiz
                 time.sleep(0.1)
+                wait_count += 0.1
+                
+        if wait_count >= max_wait_time:
+            logger.warning("Rate limit timeout, 2 soniya kutamiz")
+            time.sleep(2)
                 
     except Exception as e:
-        logger.warning(f"Redis rate limiting xatosi: {e}, 5 soniya kutamiz")
-        time.sleep(5)
+        logger.warning(f"Redis rate limiting xatosi: {e}, 2 soniya kutamiz")
+        time.sleep(2)

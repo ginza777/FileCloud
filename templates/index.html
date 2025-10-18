@@ -23,6 +23,34 @@
         .ignite-glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
         .ignite-btn { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); color: white; }
         
+        /* Pagination Styles */
+        .pagination-button {
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .pagination-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pagination-button.active {
+            background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .pagination-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        
         /* Mobile Search Form Optimizations */
         @media (max-width: 640px) {
             #searchInput {
@@ -33,6 +61,13 @@
                 padding: 12px 20px;
                 font-size: 14px;
                 min-height: 44px; /* Touch target */
+            }
+            
+            /* Mobile Pagination */
+            .pagination-button {
+                min-width: 36px;
+                height: 36px;
+                font-size: 14px;
             }
         }
         
@@ -93,12 +128,42 @@
                         </label>
                         <span class="switch-label">Chuqur qidiruv</span>
                     </div>
+                    
+                    <!-- Deep Search Loading Progress -->
+                    <div id="deepSearchProgress" class="hidden mt-3">
+                        <div class="bg-white/10 rounded-lg p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-white/90">Chuqurlashtirilgan qidiruv...</span>
+                                <span id="deepSearchPercent" class="text-sm font-semibold text-white">0%</span>
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-2">
+                                <div id="deepSearchBar" class="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <div id="deepSearchStatus" class="text-xs text-white/70 mt-1">Qidiruv boshlanmoqda...</div>
+                        </div>
+                    </div>
+                    
                     <p id="searchInfo" class="text-sm text-white/80 mt-2"><span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish</p>
                 </div>
             </div>
         </section>
 
-        <section class="container mx-auto px-4 py-12">
+        <!-- Search Results Section (moved to top) -->
+        <section id="searchResultsSection" class="container mx-auto px-4 py-12 hidden">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold">Qidiruv natijalari</h2>
+                <div id="searchResultsCount" class="text-lg font-semibold text-primary">
+                    <!-- Results count will be populated by JavaScript -->
+                </div>
+            </div>
+            <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Search results will be populated by JavaScript -->
+            </div>
+            <div id="pagination" class="flex justify-center gap-4 mt-8"></div>
+        </section>
+
+        <!-- Top Files Section (moved below search results) -->
+        <section id="topFilesSection" class="container mx-auto px-4 py-12">
             <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">Eng ommabop fayllar</h2>
             <div id="topFiles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Top files will be populated by JavaScript -->
@@ -109,15 +174,8 @@
                 <div class="shimmer h-48 rounded-xl"></div>
             </div>
         </section>
-
-        <section class="container mx-auto px-4 py-12">
-            <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">Qidiruv natijalari</h2>
-            <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Search results will be populated by JavaScript -->
-            </div>
-            <div id="pagination" class="flex justify-center gap-4 mt-8"></div>
-        </section>
     </main>
+
 
     <!-- File Preview Modal -->
     <div id="filePreviewModal" class="ios-modal fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center hidden">
@@ -184,12 +242,18 @@
 
     <script>
         feather.replace();
+        // Search cache for pagination
+        let searchCache = {};
+        let currentSearchQuery = '';
+        let currentSearchMode = false;
         let isDeepMode = false;
         const BOT_USERNAME = "{{ bot_username | safe }}".replace('@', '');
 
         async function loadTopFiles() {
             const loading = document.getElementById('loading');
             const topFiles = document.getElementById('topFiles');
+            const topFilesSection = document.getElementById('topFilesSection');
+            
             loading.classList.remove('hidden');
             try {
                 const response = await fetch('/api/web/top-downloads/');
@@ -209,10 +273,29 @@
                     </div>
                     `;
                 }).join('');
+                
+                // Show top files section
+                topFilesSection.classList.remove('hidden');
             } catch (error) {
                 topFiles.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
             } finally {
                 loading.classList.add('hidden');
+            }
+        }
+
+        function updateDeepSearchProgress(percentage, text) {
+            const progressBar = document.getElementById('deepSearchBar');
+            const progressPercent = document.getElementById('deepSearchPercent');
+            const progressStatus = document.getElementById('deepSearchStatus');
+            
+            if (progressBar) {
+                progressBar.style.width = `${percentage}%`;
+            }
+            if (progressPercent) {
+                progressPercent.textContent = `${percentage}%`;
+            }
+            if (progressStatus) {
+                progressStatus.textContent = text;
             }
         }
 
@@ -221,49 +304,174 @@
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
 
+            // Check if this is a pagination request for the same search
+            const cacheKey = `${query}_${isDeepMode}`;
+            if (page > 1 && searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
+                // Use cached data for pagination
+                displaySearchResults(searchCache[cacheKey], page);
+                return;
+            }
+
             const searchResults = document.getElementById('searchResults');
             const pagination = document.getElementById('pagination');
             const loading = document.getElementById('loading');
-            loading.classList.remove('hidden');
+            const searchResultsSection = document.getElementById('searchResultsSection');
+            const topFilesSection = document.getElementById('topFilesSection');
+            const searchResultsCount = document.getElementById('searchResultsCount');
+            const deepSearchProgress = document.getElementById('deepSearchProgress');
+            
+            // Show search results section, hide top files section
+            searchResultsSection.classList.remove('hidden');
+            topFilesSection.classList.add('hidden');
+            
+            // Show appropriate loading indicator
+            if (isDeepMode) {
+                // Show deep search progress bar
+                deepSearchProgress.classList.remove('hidden');
+                updateDeepSearchProgress(0, 'Qidiruv boshlanmoqda...');
+            } else {
+                // Show regular loading
+                loading.classList.remove('hidden');
+            }
+            
             searchResults.innerHTML = '';
             pagination.innerHTML = '';
 
             try {
+                // Simulate progress for deep search
+                if (isDeepMode) {
+                    updateDeepSearchProgress(20, 'Elasticsearch orqali qidirilmoqda...');
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    updateDeepSearchProgress(40, 'Fayl ichidan qidirilmoqda...');
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    updateDeepSearchProgress(60, 'Natijalar tayyorlanmoqda...');
+                }
+                
                 const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
                 if (!response.ok) throw new Error(`Qidiruv xatosi: ${response.status}`);
                 const data = await response.json();
 
-                if (data.results.length === 0) {
-                    searchResults.innerHTML = '<p class="text-center text-gray-500">Hech narsa topilmadi.</p>';
-                    return;
+                if (isDeepMode) {
+                    updateDeepSearchProgress(80, 'Natijalar ko\'rsatilmoqda...');
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    updateDeepSearchProgress(100, 'Tayyor!');
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
 
-                searchResults.innerHTML = data.results.map(file => {
-                    const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    return `
-                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
-                        <h3 class="text-lg font-semibold truncate">${file.title}</h3>
-                        <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
-                        <div class="flex items-center gap-4 mt-4">
-                            <span class="text-sm text-gray-500">Ko'rishlar: <span class="views-count">${file.view_count}</span></span>
-                            <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
+                // Cache the search results
+                searchCache[cacheKey] = data;
+                currentSearchQuery = query;
+                currentSearchMode = isDeepMode;
 
-                pagination.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        ${data.has_previous ? `<button onclick="performSearch(null, ${data.previous_page})" class="px-4 py-2 bg-primary text-white rounded-lg">Oldingi</button>` : ''}
-                        <span class="text-sm font-medium">${data.current_page} / ${data.total_pages}</span>
-                        ${data.has_next ? `<button onclick="performSearch(null, ${data.next_page})" class="px-4 py-2 bg-primary text-white rounded-lg">Keyingi</button>` : ''}
-                    </div>
-                `;
+                // Display results
+                displaySearchResults(data, page);
+
             } catch (error) {
                 searchResults.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
+                // Show top files section on error
+                topFilesSection.classList.remove('hidden');
             } finally {
+                // Hide all loading indicators
                 loading.classList.add('hidden');
+                deepSearchProgress.classList.add('hidden');
             }
+        }
+
+        function displaySearchResults(data, page) {
+            const searchResults = document.getElementById('searchResults');
+            const pagination = document.getElementById('pagination');
+            const searchResultsCount = document.getElementById('searchResultsCount');
+
+            // Update results count
+            searchResultsCount.textContent = `${data.total} ta natija`;
+
+            if (data.results.length === 0) {
+                searchResults.innerHTML = '<p class="text-center text-gray-500">Hech narsa topilmadi.</p>';
+                return;
+            }
+
+            searchResults.innerHTML = data.results.map(file => {
+                const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `
+                <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
+                    <h3 class="text-lg font-semibold truncate">${file.title}</h3>
+                    <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
+                    <div class="flex items-center gap-4 mt-4">
+                        <span class="text-sm text-gray-500">Ko'rishlar: <span class="views-count">${file.view_count}</span></span>
+                        <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // Generate pagination with page numbers
+            const currentPage = data.page;
+            const totalPages = data.total_pages;
+            const maxVisiblePages = 5;
+            
+            let paginationHTML = '<div class="flex items-center justify-center gap-2 flex-wrap">';
+            
+            // Previous button
+            if (data.has_previous) {
+                paginationHTML += `<button onclick="performSearch(null, ${data.previous_page})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                    <i data-feather="chevron-left" class="w-4 h-4"></i>
+                    Orqaga
+                </button>`;
+            }
+            
+            // Page numbers
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            // Adjust start page if we're near the end
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // First page and ellipsis
+            if (startPage > 1) {
+                paginationHTML += `<button onclick="performSearch(null, 1)" class="pagination-button px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<span class="px-2 text-gray-500">...</span>`;
+                }
+            }
+            
+            // Page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    paginationHTML += `<button class="pagination-button active px-3 py-2 bg-primary text-white rounded-lg font-semibold">${i}</button>`;
+                } else {
+                    paginationHTML += `<button onclick="performSearch(null, ${i})" class="pagination-button px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">${i}</button>`;
+                }
+            }
+            
+            // Last page and ellipsis
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHTML += `<span class="px-2 text-gray-500">...</span>`;
+                }
+                paginationHTML += `<button onclick="performSearch(null, ${totalPages})" class="pagination-button px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">${totalPages}</button>`;
+            }
+            
+            // Next button
+            if (data.has_next) {
+                paginationHTML += `<button onclick="performSearch(null, ${data.next_page})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                    Keyingi
+                    <i data-feather="chevron-right" class="w-4 h-4"></i>
+                </button>`;
+            }
+            
+            paginationHTML += '</div>';
+            
+            // Add page info
+            paginationHTML += `<div class="text-center mt-4 text-sm text-gray-600">
+                Sahifa ${currentPage} / ${totalPages} (${data.total} ta natija)
+            </div>`;
+            
+            pagination.innerHTML = paginationHTML;
+            
+            // Re-initialize feather icons for new buttons
+            feather.replace();
         }
 
         function openFilePreview(productId, title, viewCount, downloadCount, documentId) {
@@ -335,6 +543,7 @@
         document.getElementById('deepToggle').addEventListener('change', (e) => {
             isDeepMode = e.target.checked;
             const searchInfo = document.getElementById('searchInfo');
+            const searchInput = document.getElementById('searchInput');
             searchInfo.innerHTML = isDeepMode
                 ? '<span class="font-semibold text-orange-300">Chuqurlashtirilgan Qidiruv:</span> Fayl ichidan ham qidirish'
                 : '<span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish';

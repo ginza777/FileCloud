@@ -47,8 +47,12 @@ except ImportError as e:
 logger = logging.getLogger(__name__)
 
 # Tika setup
-tika_parser.TikaClientOnly = True
-tika_parser.TikaServerEndpoint = getattr(settings, 'TIKA_URL', 'http://tika:9998')
+import os
+os.environ['TIKA_SERVER_ENDPOINT'] = getattr(settings, 'TIKA_URL', 'http://tika:9998')
+os.environ['TIKA_CLIENT_ONLY'] = 'True'
+os.environ['TIKA_SERVER_JAR'] = '/tmp/tika-server.jar'
+os.environ['TIKA_SERVER_HOST'] = 'tika'
+os.environ['TIKA_SERVER_PORT'] = '9998'
 
 # Telegram max file size
 TELEGRAM_MAX_FILE_SIZE_BYTES = 49 * 1024 * 1024
@@ -269,7 +273,7 @@ def generate_document_images_task(self, document_id: str, max_pages: int = 5):
     return f"Successfully generated {len(images)} images for document {document_id}."
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=20, max_retries=3,
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=30, max_retries=5,
              name='apps.files.tasks.process_document_pipeline')
 def process_document_pipeline(self, document_id):
     """
@@ -381,14 +385,26 @@ def process_document_pipeline(self, document_id):
                 logger.error(f"[PIPELINE|PARSE_FAIL] DocID: {document_id} | Xato: {e}", exc_info=True)
                 doc.parse_status = 'failed'
                 doc.save(update_fields=['parse_status'])
-                log_document_error(doc, 'parse', e, self.request.retries + 1)
                 
-                # Tika server timeout xatolari uchun product ni block qilish
+                # Tika bilan bog'liq muammolarni aniq DocumentError ga yozish
                 error_str = str(e).lower()
-                if ('readtimeout' in error_str or 'timeout' in error_str or 
-                    'tika' in error_str or 'localhost:9998' in error_str):
+                error_type = 'parse'  # Default
+                error_message = str(e)
+                
+                if ('readtimeout' in error_str or 'timeout' in error_str):
+                    error_type = 'tika_timeout'
+                    error_message = f"Tika Server Timeout: {e}"
                     logger.warning(f"[PIPELINE|TIKA_TIMEOUT] DocID: {document_id} | Product ni block qilish...")
                     block_product_for_access_denied(doc, f"Tika Parse Timeout: {e}")
+                elif ('connection' in error_str or 'connect' in error_str or 'localhost:9998' in error_str):
+                    error_type = 'tika_connection'
+                    error_message = f"Tika Server Connection Error: {e}"
+                elif ('tika' in error_str or 'parse' in error_str):
+                    error_type = 'tika_parse'
+                    error_message = f"Tika Parse Error: {e}"
+                
+                # DocumentError ga yozish
+                log_document_error(doc, error_type, error_message, self.request.retries + 1)
                 
                 raise
 
@@ -473,7 +489,10 @@ def process_document_pipeline(self, document_id):
                     elif resp_data.get("error_code") == 429:
                         retry_after = int(resp_data.get("parameters", {}).get("retry_after", 5))
                         logger.warning(f"[PIPELINE|TELEGRAM_RATE_LIMIT] DocID: {document_id} | {retry_after}s keyin qayta uriniladi.")
-                        raise self.retry(countdown=retry_after + 1)
+                        # Rate limit uchun uzoqroq kutish va exponential backoff
+                        wait_time = min(retry_after + (self.request.retries * 2), 30)
+                        time.sleep(wait_time)
+                        raise self.retry(countdown=wait_time + 5)
                     else:
                         raise Exception(f"Telegram API xatosi: {resp_data.get('description')}")
             except Exception as e:
@@ -516,8 +535,18 @@ def process_document_pipeline(self, document_id):
                 else:
                      logger.info(f"[PIPELINE|DELETE_SKIP] DocID: {document_id} | Fayl keyingi urinishlar uchun saqlab qolindi.")
 
+            # Check if all steps are completed and set completed=True
+            is_fully_completed = doc.download_status == 'completed' and \
+                                 doc.parse_status == 'completed' and \
+                                 doc.index_status == 'completed' and \
+                                 (doc.telegram_status == 'completed' or doc.telegram_status == 'skipped')
+            
+            if is_fully_completed:
+                doc.completed = True
+                logger.info(f"[PIPELINE|COMPLETED] DocID: {document_id} | Barcha jarayonlar tugatildi, completed=True qo'yildi.")
+            
             doc.pipeline_running = False
-            doc.save() # Bu barcha o'zgarishlarni, jumladan, `completed` holatini `save()` metodidagi mantiqqa asosan saqlaydi.
+            doc.save() # Bu barcha o'zgarishlarni, jumladan, `completed` holatini saqlaydi.
 
             end_time = time.time()
             duration = round(end_time - start_time, 2)

@@ -475,6 +475,9 @@ class DocumentError(models.Model):
         ('telegram_send', 'Telegramga yuborish xatoligi'),
         ('telegram_download', 'Telegramdan yuklab olish xatoligi'),
         ('parse', 'Parse qilish xatoligi'),
+        ('tika_timeout', 'Tika server timeout xatoligi'),
+        ('tika_connection', 'Tika server ulanish xatoligi'),
+        ('tika_parse', 'Tika parse xatoligi'),
         ('index', 'Indekslash xatoligi'),
         ('other', 'Boshqa xatolik'),
     ]

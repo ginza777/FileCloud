@@ -191,29 +191,33 @@ class DocumentIndex(Document):
                 return None
 
         search = cls.search()
-        search = search[0:100]  # Limit results for performance
+        search = search[0:50]  # Reduced limit for faster performance
 
         if completed is not None:
             search = search.filter('term', completed=completed)
 
         if query:
             if deep:
-                # Deep search: Search in title and parsed_content with boosted title
+                # Deep search: Optimized for speed with limited fields
                 search = search.query('multi_match',
                     query=query,
-                    fields=['title^2', 'parsed_content'],  # Boost title matches
-                    operator='or',  # More flexible matching
-                    fuzziness='AUTO',  # Allow fuzzy matching for better results
-                    prefix_length=2  # Optimize fuzzy search performance
+                    fields=['title^3', 'parsed_content^1'],  # Higher boost for title
+                    type='best_fields',  # Faster than cross_fields
+                    operator='or',
+                    fuzziness='AUTO',
+                    prefix_length=2,
+                    max_expansions=20  # Limit expansions for speed
                 )
             else:
-                # Regular search: Search in title and slug with boosted title
+                # Regular search: Fast title and slug search
                 search = search.query('multi_match',
                     query=query,
-                    fields=['title^2', 'slug'],  # Boost title matches
-                    operator='or',  # More flexible matching
-                    fuzziness='AUTO',  # Allow fuzzy matching for better results
-                    prefix_length=2  # Optimize fuzzy search performance
+                    fields=['title^3', 'slug^2'],  # Higher boost for title
+                    type='best_fields',  # Faster than cross_fields
+                    operator='or',
+                    fuzziness='AUTO',
+                    prefix_length=2,
+                    max_expansions=10  # Limit expansions for speed
                 )
 
         return search.execute()
