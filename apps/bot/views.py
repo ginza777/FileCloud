@@ -637,10 +637,28 @@ async def send_file_by_callback(update, context, user, language):
             logger.info(f"File sent successfully to user {user.telegram_id}")
         else:
             logger.warning(f"Document {document_uuid} has no telegram_file_id. Status: {document.telegram_status}")
-            await context.bot.send_message(
-                chat_id=user.telegram_id,
-                text=f"❌ Fayl hali Telegram'ga yuborilmagan. Status: {document.telegram_status}"
-            )
+            # Fallback: parse_file_url orqali faylni yuborish
+            if document.parse_file_url:
+                logger.info(f"Trying to send file via parse_file_url: {document.parse_file_url}")
+                try:
+                    await context.bot.send_document(
+                        chat_id=user.telegram_id,
+                        document=document.parse_file_url,
+                        caption=f"<b>{document.product.title}</b>",
+                        parse_mode=ParseMode.HTML
+                    )
+                    logger.info(f"File sent successfully via URL to user {user.telegram_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send file via URL: {e}")
+                    await context.bot.send_message(
+                        chat_id=user.telegram_id,
+                        text=f"❌ Fayl yuborishda xatolik: {str(e)[:100]}"
+                    )
+            else:
+                await context.bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=f"❌ Fayl hali Telegram'ga yuborilmagan va URL ham yo'q. Status: {document.telegram_status}"
+                )
 
     except Document.DoesNotExist:
         logger.error(f"Document not found: {document_uuid}")
