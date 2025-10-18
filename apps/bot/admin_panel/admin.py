@@ -40,7 +40,7 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ('telegram_id', 'username', 'full_name', 'is_admin', 'is_blocked', 'last_active', 'created_at')
     list_filter = ('is_admin', 'is_blocked', 'last_active', 'created_at', 'stock_language', 'selected_language')
     search_fields = ('telegram_id', 'username', 'first_name', 'last_name')
-    readonly_fields = ('telegram_id', 'created_at', 'updated_at')
+    readonly_fields = ('telegram_id', 'last_active', 'created_at', 'updated_at')
     ordering = ('-last_active',)
     
     # Performance optimizations
@@ -66,7 +66,7 @@ class UserAdmin(admin.ModelAdmin):
             "fields": ("stock_language", "selected_language")
         }),
         (_("Activity"), {
-            "fields": ("last_active", "deeplink")
+            "fields": ("deeplink",)
         }),
         (_("Timestamps"), {
             "fields": ("created_at", "updated_at"),
