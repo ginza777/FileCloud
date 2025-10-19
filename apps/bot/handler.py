@@ -107,6 +107,8 @@ async def bot_webhook(request):
         logger.error("BOT_TOKEN sozlamalarda topilmadi.")
         return JsonResponse({"status": "BOT_TOKEN not configured"}, status=500)
 
+    logger.info("🌐 WEBHOOK REQUEST: Received webhook request")
+    
     try:
         data = json.loads(request.body.decode("utf-8"))
         
@@ -123,6 +125,7 @@ async def bot_webhook(request):
     
     try:
         update = Update.de_json(data, application.bot)
+        logger.info(f"🌐 WEBHOOK PROCESSING: Update ID {update.update_id} processed successfully")
     except Exception as e:
         logger.error(f"Error parsing update: {e}, data: {data}")
         return JsonResponse({"status": "error parsing update"}, status=400)
