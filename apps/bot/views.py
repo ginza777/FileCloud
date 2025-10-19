@@ -42,23 +42,46 @@ AWAIT_BROADCAST_MESSAGE = 0
 FIFTY_MB_IN_BYTES = 50 * 1024 * 1024
 PAGE_SIZE = 12
 
-# --- Search Cache ---
+# --- Advanced Search Cache ---
 from functools import lru_cache
 from django.core.cache import cache
 import hashlib
+import json
 
 def get_search_cache_key(query_text, search_mode, page_number):
-    """Generate cache key for search results"""
-    cache_data = f"{query_text}:{search_mode}:{page_number}"
-    return hashlib.md5(cache_data.encode()).hexdigest()
+    """Generate cache key for search results with better hashing"""
+    cache_string = f"search_{query_text.lower().strip()}_{search_mode}_{page_number}"
+    return hashlib.sha256(cache_string.encode()).hexdigest()
 
 def get_cached_search_results(cache_key):
-    """Get cached search results"""
-    return cache.get(f"search:{cache_key}")
+    """Get cached search results with compression"""
+    try:
+        cached_data = cache.get(f"search:{cache_key}")
+        if cached_data:
+            logger.info(f"🎯 CACHE HIT: Found cached results for key {cache_key[:8]}...")
+            return cached_data
+        else:
+            logger.info(f"❌ CACHE MISS: No cached results for key {cache_key[:8]}...")
+            return None
+    except Exception as e:
+        logger.warning(f"Cache get error: {e}")
+        return None
 
-def set_cached_search_results(cache_key, results, timeout=300):  # 5 minutes cache
-    """Cache search results"""
-    cache.set(f"search:{cache_key}", results, timeout)
+def set_cached_search_results(cache_key, results, timeout=900):  # 15 minutes cache
+    """Set cached search results with longer timeout"""
+    try:
+        cache.set(f"search:{cache_key}", results, timeout)
+        logger.info(f"💾 CACHE SET: Stored results for key {cache_key[:8]}... (15 min)")
+    except Exception as e:
+        logger.warning(f"Cache set error: {e}")
+
+def clear_search_cache():
+    """Clear all search cache"""
+    try:
+        cache.clear()
+        logger.info("🧹 CACHE CLEARED: All search cache cleared")
+    except Exception as e:
+        logger.warning(f"Cache clear error: {e}")
 
 
 # --- Dashboard Functions ---
@@ -436,22 +459,22 @@ async def main_text_handler(update, context, user, language):
     
     # Build optimized query based on search mode
     if search_mode == 'deep':
-        # Deep search: title + parsed_content (no slug)
+        # Deep search: slug + title + parsed_content
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['title^5', 'parsed_content^1'],
+            fields=['slug^5', 'title^4', 'parsed_content^1'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
             max_expansions=50
         )
     else:
-        # Normal search: title + slug only
+        # Normal search: slug + title only
         final_query = Q(
             'multi_match',
             query=query_text,
-            fields=['title^3', 'slug^2'],
+            fields=['slug^4', 'title^3'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
@@ -533,26 +556,59 @@ async def handle_search_pagination(update, context, user, language):
 
     page_number = int(page_number_str)
 
+    # Check cache first for pagination
+    cache_key = get_search_cache_key(query_text, search_mode, page_number)
+    cached_results = get_cached_search_results(cache_key)
+    
+    if cached_results:
+        # Return cached pagination results immediately
+        total_results, current_page_doc_ids = cached_results
+        if total_results > 0 and current_page_doc_ids:
+            # Use cached document IDs (current page only)
+            files_from_db = await sync_to_async(
+                lambda: list(
+                    Product.objects.select_related('document')
+                    .filter(
+                        document_id__in=current_page_doc_ids,
+                        document__completed=True,
+                        document__telegram_file_id__isnull=False
+                    )
+                    .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
+                )
+            )()
+            files_map = {str(prod.document_id): prod for prod in files_from_db}
+            products_on_page = [files_map[doc_id] for doc_id in current_page_doc_ids if doc_id in files_map]
+
+            paginator = Paginator(range(total_results), page_size)
+            page_obj = Page(current_page_doc_ids, page_number, paginator)
+
+            # Enhanced search results message with mode indication
+            search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
+            response_text = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(query=query_text, count=total_results)
+            reply_markup = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
+            await query.edit_message_text(text=response_text, reply_markup=reply_markup)
+            return
+
     # Optimized ES query - same as main search for consistency
     s = DocumentIndex.search()
     
     if search_mode == 'deep':
-        # Deep search: optimized multi-field search
+        # Deep search: slug + title + parsed_content
         q = Q(
             'multi_match',
             query=query_text,
-            fields=['title^5', 'slug^3', 'parsed_content^1'],
+            fields=['slug^5', 'title^4', 'parsed_content^1'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
             max_expansions=50
         )
     else:
-        # Normal search: fast title and slug only search
+        # Normal search: slug + title only
         q = Q(
             'multi_match',
             query=query_text,
-            fields=['title^3', 'slug^2'],
+            fields=['slug^4', 'title^3'],
             type='best_fields',
             fuzziness='AUTO',
             prefix_length=2,
@@ -566,6 +622,9 @@ async def handle_search_pagination(update, context, user, language):
     search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
     total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
     current_page_doc_ids = [hit.meta.id for hit in search_results]
+
+    # Cache current page results for faster future access
+    set_cached_search_results(cache_key, (total_results, current_page_doc_ids))
 
     paginator = Paginator(range(total_results), page_size)
     page_obj = Page(current_page_doc_ids, page_number, paginator)

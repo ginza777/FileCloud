@@ -267,10 +267,10 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 180,  # 3 daqiqa (180 seconds)
+        'TIMEOUT': 900,  # 15 daqiqa (900 seconds) - optimized for search
         'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
+            'MAX_ENTRIES': 5000,  # Increased cache size
+            'CULL_FREQUENCY': 2,  # More aggressive caching
         }
     }
 }
