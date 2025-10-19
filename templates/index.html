@@ -106,8 +106,19 @@
     <main>
         <section class="relative text-white py-20 md:py-28 overflow-hidden bg-sky-500">
             <div class="absolute inset-0 z-0">
-                <video class="w-full h-full object-cover" autoplay muted loop playsinline poster="{% static 'image_main.png' %}">
-                    <source src="{% static 'video_main.mp4' %}" type="video/mp4">
+                <video 
+                    class="w-full h-full object-cover" 
+                    autoplay 
+                    muted 
+                    loop 
+                    playsinline 
+                    poster="{% static 'image_main.png' %}"
+                    preload="metadata"
+                    loading="lazy"
+                    data-src="{% static 'video_main.mp4' %}">
+                    <source data-src="{% static 'video_main.mp4' %}" type="video/mp4">
+                    <!-- Fallback image -->
+                    <img src="{% static 'image_main.png' %}" alt="FayltopAi" class="w-full h-full object-cover">
                 </video>
                 <div class="absolute inset-0 bg-black/50"></div>
             </div>
@@ -634,6 +645,59 @@
             const token = document.querySelector('[name=csrfmiddlewaretoken]');
             return token ? token.value : '';
         }
+
+        // Video optimization and lazy loading
+        function optimizeVideo() {
+            const video = document.querySelector('video');
+            if (!video) return;
+
+            // Intersection Observer for lazy loading
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Load video when it comes into view
+                        const videoElement = entry.target;
+                        const dataSrc = videoElement.dataset.src;
+                        if (dataSrc && !videoElement.src) {
+                            videoElement.src = dataSrc;
+                            videoElement.load();
+                            
+                            // Add error handling
+                            videoElement.addEventListener('error', () => {
+                                console.log('Video yuklanmadi, fallback image ko\'rsatiladi');
+                                videoElement.style.display = 'none';
+                                const fallbackImg = videoElement.querySelector('img');
+                                if (fallbackImg) {
+                                    fallbackImg.style.display = 'block';
+                                }
+                            });
+                            
+                            // Add loading success handler
+                            videoElement.addEventListener('canplay', () => {
+                                console.log('Video muvaffaqiyatli yuklandi');
+                            });
+                        }
+                        observer.unobserve(videoElement);
+                    }
+                });
+            }, {
+                rootMargin: '50px' // Start loading 50px before video comes into view
+            });
+
+            observer.observe(video);
+
+            // Preload optimization
+            video.addEventListener('loadstart', () => {
+                console.log('Video yuklash boshladi');
+            });
+
+            video.addEventListener('canplaythrough', () => {
+                console.log('Video to\'liq yuklandi');
+            });
+        }
+
+        // Initialize video optimization when DOM is ready
+        document.addEventListener('DOMContentLoaded', optimizeVideo);
 
         loadTopFiles();
     </script>
