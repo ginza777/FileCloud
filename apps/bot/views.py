@@ -40,7 +40,7 @@ from .tasks import start_broadcast_task
 # --- Constants ---
 AWAIT_BROADCAST_MESSAGE = 0
 FIFTY_MB_IN_BYTES = 50 * 1024 * 1024
-PAGE_SIZE = 10
+PAGE_SIZE = 12
 
 # --- Search Cache ---
 from functools import lru_cache
@@ -393,14 +393,14 @@ async def main_text_handler(update, context, user, language):
     
     if cached_results:
         # Return cached results immediately
-        total_results, all_doc_ids = cached_results
-        if total_results > 0 and all_doc_ids:
-            # Use cached document IDs
+        total_results, first_page_doc_ids = cached_results
+        if total_results > 0 and first_page_doc_ids:
+            # Use cached document IDs (first page only)
             files_from_db = await sync_to_async(
                 lambda: list(
                     Product.objects.select_related('document')
                     .filter(
-                        document_id__in=all_doc_ids,
+                        document_id__in=first_page_doc_ids,
                         document__completed=True,
                         document__telegram_file_id__isnull=False
                     )
@@ -408,7 +408,7 @@ async def main_text_handler(update, context, user, language):
                 )
             )()
             files_map = {str(prod.document_id): prod for prod in files_from_db}
-            products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
+            products_on_page = [files_map[doc_id] for doc_id in first_page_doc_ids if doc_id in files_map]
 
             paginator = Paginator(range(total_results), PAGE_SIZE)
             page_obj = paginator.page(1)
@@ -461,27 +461,26 @@ async def main_text_handler(update, context, user, language):
     # Apply query and filters in single operation
     s = s.query(final_query).filter(Q('term', completed=True))
     
-    # Optimized pagination - get results directly without separate count
+    # Optimized pagination - get only first page results
     page_size = PAGE_SIZE
     page_number = 1
     start_index = (page_number - 1) * page_size
-    end_index = start_index + page_size
     
-    # Execute search with pagination in single call
-    search_results = await sync_to_async(lambda: s[start_index:end_index].execute())()
+    # Execute search with pagination - only get first page
+    search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
     total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
-    all_doc_ids = [hit.meta.id for hit in search_results]
+    first_page_doc_ids = [hit.meta.id for hit in search_results]
 
-    # Cache the results for future requests
-    set_cached_search_results(cache_key, (total_results, all_doc_ids))
+    # Cache only first page results for faster response
+    set_cached_search_results(cache_key, (total_results, first_page_doc_ids))
 
-    if total_results > 0 and all_doc_ids:
+    if total_results > 0 and first_page_doc_ids:
         # Optimized DB query - single query with proper indexing
         files_from_db = await sync_to_async(
             lambda: list(
                 Product.objects.select_related('document')
                 .filter(
-                    document_id__in=all_doc_ids,
+                    document_id__in=first_page_doc_ids,
                     document__completed=True,
                     document__telegram_file_id__isnull=False
                 )
@@ -489,7 +488,7 @@ async def main_text_handler(update, context, user, language):
             )
         )()
         files_map = {str(prod.document_id): prod for prod in files_from_db}
-        products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
+        products_on_page = [files_map[doc_id] for doc_id in first_page_doc_ids if doc_id in files_map]
 
         paginator = Paginator(range(total_results), page_size)
         page_obj = paginator.page(page_number)
@@ -562,24 +561,23 @@ async def handle_search_pagination(update, context, user, language):
 
     s = s.query(q).filter(Q('term', completed=True))
 
-    # Optimized pagination - single query execution
+    # Optimized pagination - get only current page results
     start_index = (page_number - 1) * page_size
-    end_index = start_index + page_size
-    search_results = await sync_to_async(lambda: s[start_index:end_index].execute())()
+    search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
     total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
-    all_doc_ids = [hit.meta.id for hit in search_results]
+    current_page_doc_ids = [hit.meta.id for hit in search_results]
 
     paginator = Paginator(range(total_results), page_size)
-    page_obj = Page(all_doc_ids, page_number, paginator)
+    page_obj = Page(current_page_doc_ids, page_number, paginator)
 
     files_from_db = await sync_to_async(list)(
-        Product.objects.filter(document_id__in=page_obj.object_list)
+        Product.objects.filter(document_id__in=current_page_doc_ids)
         .select_related('document')
         .filter(document__completed=True, document__telegram_file_id__isnull=False)
         .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
     )
     files_map = {str(p.document_id): p for p in files_from_db}
-    products_on_page = [files_map[doc_id] for doc_id in all_doc_ids if doc_id in files_map]
+    products_on_page = [files_map[doc_id] for doc_id in current_page_doc_ids if doc_id in files_map]
 
     # Enhanced search results message with mode indication
     search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
