@@ -714,10 +714,18 @@ async def increment_view_count_callback(update, context, user, language):
     document_uuid = query.data.replace('getfile_', '')
 
     try:
+        # Document orqali Product ni topish va ko'rishlar sonini oshirish
+        document = await sync_to_async(Document.objects.select_related('product').get)(id=document_uuid)
+        
         # Ko'rishlar sonini oshirish
-        await sync_to_async(lambda: Product.objects.filter(document_id=document_uuid).update(
+        await sync_to_async(lambda: Product.objects.filter(id=document.product.id).update(
             view_count=F('view_count') + 1
         ))()
+        
+        # Yangi view count ni olish
+        updated_product = await sync_to_async(Product.objects.get)(id=document.product.id)
+        
+        logger.info(f"👁 VIEW COUNT INCREMENTED: Document: {document_uuid} | Product: {document.product.title} | Old count: {document.product.view_count} | New count: {updated_product.view_count}")
 
         # Faylni yuborish
         await send_file_by_callback(update, context, user, language)
