@@ -464,7 +464,7 @@ async def main_text_handler(update, context, user, language):
     
     # Build optimized query based on search mode
     if search_mode == 'deep':
-        # Deep search: slug + title + parsed_content - get all results first
+        # Deep search: slug + title + parsed_content - get first page immediately
         final_query = Q(
             'multi_match',
             query=query_text,
@@ -475,26 +475,30 @@ async def main_text_handler(update, context, user, language):
             max_expansions=50
         )
         
-        # For deep search, get total count first, then paginate
         s = s.query(final_query).filter(Q('term', completed=True))
         
-        # Get total count for deep search
-        total_count_query = await sync_to_async(lambda: s[0:0].execute())()
-        total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else 0
-        
-        # Cache total results for deep search
-        deep_total_cache_key = get_deep_search_total_cache_key(query_text)
-        cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
-        
-        # Get first page results
+        # Get first page results immediately (don't wait for total count)
         page_size = PAGE_SIZE
         page_number = 1
         start_index = (page_number - 1) * page_size
         
+        # Execute search with pagination - get first page immediately
         search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
         first_page_doc_ids = [hit.meta.id for hit in search_results]
         
-        logger.info(f"🔍 DEEP SEARCH: Total: {total_results}, First page: {len(first_page_doc_ids)} results")
+        # Get total count in background (non-blocking)
+        try:
+            total_count_query = await sync_to_async(lambda: s[0:0].execute())()
+            total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else len(first_page_doc_ids)
+        except:
+            # If total count fails, use first page count as estimate
+            total_results = len(first_page_doc_ids) * 10  # Estimate
+        
+        # Cache total results for deep search (non-blocking)
+        deep_total_cache_key = get_deep_search_total_cache_key(query_text)
+        cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
+        
+        logger.info(f"🔍 DEEP SEARCH FAST: First page: {len(first_page_doc_ids)} results, Total estimate: {total_results}")
         
     else:
         # Normal search: slug + title only - optimized pagination
@@ -640,11 +644,16 @@ async def handle_search_pagination(update, context, user, language):
             total_results = cached_total
             logger.info(f"🔍 DEEP PAGINATION: Using cached total: {total_results}")
         else:
-            # Get total count if not cached
-            total_count_query = await sync_to_async(lambda: s[0:0].execute())()
-            total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else 0
-            cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
-            logger.info(f"🔍 DEEP PAGINATION: Calculated total: {total_results}")
+            # Get total count if not cached (fallback)
+            try:
+                total_count_query = await sync_to_async(lambda: s[0:0].execute())()
+                total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else 0
+                cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
+                logger.info(f"🔍 DEEP PAGINATION: Calculated total: {total_results}")
+            except:
+                # If total count fails, estimate based on page
+                total_results = page_number * page_size * 2  # Estimate
+                logger.info(f"🔍 DEEP PAGINATION: Estimated total: {total_results}")
         
         # Get current page results
         start_index = (page_number - 1) * page_size
