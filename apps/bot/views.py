@@ -53,6 +53,11 @@ def get_search_cache_key(query_text, search_mode, page_number):
     cache_string = f"search_{query_text.lower().strip()}_{search_mode}_{page_number}"
     return hashlib.sha256(cache_string.encode()).hexdigest()
 
+def get_deep_search_total_cache_key(query_text):
+    """Generate cache key for deep search total results"""
+    cache_string = f"deep_total_{query_text.lower().strip()}"
+    return hashlib.sha256(cache_string.encode()).hexdigest()
+
 def get_cached_search_results(cache_key):
     """Get cached search results with compression"""
     try:
@@ -459,7 +464,7 @@ async def main_text_handler(update, context, user, language):
     
     # Build optimized query based on search mode
     if search_mode == 'deep':
-        # Deep search: slug + title + parsed_content
+        # Deep search: slug + title + parsed_content - get all results first
         final_query = Q(
             'multi_match',
             query=query_text,
@@ -469,8 +474,30 @@ async def main_text_handler(update, context, user, language):
             prefix_length=2,
             max_expansions=50
         )
+        
+        # For deep search, get total count first, then paginate
+        s = s.query(final_query).filter(Q('term', completed=True))
+        
+        # Get total count for deep search
+        total_count_query = await sync_to_async(lambda: s[0:0].execute())()
+        total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else 0
+        
+        # Cache total results for deep search
+        deep_total_cache_key = get_deep_search_total_cache_key(query_text)
+        cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
+        
+        # Get first page results
+        page_size = PAGE_SIZE
+        page_number = 1
+        start_index = (page_number - 1) * page_size
+        
+        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
+        first_page_doc_ids = [hit.meta.id for hit in search_results]
+        
+        logger.info(f"🔍 DEEP SEARCH: Total: {total_results}, First page: {len(first_page_doc_ids)} results")
+        
     else:
-        # Normal search: slug + title only
+        # Normal search: slug + title only - optimized pagination
         final_query = Q(
             'multi_match',
             query=query_text,
@@ -480,21 +507,20 @@ async def main_text_handler(update, context, user, language):
             prefix_length=2,
             max_expansions=20
         )
-    
-    # Apply query and filters in single operation
-    s = s.query(final_query).filter(Q('term', completed=True))
-    
-    # Optimized pagination - get only first page results
-    page_size = PAGE_SIZE
-    page_number = 1
-    start_index = (page_number - 1) * page_size
-    
-    # Execute search with pagination - only get first page
-    search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
-    total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
-    first_page_doc_ids = [hit.meta.id for hit in search_results]
+        
+        s = s.query(final_query).filter(Q('term', completed=True))
+        
+        # Optimized pagination - get only first page results
+        page_size = PAGE_SIZE
+        page_number = 1
+        start_index = (page_number - 1) * page_size
+        
+        # Execute search with pagination - only get first page
+        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
+        total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
+        first_page_doc_ids = [hit.meta.id for hit in search_results]
 
-    # Cache only first page results for faster response
+    # Cache first page results for faster response
     set_cached_search_results(cache_key, (total_results, first_page_doc_ids))
 
     if total_results > 0 and first_page_doc_ids:
@@ -603,6 +629,30 @@ async def handle_search_pagination(update, context, user, language):
             prefix_length=2,
             max_expansions=50
         )
+        
+        s = s.query(q).filter(Q('term', completed=True))
+        
+        # For deep search pagination, get total from cache first
+        deep_total_cache_key = get_deep_search_total_cache_key(query_text)
+        cached_total = cache.get(f"deep_total:{deep_total_cache_key}")
+        
+        if cached_total:
+            total_results = cached_total
+            logger.info(f"🔍 DEEP PAGINATION: Using cached total: {total_results}")
+        else:
+            # Get total count if not cached
+            total_count_query = await sync_to_async(lambda: s[0:0].execute())()
+            total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else 0
+            cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
+            logger.info(f"🔍 DEEP PAGINATION: Calculated total: {total_results}")
+        
+        # Get current page results
+        start_index = (page_number - 1) * page_size
+        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
+        current_page_doc_ids = [hit.meta.id for hit in search_results]
+        
+        logger.info(f"🔍 DEEP PAGINATION: Page {page_number}, Results: {len(current_page_doc_ids)}")
+        
     else:
         # Normal search: slug + title only
         q = Q(
@@ -615,13 +665,13 @@ async def handle_search_pagination(update, context, user, language):
             max_expansions=20
         )
 
-    s = s.query(q).filter(Q('term', completed=True))
+        s = s.query(q).filter(Q('term', completed=True))
 
-    # Optimized pagination - get only current page results
-    start_index = (page_number - 1) * page_size
-    search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
-    total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
-    current_page_doc_ids = [hit.meta.id for hit in search_results]
+        # Optimized pagination - get only current page results
+        start_index = (page_number - 1) * page_size
+        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
+        total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
+        current_page_doc_ids = [hit.meta.id for hit in search_results]
 
     # Cache current page results for faster future access
     set_cached_search_results(cache_key, (total_results, current_page_doc_ids))

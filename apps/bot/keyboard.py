@@ -220,31 +220,59 @@ def build_search_results_keyboard(products_on_page, page_obj, search_mode, langu
 
     # Sahifalash (pagination) tugmalari
     pagination_buttons = []
+    
+    # Oldingi tugma
     if page_obj.has_previous():
         prev_page = page_obj.previous_page_number()
-        # Include query text in callback data to avoid context issues
         if query_text:
             callback_data = f"search_{search_mode}_{prev_page}_{query_text}"
         else:
             callback_data = f"search_{search_mode}_{prev_page}"
         pagination_buttons.append(
-            InlineKeyboardButton(translation.pagination_prev[language],
-                                 callback_data=callback_data)
+            InlineKeyboardButton("⬅️", callback_data=callback_data)
         )
 
-    current_page_text = f"{page_obj.number}/{page_obj.paginator.num_pages}"
-    pagination_buttons.append(InlineKeyboardButton(current_page_text, callback_data="ignore"))
+    # Sahifa raqamlari tugmalari [1,2,3,4...]
+    total_pages = page_obj.paginator.num_pages
+    current_page = page_obj.number
+    
+    # Sahifa raqamlarini ko'rsatish strategiyasi
+    if total_pages <= 7:
+        # 7 ta yoki kamroq sahifa bo'lsa, barchasini ko'rsatish
+        page_range = range(1, total_pages + 1)
+    else:
+        # Ko'p sahifa bo'lsa, smart pagination
+        if current_page <= 4:
+            page_range = list(range(1, 6)) + ['...', total_pages]
+        elif current_page >= total_pages - 3:
+            page_range = [1, '...'] + list(range(total_pages - 4, total_pages + 1))
+        else:
+            page_range = [1, '...'] + list(range(current_page - 1, current_page + 2)) + ['...', total_pages]
+    
+    # Sahifa tugmalarini qo'shish
+    for page_num in page_range:
+        if page_num == '...':
+            pagination_buttons.append(InlineKeyboardButton("...", callback_data="ignore"))
+        elif page_num == current_page:
+            pagination_buttons.append(InlineKeyboardButton(f"[{page_num}]", callback_data="ignore"))
+        else:
+            if query_text:
+                callback_data = f"search_{search_mode}_{page_num}_{query_text}"
+            else:
+                callback_data = f"search_{search_mode}_{page_num}"
+            pagination_buttons.append(
+                InlineKeyboardButton(str(page_num), callback_data=callback_data)
+            )
 
+    # Keyingi tugma
     if page_obj.has_next():
         next_page = page_obj.next_page_number()
-        # Include query text in callback data to avoid context issues
         if query_text:
             callback_data = f"search_{search_mode}_{next_page}_{query_text}"
         else:
             callback_data = f"search_{search_mode}_{next_page}"
         pagination_buttons.append(
-            InlineKeyboardButton(translation.pagination_next[language],
-                                 callback_data=callback_data)
+            InlineKeyboardButton("➡️", callback_data=callback_data)
         )
 
     if pagination_buttons:
