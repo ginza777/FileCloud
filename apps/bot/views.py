@@ -377,6 +377,8 @@ async def main_text_handler(update, context, user, language):
     query_text = update.message.text
     search_mode = context.user_data.get('search_mode', 'normal')
     context.user_data['last_search_query'] = query_text
+    
+    logger.info(f"🔍 SEARCH START: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Language: {language}")
     context.user_data['search_mode'] = search_mode
 
     await SearchQuery.objects.acreate(
@@ -417,12 +419,15 @@ async def main_text_handler(update, context, user, language):
             search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
             results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(count=total_results, query=query_text)
             
+            logger.info(f"🔍 SEARCH SUCCESS: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Results: {total_results} | Language: {language}")
+            
             await update.message.reply_text(
                 results_message,
                 reply_markup=keyboard
             )
             return
         else:
+            logger.info(f"🔍 SEARCH NO RESULTS: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Language: {language}")
             await update.message.reply_text(translation.search_no_results[language].format(query=query_text))
             return
 
@@ -617,9 +622,9 @@ async def send_file_by_callback(update, context, user, language):
     
     await query.answer(text=translation.file_is_being_sent[language])
     try:
-        logger.info(f"Attempting to send file with document_uuid: {document_uuid}")
+        logger.info(f"📥 FILE DOWNLOAD START: User {user.telegram_id} | Document: {document_uuid} | Language: {language}")
         document = await Document.objects.select_related('product').aget(id=document_uuid)
-        logger.info(f"Document found: {document.id}, telegram_file_id: {document.telegram_file_id}, telegram_status: {document.telegram_status}")
+        logger.info(f"📄 DOCUMENT FOUND: ID: {document.id} | Title: {document.product.title if document.product else 'No title'} | TelegramFileID: {document.telegram_file_id[:20] if document.telegram_file_id else 'None'}... | Status: {document.telegram_status}")
         
         if document.telegram_file_id:
             # Yuklab olishlar sonini oshirish
@@ -627,19 +632,18 @@ async def send_file_by_callback(update, context, user, language):
                 download_count=F('download_count') + 1
             ))()
 
-            logger.info(f"Sending file with telegram_file_id: {document.telegram_file_id}")
             await context.bot.send_document(
                 chat_id=user.telegram_id,
                 document=document.telegram_file_id,
                 caption=f"<b>{document.product.title}</b>",
                 parse_mode=ParseMode.HTML
             )
-            logger.info(f"File sent successfully to user {user.telegram_id}")
+            logger.info(f"✅ FILE SENT SUCCESS: User {user.telegram_id} | Document: {document.id} | Title: {document.product.title} | Method: telegram_file_id")
         else:
             logger.warning(f"Document {document_uuid} has no telegram_file_id. Status: {document.telegram_status}")
             # Fallback: parse_file_url orqali faylni yuborish
             if document.parse_file_url:
-                logger.info(f"Trying to send file via parse_file_url: {document.parse_file_url}")
+                logger.info(f"🔄 FALLBACK METHOD: Trying to send file via parse_file_url: {document.parse_file_url[:50]}...")
                 try:
                     await context.bot.send_document(
                         chat_id=user.telegram_id,
@@ -647,31 +651,32 @@ async def send_file_by_callback(update, context, user, language):
                         caption=f"<b>{document.product.title}</b>",
                         parse_mode=ParseMode.HTML
                     )
-                    logger.info(f"File sent successfully via URL to user {user.telegram_id}")
+                    logger.info(f"✅ FILE SENT SUCCESS: User {user.telegram_id} | Document: {document.id} | Title: {document.product.title} | Method: parse_file_url")
                 except Exception as e:
-                    logger.error(f"Failed to send file via URL: {e}")
+                    logger.error(f"❌ FALLBACK FAILED: User {user.telegram_id} | Document: {document.id} | Error: {str(e)[:100]}")
                     await context.bot.send_message(
                         chat_id=user.telegram_id,
                         text=f"❌ Fayl yuborishda xatolik: {str(e)[:100]}"
                     )
             else:
+                logger.warning(f"❌ NO FILE AVAILABLE: User {user.telegram_id} | Document: {document.id} | No telegram_file_id and no parse_file_url")
                 await context.bot.send_message(
                     chat_id=user.telegram_id,
                     text=f"❌ Fayl hali Telegram'ga yuborilmagan va URL ham yo'q. Status: {document.telegram_status}"
                 )
 
     except Document.DoesNotExist:
-        logger.error(f"Document not found: {document_uuid}")
+        logger.error(f"❌ DOCUMENT NOT FOUND: User {user.telegram_id} | Document: {document_uuid}")
         await context.bot.send_message(chat_id=user.telegram_id,
                                        text=translation.file_not_found[language])
     except TelegramError as e:
-        logger.error(f"Telegram fayl yuborishda xatolik (file_id orqali): {e}")
+        logger.error(f"❌ TELEGRAM ERROR: User {user.telegram_id} | Document: {document_uuid} | Error: {e}")
         await context.bot.send_message(
             chat_id=user.telegram_id,
             text=f"Faylni yuborishda Telegram bilan bog'liq xatolik yuz berdi: {e.message}"
         )
     except Exception as e:
-        logger.exception(f"Fayl yuborishda (file_id orqali) kutilmagan xatolik: {e}")
+        logger.exception(f"❌ UNEXPECTED ERROR: User {user.telegram_id} | Document: {document_uuid} | Error: {e}")
         await context.bot.send_message(chat_id=user.telegram_id, text=translation.file_send_error[language])
 
 
