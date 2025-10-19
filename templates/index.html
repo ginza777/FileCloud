@@ -323,6 +323,12 @@
                 return;
             }
 
+            // For pagination, always make API call to get fresh data
+            if (page > 1) {
+                // Clear cache for pagination to ensure fresh data
+                delete searchCache[cacheKey];
+            }
+
             const searchResults = document.getElementById('searchResults');
             const pagination = document.getElementById('pagination');
             const loading = document.getElementById('loading');
@@ -424,7 +430,7 @@
             
             // Previous button
             if (data.has_previous) {
-                paginationHTML += `<button onclick="performSearch(null, ${data.previous_page})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                paginationHTML += `<button onclick="performSearch(null, ${currentPage - 1})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
                     <i data-feather="chevron-left" class="w-4 h-4"></i>
                     Orqaga
                 </button>`;
@@ -466,7 +472,7 @@
             
             // Next button
             if (data.has_next) {
-                paginationHTML += `<button onclick="performSearch(null, ${data.next_page})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                paginationHTML += `<button onclick="performSearch(null, ${currentPage + 1})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
                     Keyingi
                     <i data-feather="chevron-right" class="w-4 h-4"></i>
                 </button>`;

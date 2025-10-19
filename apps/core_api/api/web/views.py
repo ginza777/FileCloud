@@ -117,6 +117,8 @@ def search_documents(request):
                     'total_pages': total_pages,
                     'has_next': page < total_pages,
                     'has_previous': page > 1,
+                    'next_page': page + 1 if page < total_pages else None,
+                    'previous_page': page - 1 if page > 1 else None,
                     'search_type': 'deep' if is_deep_search else 'regular'
                 })
         except Exception as es_error:
@@ -175,6 +177,8 @@ def search_documents(request):
             'total_pages': total_pages,
             'has_next': page < total_pages,
             'has_previous': page > 1,
+            'next_page': page + 1 if page < total_pages else None,
+            'previous_page': page - 1 if page > 1 else None,
             'search_type': 'deep' if is_deep_search else 'regular'
         })
     except Exception as e:
