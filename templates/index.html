@@ -334,8 +334,11 @@
 
             // Check if this is a pagination request for the same search
             const cacheKey = `${query}_${isDeepMode}`;
+            console.log('Cache check:', { cacheKey, page, hasCache: !!searchCache[cacheKey], cacheTotalPages: searchCache[cacheKey]?.total_pages });
+            
             if (page > 1 && searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
                 // Use cached data for pagination
+                console.log('Using cached data for pagination');
                 displaySearchResults(searchCache[cacheKey], page);
                 return;
             }
@@ -343,6 +346,7 @@
             // For pagination, always make API call to get fresh data
             if (page > 1) {
                 // Clear cache for pagination to ensure fresh data
+                console.log('Clearing cache for fresh pagination data');
                 delete searchCache[cacheKey];
             }
 
@@ -372,6 +376,8 @@
             pagination.innerHTML = '';
 
             try {
+                console.log('Starting API call...');
+                
                 // Simulate progress for deep search
                 if (isDeepMode) {
                     updateDeepSearchProgress(20, 'Elasticsearch orqali qidirilmoqda...');
@@ -404,6 +410,7 @@
                 displaySearchResults(data, page);
 
             } catch (error) {
+                console.error('API call error:', error);
                 searchResults.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
                 // Show top files section on error
                 topFilesSection.classList.remove('hidden');
