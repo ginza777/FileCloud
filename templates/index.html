@@ -312,7 +312,17 @@
 
         async function performSearch(event, page = 1) {
             if (event) event.preventDefault();
-            const query = document.getElementById('searchInput').value.trim();
+            
+            let query;
+            if (event === null) {
+                // Pagination request - use current search query
+                query = currentSearchQuery;
+            } else {
+                // New search request - get query from input
+                query = document.getElementById('searchInput').value.trim();
+                currentSearchQuery = query; // Store for pagination
+            }
+            
             if (!query) return;
 
             // Check if this is a pagination request for the same search
