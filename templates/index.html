@@ -520,6 +520,10 @@
             modal.style.visibility = 'visible';
             modal.style.opacity = '1';
             
+            // Store current counts for proper increment
+            viewsEl.setAttribute('data-current-count', viewCount);
+            downloadsEl.setAttribute('data-current-count', downloadCount);
+            
             incrementViewCount(productId);
         }
 
@@ -626,8 +630,12 @@
         function updateViewCountInUI(productId) {
             const viewsElement = document.getElementById('previewViews');
             if (viewsElement) {
-                const currentViews = parseInt(viewsElement.textContent) || 0;
-                viewsElement.textContent = currentViews + 1;
+                // Use stored count or current text content
+                const storedCount = viewsElement.getAttribute('data-current-count');
+                const currentViews = storedCount ? parseInt(storedCount) : (parseInt(viewsElement.textContent) || 0);
+                const newCount = currentViews + 1;
+                viewsElement.textContent = newCount;
+                viewsElement.setAttribute('data-current-count', newCount);
             }
 
             const fileCard = document.querySelector(`[data-product-id="${productId}"]`);
@@ -643,8 +651,12 @@
         function updateDownloadCountInUI(productId) {
             const downloadsElement = document.getElementById('previewDownloads');
             if (downloadsElement) {
-                const currentDownloads = parseInt(downloadsElement.textContent) || 0;
-                downloadsElement.textContent = currentDownloads + 1;
+                // Use stored count or current text content
+                const storedCount = downloadsElement.getAttribute('data-current-count');
+                const currentDownloads = storedCount ? parseInt(storedCount) : (parseInt(downloadsElement.textContent) || 0);
+                const newCount = currentDownloads + 1;
+                downloadsElement.textContent = newCount;
+                downloadsElement.setAttribute('data-current-count', newCount);
             }
 
             const fileCard = document.querySelector(`[data-product-id="${productId}"]`);
