@@ -336,12 +336,13 @@
             const cacheKey = `${query}_${isDeepMode}`;
             console.log('Cache check:', { cacheKey, page, hasCache: !!searchCache[cacheKey], cacheTotalPages: searchCache[cacheKey]?.total_pages });
             
-            if (page > 1 && searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
-                // Use cached data for pagination
-                console.log('Using cached data for pagination');
-                displaySearchResults(searchCache[cacheKey], page);
-                return;
-            }
+            // DISABLED: Always make API call for pagination to ensure fresh data
+            // if (page > 1 && searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
+            //     // Use cached data for pagination
+            //     console.log('Using cached data for pagination');
+            //     displaySearchResults(searchCache[cacheKey], page);
+            //     return;
+            // }
 
             // For pagination, always make API call to get fresh data
             if (page > 1) {
