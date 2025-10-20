@@ -349,6 +349,10 @@
                 console.log('Clearing cache for fresh pagination data');
                 delete searchCache[cacheKey];
             }
+            
+            // Always clear cache for pagination to ensure fresh data
+            console.log('Force clearing cache for pagination');
+            delete searchCache[cacheKey];
 
             const searchResults = document.getElementById('searchResults');
             const pagination = document.getElementById('pagination');
