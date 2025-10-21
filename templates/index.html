@@ -142,15 +142,19 @@
                     
                     <!-- Deep Search Loading Progress -->
                     <div id="deepSearchProgress" class="hidden mt-3">
-                        <div class="bg-white/10 rounded-lg p-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm text-white/90">Chuqurlashtirilgan qidiruv...</span>
-                                <span id="deepSearchPercent" class="text-sm font-semibold text-white">0%</span>
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <span class="text-sm text-white/90 font-semibold">🔍 Chuqurlashtirilgan qidiruv</span>
+                                    <div id="deepSearchCount" class="text-xs text-orange-300 mt-1">Topilgan fayllar: <span class="font-bold">0</span></div>
+                                </div>
+                                <span id="deepSearchPercent" class="text-lg font-bold text-orange-300">0%</span>
                             </div>
-                            <div class="w-full bg-white/20 rounded-full h-2">
-                                <div id="deepSearchBar" class="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            <div class="w-full bg-white/20 rounded-full h-3 mb-2">
+                                <div id="deepSearchBar" class="bg-gradient-to-r from-orange-400 to-orange-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
                             </div>
-                            <div id="deepSearchStatus" class="text-xs text-white/70 mt-1">Qidiruv boshlanmoqda...</div>
+                            <div id="deepSearchStatus" class="text-sm text-white/80 font-medium">Qidiruv boshlanmoqda...</div>
+                            <div id="deepSearchDetails" class="text-xs text-white/60 mt-1">Elasticsearch orqali qidirilmoqda...</div>
                         </div>
                     </div>
                     
@@ -291,10 +295,12 @@
             }
         }
 
-        function updateDeepSearchProgress(percentage, text) {
+        function updateDeepSearchProgress(percentage, text, details = '', foundCount = 0) {
             const progressBar = document.getElementById('deepSearchBar');
             const progressPercent = document.getElementById('deepSearchPercent');
             const progressStatus = document.getElementById('deepSearchStatus');
+            const progressDetails = document.getElementById('deepSearchDetails');
+            const progressCount = document.getElementById('deepSearchCount');
             
             if (progressBar) {
                 progressBar.style.width = `${percentage}%`;
@@ -304,6 +310,12 @@
             }
             if (progressStatus) {
                 progressStatus.textContent = text;
+            }
+            if (progressDetails && details) {
+                progressDetails.textContent = details;
+            }
+            if (progressCount && foundCount > 0) {
+                progressCount.innerHTML = `Topilgan fayllar: <span class="font-bold text-orange-200">${foundCount}</span>`;
             }
         }
 
@@ -373,7 +385,7 @@
             if (isDeepMode) {
                 // Show deep search progress bar
                 deepSearchProgress.classList.remove('hidden');
-                updateDeepSearchProgress(0, 'Qidiruv boshlanmoqda...');
+                updateDeepSearchProgress(0, 'Qidiruv boshlanmoqda...', 'Elasticsearch orqali qidirilmoqda...', 0);
             } else {
                 // Show regular loading
                 loading.classList.remove('hidden');
@@ -387,11 +399,11 @@
                 
                 // Simulate progress for deep search
                 if (isDeepMode) {
-                    updateDeepSearchProgress(20, 'Elasticsearch orqali qidirilmoqda...');
+                    updateDeepSearchProgress(20, 'Elasticsearch orqali qidirilmoqda...', 'Fayl nomi va ichki matn qidirilmoqda...', 0);
                     await new Promise(resolve => setTimeout(resolve, 500));
-                    updateDeepSearchProgress(40, 'Fayl ichidan qidirilmoqda...');
+                    updateDeepSearchProgress(40, 'Fayl ichidan qidirilmoqda...', 'Parsed content tahlil qilinmoqda...', 0);
                     await new Promise(resolve => setTimeout(resolve, 500));
-                    updateDeepSearchProgress(60, 'Natijalar tayyorlanmoqda...');
+                    updateDeepSearchProgress(60, 'Natijalar tayyorlanmoqda...', 'Topilgan fayllar saralanmoqda...', 0);
                 }
                 
                 const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
@@ -402,9 +414,9 @@
                 console.log('API response:', data);
 
                 if (isDeepMode) {
-                    updateDeepSearchProgress(80, 'Natijalar ko\'rsatilmoqda...');
+                    updateDeepSearchProgress(80, 'Natijalar ko\'rsatilmoqda...', `Topilgan: ${data.total} ta fayl`, data.total);
                     await new Promise(resolve => setTimeout(resolve, 300));
-                    updateDeepSearchProgress(100, 'Tayyor!');
+                    updateDeepSearchProgress(100, 'Tayyor!', `Qidiruv yakunlandi: ${data.total} ta fayl topildi`, data.total);
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
 
