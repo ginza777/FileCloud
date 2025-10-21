@@ -503,6 +503,8 @@
         }
 
         function displaySearchResults(data, page) {
+            console.log('displaySearchResults called:', { data, page, resultsLength: data.results?.length });
+            
             const searchResults = document.getElementById('searchResults');
             const pagination = document.getElementById('pagination');
             const searchResultsCount = document.getElementById('searchResultsCount');
@@ -511,10 +513,12 @@
             searchResultsCount.textContent = `${data.total} ta natija`;
 
             if (data.results.length === 0) {
+                console.log('No results found, showing empty message');
                 searchResults.innerHTML = '<p class="text-center text-gray-500">Hech narsa topilmadi.</p>';
                 return;
             }
 
+            console.log('Rendering results:', data.results.length, 'items');
             searchResults.innerHTML = data.results.map(file => {
                 const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 return `
@@ -530,6 +534,8 @@
             const currentPage = data.page;
             const totalPages = data.total_pages;
             const maxVisiblePages = 5;
+            
+            console.log('Generating pagination:', { currentPage, totalPages, hasPrevious: data.has_previous, hasNext: data.has_next });
             
             let paginationHTML = '<div class="flex items-center justify-center gap-2 flex-wrap">';
             
@@ -590,7 +596,9 @@
                 Sahifa ${currentPage} / ${totalPages} (${data.total} ta natija)
             </div>`;
             
+            console.log('Setting pagination HTML:', paginationHTML.length, 'characters');
             pagination.innerHTML = paginationHTML;
+            console.log('Pagination rendered successfully');
             
             // Re-initialize feather icons for new buttons
             feather.replace();
