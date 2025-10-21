@@ -277,10 +277,7 @@
                     <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
                         <h3 class="text-lg font-semibold truncate">${file.title}</h3>
                         <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
-                        <div class="flex items-center gap-4 mt-4">
-                            <span class="text-sm text-gray-500">Ko'rishlar: <span class="views-count">${file.view_count}</span></span>
-                            <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
-                        </div>
+                        <!-- View and download counts hidden on web page -->
                     </div>
                     `;
                 }).join('');
@@ -332,28 +329,33 @@
                 return;
             }
 
-            // Check if this is a pagination request for the same search
+            // Smart caching strategy
             const cacheKey = `${query}_${isDeepMode}`;
             console.log('Cache check:', { cacheKey, page, hasCache: !!searchCache[cacheKey], cacheTotalPages: searchCache[cacheKey]?.total_pages });
             
-            // DISABLED: Always make API call for pagination to ensure fresh data
-            // if (page > 1 && searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
-            //     // Use cached data for pagination
-            //     console.log('Using cached data for pagination');
-            //     displaySearchResults(searchCache[cacheKey], page);
-            //     return;
-            // }
-
-            // For pagination, always make API call to get fresh data
+            // For pagination (page > 1), try to use cached data first
             if (page > 1) {
-                // Clear cache for pagination to ensure fresh data
-                console.log('Clearing cache for fresh pagination data');
-                delete searchCache[cacheKey];
+                const pageCacheKey = `${query}_${isDeepMode}_page_${page}`;
+                if (searchCache[pageCacheKey]) {
+                    console.log(`Using cached data for page ${page}`);
+                    displaySearchResults(searchCache[pageCacheKey], page);
+                    return;
+                }
+                
+                // Fallback to main cache if page-specific cache not available
+                if (searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
+                    console.log('Using main cached data for pagination');
+                    displaySearchResults(searchCache[cacheKey], page);
+                    return;
+                }
             }
             
-            // Always clear cache for pagination to ensure fresh data
-            console.log('Force clearing cache for pagination');
-            delete searchCache[cacheKey];
+            // For first page or when cache is not available, make API call
+            if (page === 1) {
+                console.log('First page - making API call');
+            } else {
+                console.log('Page not in cache - making API call');
+            }
 
             const searchResults = document.getElementById('searchResults');
             const pagination = document.getElementById('pagination');
@@ -406,8 +408,22 @@
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
 
-                // Cache the search results
-                searchCache[cacheKey] = data;
+                // Smart caching: Cache all pages for first page request
+                if (page === 1) {
+                    console.log('Caching all pages for smart pagination');
+                    // Cache the first page data
+                    searchCache[cacheKey] = data;
+                    
+                    // Pre-cache other pages in background (non-blocking)
+                    if (data.total_pages > 1) {
+                        console.log(`Pre-caching ${data.total_pages - 1} additional pages in background`);
+                        preCacheAdditionalPages(query, isDeepMode, data.total_pages, cacheKey);
+                    }
+                } else {
+                    // Cache individual page for future use
+                    searchCache[cacheKey] = data;
+                }
+                
                 currentSearchQuery = query;
                 currentSearchMode = isDeepMode;
 
@@ -424,6 +440,52 @@
                 loading.classList.add('hidden');
                 deepSearchProgress.classList.add('hidden');
             }
+        }
+
+        // Pre-cache additional pages in background
+        async function preCacheAdditionalPages(query, isDeepMode, totalPages, cacheKey) {
+            console.log(`Starting background pre-caching for ${totalPages - 1} pages`);
+            
+            // Cache pages 2-5 first (most likely to be accessed)
+            const priorityPages = Math.min(5, totalPages);
+            for (let page = 2; page <= priorityPages; page++) {
+                try {
+                    console.log(`Pre-caching page ${page}`);
+                    const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const pageCacheKey = `${query}_${isDeepMode}_page_${page}`;
+                        searchCache[pageCacheKey] = data;
+                        console.log(`Page ${page} cached successfully`);
+                    }
+                } catch (error) {
+                    console.log(`Failed to cache page ${page}:`, error);
+                }
+                
+                // Small delay to avoid overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Cache remaining pages with longer delays
+            for (let page = priorityPages + 1; page <= totalPages; page++) {
+                try {
+                    console.log(`Pre-caching page ${page}`);
+                    const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const pageCacheKey = `${query}_${isDeepMode}_page_${page}`;
+                        searchCache[pageCacheKey] = data;
+                        console.log(`Page ${page} cached successfully`);
+                    }
+                } catch (error) {
+                    console.log(`Failed to cache page ${page}:`, error);
+                }
+                
+                // Longer delay for remaining pages
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            console.log('Background pre-caching completed');
         }
 
         function displaySearchResults(data, page) {
@@ -445,10 +507,7 @@
                 <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
                     <h3 class="text-lg font-semibold truncate">${file.title}</h3>
                     <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
-                    <div class="flex items-center gap-4 mt-4">
-                        <span class="text-sm text-gray-500">Ko'rishlar: <span class="views-count">${file.view_count}</span></span>
-                        <span class="text-sm text-gray-500">Yuklab olishlar: <span class="downloads-count">${file.download_count}</span></span>
-                    </div>
+                    <!-- View and download counts hidden on web page -->
                 </div>
                 `;
             }).join('');
@@ -600,7 +659,13 @@
             searchInfo.innerHTML = isDeepMode
                 ? '<span class="font-semibold text-orange-300">Chuqurlashtirilgan Qidiruv:</span> Fayl ichidan ham qidirish'
                 : '<span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish';
-            if (searchInput.value.trim()) { performSearch(null, 1); }
+            
+            // Deep search toggle - force new search with current query
+            if (searchInput.value.trim()) { 
+                console.log('Deep search toggle - performing new search');
+                currentSearchQuery = searchInput.value.trim(); // Update current query
+                performSearch(null, 1); 
+            }
         });
 
         document.addEventListener('keydown', (e) => {
@@ -701,6 +766,10 @@
             const video = document.querySelector('video');
             if (!video) return;
 
+            // Check if already initialized to prevent multiple event listeners
+            if (video.hasAttribute('data-initialized')) return;
+            video.setAttribute('data-initialized', 'true');
+
             // Intersection Observer for lazy loading
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -712,20 +781,26 @@
                             videoElement.src = dataSrc;
                             videoElement.load();
                             
-                            // Add error handling
-                            videoElement.addEventListener('error', () => {
-                                console.log('Video yuklanmadi, fallback image ko\'rsatiladi');
-                                videoElement.style.display = 'none';
-                                const fallbackImg = videoElement.querySelector('img');
-                                if (fallbackImg) {
-                                    fallbackImg.style.display = 'block';
-                                }
-                            });
+                            // Add error handling (only once)
+                            if (!videoElement.hasAttribute('data-error-handler')) {
+                                videoElement.setAttribute('data-error-handler', 'true');
+                                videoElement.addEventListener('error', () => {
+                                    console.log('Video yuklanmadi, fallback image ko\'rsatiladi');
+                                    videoElement.style.display = 'none';
+                                    const fallbackImg = videoElement.querySelector('img');
+                                    if (fallbackImg) {
+                                        fallbackImg.style.display = 'block';
+                                    }
+                                });
+                            }
                             
-                            // Add loading success handler
-                            videoElement.addEventListener('canplay', () => {
-                                console.log('Video muvaffaqiyatli yuklandi');
-                            });
+                            // Add loading success handler (only once)
+                            if (!videoElement.hasAttribute('data-success-handler')) {
+                                videoElement.setAttribute('data-success-handler', 'true');
+                                videoElement.addEventListener('canplay', () => {
+                                    console.log('Video muvaffaqiyatli yuklandi');
+                                });
+                            }
                         }
                         observer.unobserve(videoElement);
                     }
@@ -736,14 +811,17 @@
 
             observer.observe(video);
 
-            // Preload optimization
-            video.addEventListener('loadstart', () => {
-                console.log('Video yuklash boshladi');
-            });
+            // Preload optimization (only once)
+            if (!video.hasAttribute('data-load-handlers')) {
+                video.setAttribute('data-load-handlers', 'true');
+                video.addEventListener('loadstart', () => {
+                    console.log('Video yuklash boshladi');
+                });
 
-            video.addEventListener('canplaythrough', () => {
-                console.log('Video to\'liq yuklandi');
-            });
+                video.addEventListener('canplaythrough', () => {
+                    console.log('Video to\'liq yuklandi');
+                });
+            }
         }
 
         // Initialize video optimization when DOM is ready
