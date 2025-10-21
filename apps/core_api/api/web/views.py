@@ -61,7 +61,7 @@ def search_documents(request):
     
     # Get pagination parameters
     page = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('page_size', 9))
+    page_size = int(request.GET.get('page_size', 12))
     
     if not query:
         return Response(
@@ -207,7 +207,7 @@ def top_downloads(request):
     try:
         # Get pagination parameters
         page = int(request.GET.get('page', 1))
-        page_size = int(request.GET.get('page_size', 9))
+        page_size = int(request.GET.get('page_size', 12))
         
         # Calculate offset
         offset = (page - 1) * page_size

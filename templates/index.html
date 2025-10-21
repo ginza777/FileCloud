@@ -343,33 +343,8 @@
                 return;
             }
 
-            // Smart caching strategy
-            const cacheKey = `${query}_${isDeepMode}`;
-            console.log('Cache check:', { cacheKey, page, hasCache: !!searchCache[cacheKey], cacheTotalPages: searchCache[cacheKey]?.total_pages });
-            
-            // For pagination (page > 1), try to use cached data first
-            if (page > 1) {
-                const pageCacheKey = `${query}_${isDeepMode}_page_${page}`;
-                if (searchCache[pageCacheKey]) {
-                    console.log(`Using cached data for page ${page}`);
-                    displaySearchResults(searchCache[pageCacheKey], page);
-                    return;
-                }
-                
-                // Fallback to main cache if page-specific cache not available
-                if (searchCache[cacheKey] && searchCache[cacheKey].total_pages && searchCache[cacheKey].total_pages >= page) {
-                    console.log('Using main cached data for pagination');
-                    displaySearchResults(searchCache[cacheKey], page);
-                    return;
-                }
-            }
-            
-            // For first page or when cache is not available, make API call
-            if (page === 1) {
-                console.log('First page - making API call');
-            } else {
-                console.log('Page not in cache - making API call');
-            }
+            // Simple per-page API calls - no caching
+            console.log(`Making API call for page ${page}`);
 
             const searchResults = document.getElementById('searchResults');
             const pagination = document.getElementById('pagination');
@@ -422,22 +397,7 @@
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
 
-                // Smart caching: Cache all pages for first page request
-                if (page === 1) {
-                    console.log('Caching all pages for smart pagination');
-                    // Cache the first page data
-                    searchCache[cacheKey] = data;
-                    
-                    // Pre-cache other pages in background (non-blocking)
-                    if (data.total_pages > 1) {
-                        console.log(`Pre-caching ${data.total_pages - 1} additional pages in background`);
-                        preCacheAdditionalPages(query, isDeepMode, data.total_pages, cacheKey);
-                    }
-                } else {
-                    // Cache individual page for future use
-                    searchCache[cacheKey] = data;
-                }
-                
+                // Simple per-page approach - no caching needed
                 currentSearchQuery = query;
                 currentSearchMode = isDeepMode;
 
@@ -454,52 +414,6 @@
                 loading.classList.add('hidden');
                 deepSearchProgress.classList.add('hidden');
             }
-        }
-
-        // Pre-cache additional pages in background
-        async function preCacheAdditionalPages(query, isDeepMode, totalPages, cacheKey) {
-            console.log(`Starting background pre-caching for ${totalPages - 1} pages`);
-            
-            // Cache pages 2-5 first (most likely to be accessed)
-            const priorityPages = Math.min(5, totalPages);
-            for (let page = 2; page <= priorityPages; page++) {
-                try {
-                    console.log(`Pre-caching page ${page}`);
-                    const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        const pageCacheKey = `${query}_${isDeepMode}_page_${page}`;
-                        searchCache[pageCacheKey] = data;
-                        console.log(`Page ${page} cached successfully`);
-                    }
-                } catch (error) {
-                    console.log(`Failed to cache page ${page}:`, error);
-                }
-                
-                // Small delay to avoid overwhelming the server
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-            // Cache remaining pages with longer delays
-            for (let page = priorityPages + 1; page <= totalPages; page++) {
-                try {
-                    console.log(`Pre-caching page ${page}`);
-                    const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        const pageCacheKey = `${query}_${isDeepMode}_page_${page}`;
-                        searchCache[pageCacheKey] = data;
-                        console.log(`Page ${page} cached successfully`);
-                    }
-                } catch (error) {
-                    console.log(`Failed to cache page ${page}:`, error);
-                }
-                
-                // Longer delay for remaining pages
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-            
-            console.log('Background pre-caching completed');
         }
 
         function displaySearchResults(data, page) {
