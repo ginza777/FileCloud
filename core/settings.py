@@ -269,33 +269,33 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.fayltop\.cloud$",
 ]
 
-# Redis Cache Configuration for Admin Panel Optimization
+# Redis Cache Configuration for Production Optimization
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 900,  # 15 daqiqa (900 seconds) - optimized for search
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://redis:6379/0',
+        'TIMEOUT': 1800,  # 30 daqiqa (1800 seconds) - optimized for search
         'OPTIONS': {
-            'MAX_ENTRIES': 5000,  # Increased cache size
-            'CULL_FREQUENCY': 2,  # More aggressive caching
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 100,  # Increased connections
+                'retry_on_timeout': True,
+            },
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
         }
     }
 }
 
-# Redis Cache Configuration (Production uchun)
+# Fallback LocMem Cache (Development uchun)
 # CACHES = {
 #     'default': {
-#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-#         'LOCATION': 'redis://redis:6379/0',
-#         'TIMEOUT': 180,  # 3 daqiqa (180 seconds)
+#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+#         'LOCATION': 'unique-snowflake',
+#         'TIMEOUT': 900,  # 15 daqiqa (900 seconds) - optimized for search
 #         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#             'CONNECTION_POOL_KWARGS': {
-#                 'max_connections': 50,
-#                 'retry_on_timeout': True,
-#             },
-#             'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-#             'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+#             'MAX_ENTRIES': 5000,  # Increased cache size
+#             'CULL_FREQUENCY': 2,  # More aggressive caching
 #         }
 #     }
 # }

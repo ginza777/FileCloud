@@ -191,7 +191,8 @@ class DocumentIndex(Document):
                 return None
 
         search = cls.search()
-        search = search[0:50]  # Reduced limit for faster performance
+        search = search[0:10000]  # Increased limit for better pagination
+        search = search.timeout('5s')  # Add timeout for better performance
 
         if completed is not None:
             search = search.filter('term', completed=completed)
@@ -201,23 +202,25 @@ class DocumentIndex(Document):
                 # Deep search: Optimized for speed with limited fields
                 search = search.query('multi_match',
                     query=query,
-                    fields=['title^3', 'parsed_content^1'],  # Higher boost for title
+                    fields=['title^4', 'parsed_content^1'],  # Higher boost for title
                     type='best_fields',  # Faster than cross_fields
                     operator='or',
                     fuzziness='AUTO',
                     prefix_length=2,
-                    max_expansions=20  # Limit expansions for speed
+                    max_expansions=50,  # Increased for better results
+                    cutoff_frequency=0.01  # Skip rare terms for speed
                 )
             else:
                 # Regular search: Fast title and slug search
                 search = search.query('multi_match',
                     query=query,
-                    fields=['title^3', 'slug^2'],  # Higher boost for title
+                    fields=['title^4', 'slug^2'],  # Higher boost for title
                     type='best_fields',  # Faster than cross_fields
                     operator='or',
                     fuzziness='AUTO',
                     prefix_length=2,
-                    max_expansions=10  # Limit expansions for speed
+                    max_expansions=20,  # Increased for better results
+                    cutoff_frequency=0.01  # Skip rare terms for speed
                 )
 
         return search.execute()

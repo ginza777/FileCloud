@@ -11,7 +11,7 @@ services:
              python manage.py collectstatic --no-input &&
              mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
              python manage.py clean --cancel-tasks --force &&
-             uvicorn core.asgi:application --host 0.0.0.0 --workers 12 --timeout-keep-alive 120"
+             uvicorn core.asgi:application --host 0.0.0.0 --workers 8 --timeout-keep-alive 60 --access-log"
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
@@ -29,6 +29,14 @@ services:
         condition: service_healthy
     networks:
       - filefinder_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     restart: unless-stopped
 
   # 2. Celery Worker (Asosiy fon vazifalarini bajaruvchi)
@@ -37,7 +45,7 @@ services:
     container_name: filefinder_celery
     command: >
       sh -c "mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
-             celery -A core worker --loglevel=info --concurrency=12"
+             celery -A core worker --loglevel=info --concurrency=8 --max-tasks-per-child=1000"
     volumes:
       - .:/app
       - ./media:/app/media
@@ -48,6 +56,14 @@ services:
       - postgres
     networks:
       - filefinder_net
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     restart: unless-stopped
 
   # 3. Celery Beat (Vaqti-vaqti bilan ishlaydigan vazifalar rejalashtiruvchisi)

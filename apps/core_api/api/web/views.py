@@ -4,6 +4,12 @@ Handles web interface API endpoints
 """
 from django.shortcuts import render
 from django.conf import settings
+from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
+import hashlib
+import json
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -54,6 +60,7 @@ def index_view(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@cache_page(300)  # 5 minutes cache
 def search_documents(request):
     """API endpoint for searching documents with pagination"""
     query = request.GET.get('q', '')
@@ -87,11 +94,22 @@ def search_documents(request):
                 offset = (page - 1) * page_size
                 paginated_hits = search_results.hits[offset:offset + page_size]
                 
+                # Optimized database query - bulk fetch with select_related
+                product_ids = [hit.meta.id for hit in paginated_hits]
+                products_dict = {
+                    p.id: p for p in Product.objects.filter(
+                        id__in=product_ids
+                    ).select_related('document').only(
+                        'id', 'title', 'view_count', 'download_count', 
+                        'file_size', 'created_at', 'document__id', 'document__telegram_file_id'
+                    )
+                }
+                
                 # Serialize the results from Elasticsearch
                 results_data = []
                 for hit in paginated_hits:
-                    try:
-                        product = Product.objects.get(id=hit.meta.id)
+                    product = products_dict.get(hit.meta.id)
+                    if product:
                         results_data.append({
                             'id': product.id,
                             'title': product.title,
@@ -103,8 +121,6 @@ def search_documents(request):
                             'telegram_file_id': product.document.telegram_file_id,
                             'score': hit.meta.score
                         })
-                    except Product.DoesNotExist:
-                        continue
                 
                 # Calculate pagination info
                 total_pages = (total_count + page_size - 1) // page_size
@@ -149,9 +165,12 @@ def search_documents(request):
         # Get total count
         total_count = products_query.count()
         
-        # Calculate pagination
+        # Calculate pagination with optimized query
         offset = (page - 1) * page_size
-        products = products_query[offset:offset + page_size]
+        products = products_query.only(
+            'id', 'title', 'view_count', 'download_count', 
+            'file_size', 'created_at', 'document__id', 'document__telegram_file_id'
+        )[offset:offset + page_size]
         
         results_data = []
         for product in products:
