@@ -115,7 +115,9 @@
                     poster="{% static 'image_main.png' %}"
                     preload="metadata"
                     loading="lazy"
-                    data-src="{% static 'video_main.mp4' %}">
+                    data-src="{% static 'video_main.mp4' %}"
+                    cache-control="max-age=31536000"
+                    cache="force-cache">
                     <source data-src="{% static 'video_main.mp4' %}" type="video/mp4">
                     <!-- Fallback image -->
                     <img src="{% static 'image_main.png' %}" alt="FayltopAi" class="w-full h-full object-cover">
@@ -790,6 +792,9 @@
                         const videoElement = entry.target;
                         const dataSrc = videoElement.dataset.src;
                         if (dataSrc && !videoElement.src) {
+                            // Set cache control for permanent caching
+                            videoElement.setAttribute('cache-control', 'max-age=31536000');
+                            videoElement.setAttribute('cache', 'force-cache');
                             videoElement.src = dataSrc;
                             videoElement.load();
                             

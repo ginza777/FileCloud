@@ -108,6 +108,9 @@ MIDDLEWARE = [
     # Static files serving middleware
     'whitenoise.middleware.WhiteNoiseMiddleware',
     
+    # Custom video cache middleware
+    'core.middleware.VideoCacheMiddleware',
+    
     # CORS middleware - Cross-Origin Resource Sharing
     'corsheaders.middleware.CorsMiddleware',
     
@@ -249,6 +252,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
+
+# WhiteNoise Cache Configuration for Video Files
+WHITENOISE_MAX_AGE = 31536000  # 1 year cache for static files
+WHITENOISE_IMMUTABLE_FILE_TEST = lambda path, url: url.endswith('.mp4') or url.endswith('.webm') or url.endswith('.avi')
 
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True
