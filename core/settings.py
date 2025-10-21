@@ -111,6 +111,12 @@ MIDDLEWARE = [
     # Custom video cache middleware
     'core.middleware.VideoCacheMiddleware',
     
+    # API monitoring middleware
+    'core.middleware.APIMonitoringMiddleware',
+    
+    # Cache headers middleware
+    'core.middleware.CacheHeadersMiddleware',
+    
     # CORS middleware - Cross-Origin Resource Sharing
     'corsheaders.middleware.CorsMiddleware',
     

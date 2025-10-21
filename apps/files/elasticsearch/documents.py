@@ -191,8 +191,8 @@ class DocumentIndex(Document):
                 return None
 
         search = cls.search()
-        search = search[0:10000]  # Increased limit for better pagination
-        search = search.timeout('5s')  # Add timeout for better performance
+        search = search[0:1000]  # Reduced limit for better performance
+        search = search.timeout('3s')  # Reduced timeout for faster response
 
         if completed is not None:
             search = search.filter('term', completed=completed)

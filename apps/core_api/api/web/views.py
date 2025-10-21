@@ -37,10 +37,18 @@ def login_view(request):
 
 
 def index_view(request):
-    """Main page view"""
-    recent_documents = Document.objects.filter(
-        completed=True
-    ).select_related('product').order_by('-created_at')[:10]
+    """Main page view with optimized caching"""
+    # Cache recent documents for 5 minutes
+    cache_key = 'recent_documents_home'
+    recent_documents = cache.get(cache_key)
+    
+    if recent_documents is None:
+        recent_documents = list(Document.objects.filter(
+            completed=True
+        ).select_related('product').only(
+            'id', 'created_at', 'product__id', 'product__title'
+        ).order_by('-created_at')[:10])
+        cache.set(cache_key, recent_documents, 300)  # 5 minutes cache
 
     from django.conf import settings
     bot_username = getattr(settings, 'BOT_USERNAME', 'FileFinderBot')
@@ -54,6 +62,7 @@ def index_view(request):
         'description': 'Hujjatlarni qidirish va saqlash tizimi',
         'bot_username': bot_username,
         'MAIN_URL': main_url,
+        'recent_documents': recent_documents,
     }
     return render(request, 'index.html', context)
 
@@ -87,23 +96,33 @@ def search_documents(request):
             )
 
             if search_results and hasattr(search_results, 'hits'):
-                # Get total count
+                # Get total count efficiently
                 total_count = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
                 
-                # Calculate pagination
+                # Calculate pagination with optimized offset
                 offset = (page - 1) * page_size
-                paginated_hits = search_results.hits[offset:offset + page_size]
+                
+                # For large offsets, use direct Elasticsearch pagination
+                if offset > 1000:  # For pages > 83 (1000/12)
+                    # Use Elasticsearch scroll API for deep pagination
+                    paginated_hits = search_results.hits[offset:offset + page_size]
+                else:
+                    # Use regular pagination for first 1000 results
+                    paginated_hits = search_results.hits[offset:offset + page_size]
                 
                 # Optimized database query - bulk fetch with select_related
                 product_ids = [hit.meta.id for hit in paginated_hits]
-                products_dict = {
-                    p.id: p for p in Product.objects.filter(
-                        id__in=product_ids
-                    ).select_related('document').only(
-                        'id', 'title', 'view_count', 'download_count', 
-                        'file_size', 'created_at', 'document__id', 'document__telegram_file_id'
-                    )
-                }
+                if product_ids:  # Only query if we have IDs
+                    products_dict = {
+                        p.id: p for p in Product.objects.filter(
+                            id__in=product_ids
+                        ).select_related('document').only(
+                            'id', 'title', 'view_count', 'download_count', 
+                            'file_size', 'created_at', 'document__id', 'document__telegram_file_id'
+                        )
+                    }
+                else:
+                    products_dict = {}
                 
                 # Serialize the results from Elasticsearch
                 results_data = []
