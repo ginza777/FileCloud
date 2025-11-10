@@ -413,12 +413,11 @@ async def main_text_handler(update, context, user, language):
     Asosiy matnli xabarlarni qabul qiladi va Elasticsearch orqali qidiradi.
     'normal' va 'deep' rejimlarini qo'llab-quvvatlaydi.
     """
-    query_text = update.message.text
+    query_text = update.message.text.strip()
     search_mode = context.user_data.get('search_mode', 'normal')
     context.user_data['last_search_query'] = query_text
     
     logger.info(f"🔍 SEARCH START: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Language: {language}")
-    context.user_data['search_mode'] = search_mode
 
     await SearchQuery.objects.acreate(
         user=user,
@@ -434,7 +433,7 @@ async def main_text_handler(update, context, user, language):
         # Return cached results immediately
         total_results, first_page_doc_ids = cached_results
         if total_results > 0 and first_page_doc_ids:
-            # Use cached document IDs (first page only)
+            # Use cached document IDs
             files_from_db = await sync_to_async(
                 lambda: list(
                     Product.objects.select_related('document')
@@ -446,129 +445,152 @@ async def main_text_handler(update, context, user, language):
                     .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
                 )
             )()
-            files_map = {str(prod.document_id): prod for prod in files_from_db}
-            products_on_page = [files_map[doc_id] for doc_id in first_page_doc_ids if doc_id in files_map]
 
-            paginator = Paginator(range(total_results), PAGE_SIZE)
-            page_obj = paginator.page(1)
+            if not files_from_db:
+                logger.warning(f"🔍 CACHE MISS (Invalid): No valid documents found for cached IDs")
+                cached_results = None
+            else:
+                files_map = {str(prod.document_id): prod for prod in files_from_db}
+                products_on_page = [files_map[doc_id] for doc_id in first_page_doc_ids if doc_id in files_map]
 
-            keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
-            
-            # Enhanced search results message with mode indication
-            search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
-            results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(count=total_results, query=query_text)
-            
-            logger.info(f"🔍 SEARCH SUCCESS: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Results: {total_results} | Language: {language}")
-            
-            await update.message.reply_text(
-                results_message,
-                reply_markup=keyboard
-            )
-            return
-        else:
-            logger.info(f"🔍 SEARCH NO RESULTS: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Language: {language}")
-            await update.message.reply_text(translation.search_no_results[language].format(query=query_text))
-            return
+                paginator = Paginator(range(total_results), PAGE_SIZE)
+                page_obj = paginator.page(1)
 
-    # Optimized ES query - single query with efficient structure
+                keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
+
+                search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
+                results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(count=total_results, query=query_text)
+
+                logger.info(f"🔍 SEARCH SUCCESS (Cache): User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Results: {total_results}")
+
+                await update.message.reply_text(
+                    results_message,
+                    reply_markup=keyboard
+                )
+                return
+
+    # Prepare Elasticsearch query
     s = DocumentIndex.search()
     
     # Build optimized query based on search mode
     if search_mode == 'deep':
-        # Deep search: slug + title + parsed_content - get first page immediately
+        # Deep search with improved multi-word handling
         final_query = Q(
-            'multi_match',
-            query=query_text,
-            fields=['slug^5', 'title^4', 'parsed_content^1'],
-            type='best_fields',
-            fuzziness='AUTO',
-            prefix_length=2,
-            max_expansions=50
-        )
-        
-        s = s.query(final_query).filter(Q('term', completed=True))
-        
-        # Get first page results immediately (don't wait for total count)
-        page_size = PAGE_SIZE
-        page_number = 1
-        start_index = (page_number - 1) * page_size
-        
-        # Execute search with pagination - get first page immediately
-        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
-        first_page_doc_ids = [hit.meta.id for hit in search_results]
-        
-        # Get total count in background (non-blocking)
-        try:
-            total_count_query = await sync_to_async(lambda: s[0:0].execute())()
-            total_results = total_count_query.hits.total.value if hasattr(total_count_query.hits.total, 'value') else len(first_page_doc_ids)
-        except:
-            # If total count fails, use first page count as estimate
-            total_results = len(first_page_doc_ids) * 10  # Estimate
-        
-        # Cache total results for deep search (non-blocking)
-        deep_total_cache_key = get_deep_search_total_cache_key(query_text)
-        cache.set(f"deep_total:{deep_total_cache_key}", total_results, timeout=900)
-        
-        logger.info(f"🔍 DEEP SEARCH FAST: First page: {len(first_page_doc_ids)} results, Total estimate: {total_results}")
-        
-    else:
-        # Normal search: slug + title only - optimized pagination
-        final_query = Q(
-            'multi_match',
-            query=query_text,
-            fields=['slug^4', 'title^3'],
-            type='best_fields',
-            fuzziness='AUTO',
-            prefix_length=2,
-            max_expansions=20
-        )
-        
-        s = s.query(final_query).filter(Q('term', completed=True))
-        
-        # Optimized pagination - get only first page results
-        page_size = PAGE_SIZE
-        page_number = 1
-        start_index = (page_number - 1) * page_size
-        
-        # Execute search with pagination - only get first page
-        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
-        total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
-        first_page_doc_ids = [hit.meta.id for hit in search_results]
+            'bool',
+            should=[
+                # Exact phrase match with high boost
+                Q('match_phrase', title={'query': query_text, 'boost': 10}),
+                Q('match_phrase', parsed_content={'query': query_text, 'boost': 5}),
 
-    # Cache first page results for faster response
-    set_cached_search_results(cache_key, (total_results, first_page_doc_ids))
+                # Multi-match for individual terms
+                Q('multi_match',
+                    query=query_text,
+                    fields=['title^4', 'parsed_content^2', 'slug^3'],
+                    type='best_fields',
+                    operator='or',
+                    minimum_should_match='60%',
+                    fuzziness='AUTO',
+                    prefix_length=2
+                ),
 
-    if total_results > 0 and first_page_doc_ids:
-        # Optimized DB query - single query with proper indexing
-        files_from_db = await sync_to_async(
-            lambda: list(
-                Product.objects.select_related('document')
-                .filter(
-                    document_id__in=first_page_doc_ids,
-                    document__completed=True,
-                    document__telegram_file_id__isnull=False
+                # Cross-field matching
+                Q('multi_match',
+                    query=query_text,
+                    fields=['title^3', 'parsed_content^2'],
+                    type='cross_fields',
+                    operator='and',
+                    minimum_should_match='50%'
                 )
-                .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
-            )
-        )()
-        files_map = {str(prod.document_id): prod for prod in files_from_db}
-        products_on_page = [files_map[doc_id] for doc_id in first_page_doc_ids if doc_id in files_map]
-
-        paginator = Paginator(range(total_results), page_size)
-        page_obj = paginator.page(page_number)
-
-        keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
-        
-        # Enhanced search results message with mode indication
-        search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
-        results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(count=total_results, query=query_text)
-        
-        await update.message.reply_text(
-            results_message,
-            reply_markup=keyboard
+            ],
+            minimum_should_match=1
         )
     else:
-        await update.message.reply_text(translation.search_no_results[language].format(query=query_text))
+        # Normal search - focus on title and exact matches
+        final_query = Q(
+            'bool',
+            should=[
+                # Exact phrase match in title
+                Q('match_phrase', title={'query': query_text, 'boost': 5}),
+
+                # Multi-match for individual terms in title
+                Q('multi_match',
+                    query=query_text,
+                    fields=['title^3', 'slug^2'],
+                    type='best_fields',
+                    operator='or',
+                    minimum_should_match='70%',
+                    fuzziness='AUTO',
+                    prefix_length=2
+                )
+            ],
+            minimum_should_match=1
+        )
+
+    # Apply filter for completed documents
+    s = s.query(final_query).filter(Q('term', completed=True))
+
+    # Get page size and calculate offset
+    page_size = PAGE_SIZE
+    page_number = 1
+    start_index = (page_number - 1) * page_size
+
+    try:
+        # Execute search with pagination
+        search_results = await sync_to_async(lambda: s[start_index:start_index + page_size].execute())()
+        first_page_doc_ids = [hit.meta.id for hit in search_results]
+
+        # Get total count
+        total_results = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(first_page_doc_ids)
+
+        # Cache results
+        set_cached_search_results(cache_key, (total_results, first_page_doc_ids))
+
+        if total_results > 0 and first_page_doc_ids:
+            # Get documents from database
+            files_from_db = await sync_to_async(
+                lambda: list(
+                    Product.objects.select_related('document')
+                    .filter(
+                        document_id__in=first_page_doc_ids,
+                        document__completed=True,
+                        document__telegram_file_id__isnull=False
+                    )
+                    .only('id', 'title', 'view_count', 'download_count', 'document_id', 'document__telegram_file_id')
+                )
+            )()
+
+            # Map documents and create keyboard
+            files_map = {str(prod.document_id): prod for prod in files_from_db}
+            products_on_page = [files_map[doc_id] for doc_id in first_page_doc_ids if doc_id in files_map]
+
+            if products_on_page:
+                paginator = Paginator(range(total_results), page_size)
+                page_obj = paginator.page(1)
+
+                keyboard = build_search_results_keyboard(products_on_page, page_obj, search_mode, language, query_text)
+
+                search_mode_text = "🔍 Chuqurlashtirilgan qidiruv" if search_mode == 'deep' else "🔎 Oddiy qidiruv"
+                results_message = f"{search_mode_text}\n\n" + translation.search_results_found[language].format(
+                    count=total_results,
+                    query=query_text
+                )
+
+                logger.info(f"🔍 SEARCH SUCCESS: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode} | Results: {total_results}")
+
+                await update.message.reply_text(
+                    results_message,
+                    reply_markup=keyboard
+                )
+                return
+
+    except Exception as e:
+        logger.error(f"🔴 SEARCH ERROR: User {user.telegram_id} | Query: '{query_text}' | Error: {str(e)}")
+
+    # If we get here, either no results were found or an error occurred
+    logger.info(f"🔍 SEARCH NO RESULTS: User {user.telegram_id} | Query: '{query_text}' | Mode: {search_mode}")
+    await update.message.reply_text(
+        translation.search_no_results[language].format(query=query_text)
+    )
 
 
 @get_user
