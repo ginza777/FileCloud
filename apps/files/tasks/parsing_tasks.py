@@ -19,7 +19,7 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from ..models import Document, Product, SiteToken, ParseProgress
+from ..models import Document, Product, SiteToken
 from ..utils import get_valid_soff_token
 from .document_processing import process_document_pipeline
 from apps.files.management.commands.parse_soff_documents import create_slug
