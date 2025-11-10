@@ -19,7 +19,7 @@ cookies.txt
 # Baza fayllari
 db.sqlite3
 *.sqlite3
-
+logs
 .mypy_cache/
 .ruff_cache/
 *.DS_Store
