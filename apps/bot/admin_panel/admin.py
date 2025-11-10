@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.files.models import SearchQuery
 from apps.bot.forms import SubscribeChannelForm
-from apps.bot.models import (User, Broadcast, BroadcastRecipient,
+from apps.bot.models import (TelegramUser, Broadcast, BroadcastRecipient,
                               SubscribeChannel, Location)
 from apps.bot.tasks import send_message_to_user_task
 
@@ -34,8 +34,8 @@ class SubscribeChannelAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+@admin.register(TelegramUser)
+class TelegramUserAdmin(admin.ModelAdmin):
     """Admin for Telegram users with performance optimizations"""
     list_display = ('telegram_id', 'username', 'full_name', 'is_admin', 'is_blocked', 'last_active', 'created_at')
     list_filter = ('is_admin', 'is_blocked', 'last_active', 'created_at', 'stock_language', 'selected_language')

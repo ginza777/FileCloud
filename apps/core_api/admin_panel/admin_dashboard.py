@@ -26,10 +26,10 @@ import json
 import logging
 
 from apps.files.models import (
-    Document, Product, DocumentError, ParseProgress, 
+    Document, Product, DocumentError, 
     DocumentImage, SearchQuery
 )
-from apps.bot.models import User, Broadcast, BroadcastRecipient
+from apps.bot.models import TelegramUser, Broadcast, BroadcastRecipient
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ def calculate_main_statistics():
     
     # Mahsulotlar va foydalanuvchilar soni
     total_products = Product.objects.count()
-    total_users = User.objects.count()
+    total_users = TelegramUser.objects.count()
     
     # Jami xatoliklar
     total_errors = DocumentError.objects.count()
@@ -340,20 +340,10 @@ def get_recent_activities():
             'status': 'danger'
         })
     
-    # So'nggi parse progress
-    try:
-        progress = ParseProgress.objects.latest('last_run_at')
-        activities.append({
-            'title': f"Parse jarayoni: {progress.last_page} sahifa",
-            'time': progress.last_run_at.strftime('%H:%M, %d.%m.%Y'),
-            'icon': '⚙️',
-            'status': 'info'
-        })
-    except ParseProgress.DoesNotExist:
-        pass
+    # ParseProgress model o'chirilgan, shuning uchun bu qism o'chirildi
     
     # So'nggi foydalanuvchilar
-    recent_users = User.objects.order_by('-created_at')[:2]
+    recent_users = TelegramUser.objects.order_by('-created_at')[:2]
     for user in recent_users:
         activities.append({
             'title': f"Yangi foydalanuvchi: {user.full_name}",

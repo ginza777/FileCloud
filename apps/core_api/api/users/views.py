@@ -13,11 +13,12 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 
-from apps.bot.models import *
+from apps.bot.models import TelegramUser
 from apps.core_api.serializers import UserSerializer, UserDetailSerializer, UserStatsSerializer
 from apps.bot.permissions import BOT_API_PERMISSION_CLASSES
 
-User = get_user_model()
+# Django's built-in User model for admin panel
+DjangoUser = get_user_model()
 
 __all__ = [
     'UserListCreateView',
@@ -27,8 +28,8 @@ __all__ = [
 
 
 class UserListCreateView(generics.ListCreateAPIView):
-    """List all users or create a new user"""
-    queryset = User.objects.all()
+    """List all Django admin users or create a new user"""
+    queryset = DjangoUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = BOT_API_PERMISSION_CLASSES
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -43,37 +44,37 @@ class UserListCreateView(generics.ListCreateAPIView):
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete a user"""
-    queryset = User.objects.all()
+    """Retrieve, update or delete a Django admin user"""
+    queryset = DjangoUser.objects.all()
     serializer_class = UserDetailSerializer
     permission_classes = BOT_API_PERMISSION_CLASSES
     lookup_field = 'id'
 
     def get_queryset(self):
-        return User.objects.all()
+        return DjangoUser.objects.all()
 
 
 class UserStatsView(APIView):
-    """User statistics and analytics"""
+    """TelegramUser statistics and analytics"""
     permission_classes = [permissions.IsAuthenticated]
 
     @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
-        # Basic statistics
-        total_users = User.objects.count()
-        active_users = User.objects.filter(
+        # Basic statistics for TelegramUser
+        total_users = TelegramUser.objects.count()
+        active_users = TelegramUser.objects.filter(
             last_active__gte=timezone.now() - timedelta(days=1)
         ).count()
-        admin_users = User.objects.filter(is_admin=True).count()
-        blocked_users = User.objects.filter(is_blocked=True).count()
+        admin_users = TelegramUser.objects.filter(is_admin=True).count()
+        blocked_users = TelegramUser.objects.filter(is_blocked=True).count()
 
         # Users by language
-        users_by_language = User.objects.values('selected_language').annotate(
+        users_by_language = TelegramUser.objects.values('selected_language').annotate(
             count=Count('id')
         ).order_by('-count')
 
         # Recent users
-        recent_users = User.objects.order_by('-created_at')[:10]
+        recent_users = TelegramUser.objects.order_by('-created_at')[:10]
 
         data = {
             'total_users': total_users,
@@ -81,7 +82,16 @@ class UserStatsView(APIView):
             'admin_users': admin_users,
             'blocked_users': blocked_users,
             'users_by_language': {item['selected_language']: item['count'] for item in users_by_language},
-            'recent_users': UserSerializer(recent_users, many=True).data,
+            'recent_users': [{
+                'telegram_id': u.telegram_id,
+                'username': u.username,
+                'first_name': u.first_name,
+                'last_name': u.last_name,
+                'full_name': u.full_name,
+                'is_admin': u.is_admin,
+                'is_blocked': u.is_blocked,
+                'created_at': u.created_at.isoformat() if u.created_at else None,
+            } for u in recent_users],
         }
 
         serializer = UserStatsSerializer(data)

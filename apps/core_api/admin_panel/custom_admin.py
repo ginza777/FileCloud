@@ -64,10 +64,9 @@ admin_site.register(Group, GroupAdmin)
 from apps.files.models import *
 from apps.files.admin import *
 from apps.bot.models import *
-from apps.bot.admin import *
+from apps.bot.admin_panel.admin import *
 
 # Register with custom admin site
-admin_site.register(ParseProgress, ParseProgressAdmin)
 admin_site.register(Document, DocumentAdmin)
 admin_site.register(Product, ProductAdmin)
 admin_site.register(SiteToken, SiteTokenAdmin)
@@ -76,7 +75,7 @@ admin_site.register(DocumentImage, DocumentImageAdmin)
 admin_site.register(SearchQuery, SearchQueryAdmin)
 
 admin_site.register(SubscribeChannel, SubscribeChannelAdmin)
-admin_site.register(User, UserAdmin)
+# TelegramUser is registered via apps.bot.admin_panel.admin import
 admin_site.register(Location, LocationAdmin)
 admin_site.register(Broadcast, BroadcastAdmin)
 admin_site.register(BroadcastRecipient)

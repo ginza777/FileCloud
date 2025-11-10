@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from apps.bot.models import User, Broadcast, BroadcastRecipient, SubscribeChannel, Location
-from apps.files.models import SearchQuery, Document, Product, SiteToken, ParseProgress
+from apps.bot.models import TelegramUser, Broadcast, BroadcastRecipient, SubscribeChannel, Location
+from apps.files.models import SearchQuery, Document, Product, SiteToken
 from .models import Feedback
 
 User = get_user_model()
@@ -177,15 +177,7 @@ class SiteTokenSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
-class ParseProgressSerializer(serializers.ModelSerializer):
-    """Serializer for ParseProgress model"""
-    
-    class Meta:
-        model = ParseProgress
-        fields = [
-            'id', 'last_page', 'total_pages_parsed', 'last_run_at', 'created_at'
-        ]
-        read_only_fields = ['id', 'created_at']
+# ParseProgressSerializer o'chirildi - ParseProgress model o'chirilgan
 
 
 class FeedbackSerializer(serializers.ModelSerializer):

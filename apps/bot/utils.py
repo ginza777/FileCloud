@@ -17,7 +17,7 @@ from telegram.error import TelegramError
 import requests
 
 from . import translation
-from .models import User, SubscribeChannel
+from .models import TelegramUser, SubscribeChannel
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -104,9 +104,9 @@ def update_or_create_user(func: Callable):
             return
 
         # Lazy import to avoid circular dependency
-        from .models import User
+        from .models import TelegramUser
         
-        user, _ = await User.objects.aupdate_or_create(
+        user, _ = await TelegramUser.objects.aupdate_or_create(
             telegram_id=user_data.id,
             defaults={
                 "first_name": user_data.first_name or "",
@@ -144,9 +144,9 @@ def get_user(func: Callable):
             return
 
         # Lazy import to avoid circular dependency
-        from .models import User
+        from .models import TelegramUser
         
-        user = await User.objects.filter(telegram_id=user_data.id).afirst()
+        user = await TelegramUser.objects.filter(telegram_id=user_data.id).afirst()
         if not user:
             # Show proper start-required message in user's language if available
             lang = getattr(user_data, 'language_code', 'en') or 'en'
@@ -181,9 +181,9 @@ def admin_only(func: Callable):
             return
 
         # Lazy import to avoid circular dependency
-        from .models import User
+        from .models import TelegramUser
         
-        user = await User.objects.filter(telegram_id=user_data.id).afirst()
+        user = await TelegramUser.objects.filter(telegram_id=user_data.id).afirst()
         if not user or not user.is_admin:
             if update.message:
                 await update.message.reply_text("❌ Bu buyruq faqat adminlar uchun!")
@@ -255,8 +255,8 @@ async def get_user_statistics(bot_username: str) -> dict:
         stats = await get_user_statistics("MyBot")
         print(f"Jami: {stats['total']}, Faol: {stats['active_24h']}")
     """
-    total = await User.objects.acount()
-    active_24 = await User.objects.filter(last_active__gte=now() - timedelta(hours=24)).acount()
+    total = await TelegramUser.objects.acount()
+    active_24 = await TelegramUser.objects.filter(last_active__gte=now() - timedelta(hours=24)).acount()
     return {"total": total, "active_24h": active_24}
 
 
@@ -333,7 +333,7 @@ def generate_csv_from_users(users_data) -> io.BytesIO:
         io.BytesIO: CSV ma'lumotlari bilan to'ldirilgan BytesIO obyekti
     
     Ishlatish:
-        users = User.objects.values()
+        users = TelegramUser.objects.values()
         csv_file = generate_csv_from_users(users)
         # csv_file ni Telegram orqali yuborish mumkin
     """

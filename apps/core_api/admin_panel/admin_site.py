@@ -17,8 +17,8 @@ from django.utils import timezone
 from datetime import timedelta
 import json
 
-from apps.files.models import Document, Product, DocumentError, ParseProgress
-from apps.bot.models import User as BotUser, Broadcast
+from apps.files.models import Document, Product, DocumentError
+from apps.bot.models import TelegramUser as BotUser, Broadcast
 
 
 class FileFinderAdminSite(admin.AdminSite):
@@ -155,7 +155,7 @@ class FileFinderAdminSite(admin.AdminSite):
             },
             {
                 'title': '👥 Foydalanuvchilar',
-                'url': reverse('admin:bot_user_changelist'),
+                'url': reverse('admin:bot_telegramuser_changelist'),
                 'description': 'Bot foydalanuvchilari',
                 'color': '#f093fb'
             },

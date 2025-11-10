@@ -25,7 +25,7 @@ JAZZMIN_SETTINGS = {
     "copyright": "FaylTop Team",
 
     # Search models
-    "search_model": ["auth.User", "files.Document", "files.Product", "bot.User"],
+    "search_model": ["auth.User", "files.Document", "files.Product", "bot.TelegramUser"],
 
     # User avatar
     "user_avatar": None,
@@ -62,7 +62,7 @@ JAZZMIN_SETTINGS = {
         "files.document",
         "files.product",
         "bot",
-        "bot.user",
+        "bot.telegramuser",
         "core_api",
         "django_celery_results",
         "django_celery_beat"
@@ -91,7 +91,7 @@ JAZZMIN_SETTINGS = {
 
         # Bot App
         "bot": "fas fa-robot",
-        "bot.User": "fas fa-user-friends",
+        "bot.TelegramUser": "fas fa-user-friends",
         "bot.SubscribeChannel": "fas fa-bell",
         "bot.Location": "fas fa-map-marker-alt",
         "bot.Broadcast": "fas fa-bullhorn",

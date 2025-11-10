@@ -8,7 +8,7 @@ from django.conf import settings
 from telegram import Bot as TelegramBot
 from telegram.error import TelegramError
 
-from .models import Broadcast, BroadcastRecipient, User
+from .models import Broadcast, BroadcastRecipient, TelegramUser
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def start_broadcast_task(broadcast_id):
     broadcast.status = Broadcast.Status.IN_PROGRESS
     broadcast.save()
 
-    users = User.objects.filter(is_blocked=False)
+    users = TelegramUser.objects.filter(is_blocked=False)
     for user in users:
         recipient, _ = BroadcastRecipient.objects.get_or_create(
             broadcast=broadcast, user=user

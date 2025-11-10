@@ -1,356 +1,560 @@
 """
-SOFF.UZ Parser Command
-======================
+Files App Models
+================
 
-Bu komanda SOFF.UZ saytidan ilmiy hujjatlarni pars qiladi.
-Yaroqsiz URL'li va bazada mavjud ID'li (Product) elementlarni SKIP qiladi.
+Bu modul fayllar bilan bog'liq barcha Django modellarini o'z ichiga oladi.
+Hujjatlar, mahsulotlar, xatoliklar va indekslash jarayonlarini boshqaradi.
 
-MUHIM TUZATISHLAR:
-1. Bazada ID bo'yicha mavjud bo'lsa, skip qilish.
-2. Har bir item alohida tranzaksiyada, xatoliklar bir-biriga ta'sir qilmaydi.
-3. KeyError: 'start-page' xatosi tuzatildi: options['start-page'] -> options['start_page']
-4. (YANGI) --start-page mantiqi to'g'rilandi. Endi u 'None' bo'lsa davom etadi.
+Modellar:
+- Document: Hujjat ma'lumotlari
+- Product: Mahsulot ma'lumotlari
+- SiteToken: Sayt tokenlari
+- DocumentError: Hujjat xatoliklari
+- SearchQuery: Qidiruv so'rovlari
+- DocumentImage: Hujjat rasmlari
 """
-
-# apps/files/management/commands/parsing/parse_soff_documents.py
-
-import re
-import time
-import requests
-from django.core.management.base import BaseCommand
-from django.db import transaction, IntegrityError
-# Modellar va utility funksiyalaringizni to'g'ri import qilganingizga ishonch hosil qiling
-from apps.files.models import Document, Product, SiteToken, ParseProgress
-from apps.files.utils import get_valid_soff_token
-
-# ============================ CONFIGURATION ============================
-SOFF_BUILD_ID_HOLDER = "{build_id}"
-BASE_API_URL_TEMPLATE = f"https://soff.uz/_next/data/{SOFF_BUILD_ID_HOLDER}/scientific-resources/all.json"
-
-# =======================================================================
-
-def parse_file_size(file_size_str):
-    """Fayl hajmini string formatdan (masalan, '3.49 MB') baytga o'giradi."""
-    if not file_size_str:
-        return 0
-    match = re.match(r'(\d+\.?\d*)\s*(MB|GB|KB)', file_size_str, re.IGNORECASE)
-    if not match:
-        return 0
-    size, unit = float(match.group(1)), match.group(2).upper()
-    if unit == 'GB':
-        return size * 1024 * 1024 * 1024
-    elif unit == 'MB':
-        return size * 1024 * 1024
-    elif unit == 'KB':
-        return size * 1024
-    return 0
-
-def extract_file_url(poster_url):
-    """Poster URL'dan asosiy fayl URL'ini ajratib oladi."""
-    if not poster_url:
-        return None
-    match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)
-    if match:
-        file_id = match.group(1)
-        file_ext_match = re.search(
-            r'\.(pdf|docx|doc|pptx|ppt|xlsx|xls|txt|rtf|PPT|DOC|DOCX|PPTX|PDF|XLS|XLSX|odt|ods|odp)(?:_page|$)',
-            poster_url,
-            re.IGNORECASE
-        )
-        if file_ext_match:
-            file_extension = file_ext_match.group(1)
-            return f"https://d2co7bxjtnp5o.cloudfront.net/media/documents/{file_id}.{file_extension}"
-    return None
-
-def create_slug(title):
-    """Sarlavhadan unique slug yaratadi (URL uchun)."""
-    from apps.files.models import Product  # Import here to avoid circular import
-    translit_map = {
-        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
-        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-        'ф': 'f', 'х': 'x', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-        'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-        'ў': 'o', 'қ': 'q', 'ғ': 'g', 'ҳ': 'h', 'ў': 'o'
-    }
-
-    slug = title.lower()
-    for cyr, lat in translit_map.items():
-        slug = slug.replace(cyr, lat)
-
-    slug = re.sub(r'[^a-z0-9\s-]', '', slug)
-    slug = re.sub(r'\s+', '-', slug)
-    slug = re.sub(r'-+', '-', slug)
-    slug = slug.strip('-')
-    base_slug = slug
-    counter = 1
-    while Product.objects.filter(slug=slug).exists():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-    return slug.strip('-')
+import uuid
+from datetime import timedelta
+from django.db import models
+from django.utils import timezone
 
 
-class Command(BaseCommand):
+def upload_to(instance, filename):
     """
-    SOFF.UZ saytidan ilmiy hujjatlarni pars qilish komandasi.
+    Fayllar uchun yuklash yo'lini yaratadi.
+    
+    Args:
+        instance: Model obyekti (Document yoki DocumentImage)
+        filename (str): Fayl nomi
+    
+    Returns:
+        str: Fayl saqlanish yo'li (documents/{instance.id}/{filename})
+    
+    Misol:
+        upload_to(document, "file.pdf") -> "documents/uuid-123/file.pdf"
+    """
+    return f'documents/{instance.id}/{filename}'
+
+
+# ParseProgress model o'chirildi - endi start_page va end_page to'g'ri ishlaydi
+
+
+class Document(models.Model):
+    """
+    Hujjat ma'lumotlarini saqlash uchun asosiy model.
+    
+    Bu model:
+    - Hujjat faylini saqlaydi
+    - Parse jarayonini kuzatadi
+    - Telegram yuborish holatini boshqaradi
+    - Indekslash jarayonini kuzatadi
+    - Pipeline holatini boshqaradi
+    
+    Maydonlar:
+    - parse_file_url: Hujjat fayl havolasi
+    - download_status: Yuklab olish holati
+    - parse_status: Parse qilish holati
+    - index_status: Indekslash holati
+    - telegram_status: Telegram holati
+    - delete_status: O'chirish holati
+    - completed: Barchasi tugatildimi
+    - telegram_file_id: Telegram fayl ID'si
+    - pipeline_running: Pipeline ishlayotganmi
     """
 
-    help = "SOFF.UZ saytidan ilmiy hujjatlarni pars qiladi"
+    STATUS_CHOICES = [
+        ('pending', 'Kutilmoqda'),
+        ('processing', 'Jarayonda'),
+        ('completed', 'Tugatildi'),
+        ('failed', 'Xatolik'),
+        ('skipped', 'O`tkazib yuborildi'),
+    ]
 
-    def add_arguments(self, parser):
-        # <<< O'ZGARISH: `default=1` ni `default=None` ga o'zgartirdik
-        parser.add_argument(
-            '--start-page',
-            type=int,
-            default=None,
-            help='Boshlanish sahifasi (agar berilmasa, oxirgi to`xtagan joydan davom etadi)'
-        )
-        parser.add_argument(
-            '--end-page',
-            type=int,
-            default=None,
-            help='Tugash sahifasi (agar berilmasa, barcha sahifalar)'
-        )
-        parser.add_argument(
-            '--limit',
-            type=int,
-            default=None,
-            help='Maksimal hujjatlar soni (test uchun)'
-        )
-        parser.add_argument(
-            '--delay',
-            type=float,
-            default=1.0,
-            help='Sahifalar orasidagi kutish vaqti sekundlarda (default: 1.0)'
-        )
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        db_index=True,
+        help_text="Hujjatning noyub identifikatori"
+    )
 
-    def handle(self, *args, **options):
+    parse_file_url = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="File URL",
+        help_text="Hujjat faylining to'g'ridan-to'g'ri havolasi"
+    )
+
+    # Status fields - Jarayon holatlari
+    download_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Yuklab olish holati",
+        db_index=True,
+        help_text="Hujjat yuklab olish jarayoni holati"
+    )
+    parse_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Parse qilish holati",
+        db_index=True,
+        help_text="Hujjat parse qilish jarayoni holati"
+    )
+    index_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Indekslash holati",
+        db_index=True,
+        help_text="Hujjat indekslash jarayoni holati"
+    )
+    telegram_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Telegram holati",
+        db_index=True,
+        help_text="Telegram'ga yuborish jarayoni holati"
+    )
+    delete_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="O'chirish holati",
+        db_index=True,
+        help_text="Hujjat o'chirish jarayoni holati"
+    )
+
+    completed = models.BooleanField(
+        default=False,
+        verbose_name="Barchasi tugatildimi?",
+        db_index=True,
+        help_text="Hujjat barcha jarayonlardan o'tganmi"
+    )
+
+    telegram_file_id = models.CharField(
+        blank=True,
+        null=True,
+        verbose_name="Telegram File ID",
+        help_text="Telegram kanaliga yuborilgandan keyin fayl ID'si",
+        db_index=True,
+        max_length=500
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Created At",
+        db_index=True,
+        help_text="Hujjat yaratilgan vaqt"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Updated At",
+        db_index=True,
+        help_text="Hujjat oxirgi yangilangan vaqt"
+    )
+    json_data = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="JSON Data",
+        help_text="Hujjat bilan bog'liq qo'shimcha JSON ma'lumotlar"
+    )
+    pipeline_running = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi"
+    )
+
+    class Meta:
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
+        ordering = ['-created_at']
+
+
+
+    def __str__(self):
         """
-        Asosiy pars qilish jarayoni.
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Hujjat ID va fayl havolasi
         """
-        # <<< O'ZGARISH: Bu endi 1, 50 yoki None bo'lishi mumkin
-        start_page_arg = options['start_page']
-        end_page = options['end_page']
-        limit = options['limit']
-        delay = options['delay']
+        return f"Document {self.id} ({self.parse_file_url or 'no file'})"
 
-        self.stdout.write(
-            self.style.SUCCESS("=== SOFF.UZ Parser boshlandi ===")
-        )
-
-        # 1. Token olish/yangilash
-        token = get_valid_soff_token()
-        if not token:
-            self.stdout.write(
-                self.style.ERROR("SOFF token olishda xatolik!")
-            )
-            return
-
-        self.stdout.write(f"Token: {token}")
-
-        # 2. Progress obyektini yaratish/yangilash
-        progress, created = ParseProgress.objects.get_or_create(
-            defaults={'last_page': 0, 'total_pages_parsed': 0}
-        )
-
-        # <<< O'ZGARISH: Boshlang'ich sahifani aniqlash mantiqi
-        page_to_start_from = 1 # Standart (agar progress bo'lmasa)
-
-        if created:
-            self.stdout.write("Yangi progress obyekti yaratildi.")
-            if start_page_arg is not None:
-                # Foydalanuvchi birinchi marta ham aniq sahifani ko'rsatishi mumkin
-                page_to_start_from = start_page_arg
-        else:
-            # Progress allaqachon mavjud
-            self.stdout.write(f"Oxirgi to'xtagan sahifa (bazada): {progress.last_page}")
-            if start_page_arg is None:
-                # Foydalanuvchi --start-page ko'rsatmadi, demak davom ettiramiz
-                page_to_start_from = progress.last_page + 1
-                self.stdout.write(self.style.SUCCESS(f"Davom ettirilmoqda... Boshlanish sahifasi: {page_to_start_from}"))
-            else:
-                # Foydalanuvchi aniq sahifa ko'rsatdi (--start-page=1 yoki --start-page=50)
-                page_to_start_from = start_page_arg
-                self.stdout.write(self.style.WARNING(f"Foydalanuvchi ko'rsatgan sahifadan boshlanmoqda: {page_to_start_from}"))
-
-        # 3. Sahifalarni pars qilish
-        page = page_to_start_from # Asosiy tsikl o'zgaruvchisini o'rnatish
-        total_documents = 0
-        total_skipped_url = 0
-        total_skipped_exists = 0
-
-        while True:
-            if end_page and page > end_page:
-                self.stdout.write(self.style.SUCCESS(f"Belgilangan tugash sahifasiga ({end_page}) yetildi. Yakunlandi."))
-                break
-
-            if limit and total_documents >= limit:
-                self.stdout.write(f"Limit yetildi: {limit} hujjat")
-                break
-
-            self.stdout.write(f"\n{'=' * 10} Sahifa {page} pars qilinmoqda... {'=' * 10}")
-
-            try:
-                # API so'rovini yuborish
-                api_url = BASE_API_URL_TEMPLATE.format(build_id=token)
-                params = {'page': page}
-
-                response = requests.get(api_url, params=params, timeout=30)
-                response.raise_for_status()
-
-                data = response.json()
-
-                page_props = data.get('pageProps', {})
-                items = page_props.get('productsData', {}).get('results', [])
-
-                if not items:
-                    self.stdout.write(self.style.SUCCESS(f"Sahifa {page} da ma'lumot topilmadi. Parsing yakunlandi."))
-                    break
-
-                # Hujjatlarni bazaga saqlash
-                page_documents = 0
-                page_skipped_exists = 0
-                page_skipped_url = 0
-
-                # Sahifadagi barcha item ID'larini yig'ib olamiz
-                item_ids = [item.get('id') for item in items if item.get('id') is not None]
-                # Bazada mavjud bo'lgan Product ID'larini bir so'rovda tekshiramiz
-                existing_product_ids = set(Product.objects.filter(id__in=item_ids).values_list('id', flat=True))
+    def check_and_set_completed(self):
+        """
+        Agar barcha status maydonlari 'completed' bo'lsa, completed=True ga o'zgartiring va saqlang.
+        """
+        if (
+                self.download_status == 'completed' and
+                self.parse_status == 'completed' and
+                self.index_status == 'completed' and
+                self.telegram_status == 'completed' and
+                self.delete_status == 'completed'
+        ):
+            if not self.completed:
+                self.completed = True
+                self.save(update_fields=['completed'])
 
 
-                # Har bir elementni alohida tranzaksiyada qayta ishlash
-                for item in items:
-                    if limit and total_documents >= limit:
-                        break
+class Product(models.Model):
+    """
+    Raqamli mahsulotlar uchun model.
+    
+    Bu model:
+    - Hujjatdan parse qilingan ma'lumotlarni saqlaydi
+    - Mahsulot statistikalarini kuzatadi
+    - Hujjat bilan bir-biriga bog'laydi
+    - Ko'rish va yuklab olish sonlarini hisoblaydi
+    
+    Maydonlar:
+    - id: Mahsulot ID'si
+    - title: Mahsulot sarlavhasi
+    - parsed_content: Parse qilingan kontent
+    - slug: URL slug
+    - document: Bog'langan hujjat
+    - view_count: Ko'rishlar soni
+    - download_count: Yuklab olishlar soni
+    - file_size: Fayl hajmi
+    """
+    id = models.AutoField(
+        primary_key=True,
+        verbose_name="Product ID",
+        help_text="Mahsulotning noyub identifikatori"
+    )
+    title = models.TextField(
+        verbose_name="Title",
+        db_index=True,
+        help_text="Mahsulot sarlavhasi"
+    )
+    parsed_content = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Parsed Content",
+        help_text="Hujjatdan parse qilingan matn kontenti"
+    )
+    slug = models.TextField(
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="Slug",
+        db_index=True,
+        help_text="URL uchun slug (masalan: 'matematika-darsligi')"
+    )
+    document = models.OneToOneField(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='product',
+        verbose_name="Document",
+        help_text="Bog'langan hujjat"
+    )
+    view_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="View Count",
+        db_index=True,
+        help_text="Mahsulotni ko'rishlar soni"
+    )
+    download_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Download Count",
+        db_index=True,
+        help_text="Mahsulotni yuklab olishlar soni"
+    )
+    file_size = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="File Size (bytes)",
+        help_text="Fayl hajmi baytlarda"
+    )
+    blocked = models.BooleanField(
+        default=False,
+        verbose_name="Blocked",
+        db_index=True,
+        help_text="Mahsulot bloklangan (Access Denied xatolari uchun)"
+    )
+    blocked_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Blocked Reason",
+        help_text="Bloklanish sababi"
+    )
+    blocked_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Blocked At",
+        help_text="Bloklangan vaqt"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Created At",
+        db_index=True,
+        help_text="Mahsulot yaratilgan vaqt"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Updated At",
+        help_text="Mahsulot oxirgi yangilangan vaqt"
+    )
 
-                    item_id = item.get('id')
+    class Meta:
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
+        ordering = ['-created_at']
 
-                    # 1. ID mavjudligini tekshirish va skip qilish
-                    if item_id is None:
-                        continue
-
-                    if item_id in existing_product_ids:
-                        # self.stdout.write(f"    ℹ️ Hujjat ({item_id}) ID bazada mavjud. Skip qilindi.")
-                        page_skipped_exists += 1
-                        continue # Keyingi itemga o'tish
-
-                    # 2. Yaroqsiz URL ni tekshirish va skip qilish
-                    file_url = extract_file_url(item.get("poster_url"))
-
-                    if not file_url:
-                        # self.stdout.write(
-                        #     self.style.WARNING(f"    ⚠️ Hujjat ({item_id}) uchun yaroqsiz URL. Skip qilindi.")
-                        # )
-                        page_skipped_url += 1
-                        continue
-
-                    try:
-                        # 3. Yaratish (Document va Product)
-                        with transaction.atomic():
-
-                            document, doc_created = Document.objects.get_or_create(
-                                parse_file_url=file_url,
-                                defaults={
-                                    'download_status': 'pending',
-                                    'parse_status': 'pending',
-                                    'index_status': 'pending',
-                                    'telegram_status': 'pending',
-                                    'delete_status': 'pending',
-                                    'pipeline_running': False,
-                                    'completed': False,
-                                    'json_data': item
-                                }
-                            )
-
-                            if doc_created:
-                                title = item['title']
-                                slug = create_slug(title)
-
-                                Product.objects.create(
-                                    id=item_id, # API ID Product ID sifatida
-                                    document=document,
-                                    title=title,
-                                    slug=slug,
-                                    parsed_content=item.get('description', ''),
-                                    file_size=parse_file_size(item.get('document', {}).get('file_size', '')),
-                                    view_count=0,
-                                    download_count=0
-                                )
-
-                                page_documents += 1
-                                total_documents += 1
-                                self.stdout.write(f"    ➕ Yangi hujjat qo'shildi: {title} (ID: {item_id})")
-                            else:
-                                # Document allaqachon parse_file_url bo'yicha mavjud
-                                # self.stdout.write(f"    ℹ️ Hujjat ({item_id}) Document allaqachon URL bo'yicha mavjud. Skip.")
-                                page_skipped_exists += 1
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Mahsulot sarlavhasi
+        """
+        return self.title
 
 
-                    except IntegrityError as e:
-                        self.stdout.write(
-                            self.style.WARNING(f"    ❌ Hujjat saqlashda IntegrityError (Duplikat): {e}. ID: {item_id}. Skip qilindi.")
-                        )
-                        page_skipped_exists += 1
-                        continue
-                    except Exception as e:
-                        self.stdout.write(
-                            self.style.ERROR(f"    ❌ Hujjat saqlashda kutilmagan xatolik: {e}. ID: {item_id}")
-                        )
-                        continue
+class SiteToken(models.Model):
+    """
+    Tashqi saytlar bilan autentifikatsiya uchun tokenlar.
+    
+    Bu model:
+    - SOFF.UZ va Arxiv.uz saytlari uchun tokenlarni saqlaydi
+    - Autentifikatsiya ma'lumotlarini boshqaradi
+    - Token yangilanishini kuzatadi
+    
+    Maydonlar:
+    - name: Sayt nomi (soff, arxiv)
+    - token: Asosiy token
+    - auth_token: Autentifikatsiya token'i
+    """
+
+    NAME_CHOICES = [
+        ('soff', 'soff'),
+        ('arxiv', 'arxiv'),
+    ]
+
+    name = models.CharField(
+        choices=NAME_CHOICES,
+        unique=True,
+        max_length=100,
+        help_text="Sayt nomi (soff yoki arxiv)"
+    )
+    token = models.CharField(
+        unique=True,
+        max_length=300,
+        help_text="Asosiy autentifikatsiya token'i"
+    )
+    auth_token = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Qo'shimcha autentifikatsiya token'i"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Token yaratilgan vaqt"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Token oxirgi yangilangan vaqt"
+    )
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Sayt nomi
+        """
+        return self.name
 
 
-                # Progress yangilash
-                progress.last_page = page
-                progress.total_pages_parsed += 1
-                progress.save()
+class DocumentError(models.Model):
+    """
+    Hujjat qayta ishlash jarayonida yuz bergan xatoliklarni saqlash uchun model.
+    
+    Bu model:
+    - Har xil turdagi xatoliklarni kuzatadi
+    - Celery urinishlarini hisoblaydi
+    - Xatoliklar tarixini saqlaydi
+    - Debug va monitoring uchun ishlatiladi
+    
+    Maydonlar:
+    - document: Bog'langan hujjat
+    - error_type: Xatolik turi
+    - error_message: Xatolik xabari
+    - celery_attempt: Celery urinish raqami
+    """
 
-                # Jami statistikalarni yangilash
-                total_skipped_exists += page_skipped_exists
-                total_skipped_url += page_skipped_url
+    ERROR_TYPE_CHOICES = [
+        ('download', 'Yuklab olish xatoligi'),
+        ('telegram_send', 'Telegramga yuborish xatoligi'),
+        ('telegram_download', 'Telegramdan yuklab olish xatoligi'),
+        ('parse', 'Parse qilish xatoligi'),
+        ('tika_timeout', 'Tika server timeout xatoligi'),
+        ('tika_connection', 'Tika server ulanish xatoligi'),
+        ('tika_parse', 'Tika parse xatoligi'),
+        ('index', 'Indekslash xatoligi'),
+        ('other', 'Boshqa xatolik'),
+    ]
 
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"\n--- Sahifa {page} Statistikasi ---"
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='errors',
+        verbose_name="Document",
+        db_index=True,
+        help_text="Xatolik yuz bergan hujjat"
+    )
+    error_type = models.CharField(
+        max_length=20,
+        choices=ERROR_TYPE_CHOICES,
+        verbose_name="Xatolik turi",
+        db_index=True,
+        help_text="Xatolikning turi"
+    )
+    error_message = models.TextField(
+        verbose_name="Xatolik xabari",
+        help_text="Xatolikning batafsil tavsifi"
+    )
+    celery_attempt = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Celery urinish raqami",
+        help_text="Bu xatolik qaysi urinishda yuz bergani"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Yaratilgan vaqt",
+        db_index=True,
+        help_text="Xatolik yuz bergan vaqt"
+    )
+
+    class Meta:
+        verbose_name = "Document Error"
+        verbose_name_plural = "Document Errors"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Xatolik turi, hujjat ID va urinish raqami
+        """
+        return f"{self.get_error_type_display()} - {self.document.id} (urinish: {self.celery_attempt})"
+
+
+class SearchQuery(models.Model):
+    """
+    Foydalanuvchilar tomonidan amalga oshirilgan qidiruv so'rovlarini saqlash uchun model.
+    
+    Bu model:
+    - Qidiruv so'rovlarini kuzatadi
+    - Natijalar topilganligini belgilaydi
+    - Chuqur qidiruv holatini saqlaydi
+    - Foydalanuvchi faoliyatini tahlil qiladi
+    
+    Maydonlar:
+    - user: Qidiruv qilgan foydalanuvchi
+    - query_text: Qidiruv matni
+    - found_results: Natijalar topildimi
+    - is_deep_search: Chuqur qidiruvmi
+    """
+    user = models.ForeignKey(
+        'bot.TelegramUser',
+        on_delete=models.CASCADE,
+        related_name='search_queries',
+        db_index=True,
+        help_text="Qidiruv qilgan foydalanuvchi"
+    )
+    query_text = models.CharField(
+        max_length=500,
+        db_index=True,
+        help_text="Qidiruv so'rovi matni"
+    )
+    found_results = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Qidiruv natijalari topildimi"
+    )
+    is_deep_search = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Chuqur qidiruv rejimi ishlatildimi"
                     )
-                )
-                self.stdout.write(f"  - Yangi qo'shilganlar: {page_documents}")
-                self.stdout.write(f"  - O'tkazib yuborildi (ID/URL mavjud): {page_skipped_exists}")
-                self.stdout.write(self.style.ERROR(f"  - O'tkazib yuborildi (Yaroqsiz URL): {page_skipped_url}"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Qidiruv amalga oshirilgan vaqt"
+    )
 
-                # Keyingi sahifaga o'tish
-                page += 1
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Qidiruv matni va foydalanuvchi
+        """
+        return f"'{self.query_text}' by {self.user}"
 
-                # Kutish
-                if delay > 0:
-                    time.sleep(delay)
 
-            except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 404:
-                    self.stdout.write(
-                        self.style.ERROR(f"API so'rovida xatolik: 404 Not Found. Token eskirgan bo'lishi mumkin.")
-                    )
-                    break
-                self.stdout.write(
-                    self.style.ERROR(f"API so'rovida HTTP xatoligi: {e}")
-                )
-                break
-            except requests.RequestException as e:
-                self.stdout.write(
-                    self.style.ERROR(f"API so'rovida tarmoq xatoligi: {e}")
-                )
-                break
-            except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"Kutilmagan xatolik: {e}")
-                )
-                break
+def document_image_upload_to(instance, filename):
+    """
+    Hujjat rasmlari uchun yuklash yo'lini yaratadi.
+    
+    Args:
+        instance: DocumentImage obyekti
+        filename (str): Rasm fayl nomi
+    
+    Returns:
+        str: Rasm saqlanish yo'li (file/{document_id}/{filename})
+    
+    Misol:
+        document_image_upload_to(image, "page1.jpg") -> "file/uuid-123/page1.jpg"
+    """
+    return f"file/{instance.document.id}/{filename}"
 
-        # Yakuniy hisobot
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"\n{'=' * 20} PARSING YAKUNLANDI {'=' * 20}\n"
-                f"Jami yangi hujjatlar: {total_documents}\n"
-                f"Jami o'tkazib yuborilganlar (Mavjud/URL): {total_skipped_exists + total_skipped_url}\n"
-                f"Oxirgi muvaffaqiyatli sahifa: {progress.last_page}\n"
-            )
-        )
+
+class DocumentImage(models.Model):
+    """
+    Hujjat sahifalarining rasmlarini saqlash uchun model.
+    
+    Bu model:
+    - Hujjat sahifalarining rasmlarini saqlaydi
+    - Sahifa raqamini kuzatadi
+    - Hujjat bilan bog'laydi
+    - Rasm fayllarini boshqaradi
+    
+    Maydonlar:
+    - document: Bog'langan hujjat
+    - page_number: Sahifa raqami
+    - image: Rasm fayli
+    - created_at: Yaratilgan vaqt
+    """
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='images',
+        help_text="Rasm tegishli bo'lgan hujjat"
+    )
+    page_number = models.PositiveIntegerField(
+        help_text="Sahifa raqami"
+    )
+    image = models.ImageField(
+        upload_to='images/',
+        help_text="Hujjat sahifasining rasm fayli"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Rasm yaratilgan vaqt"
+    )
+
+    class Meta:
+        unique_together = ('document', 'page_number')
+        ordering = ['page_number']
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Sahifa raqami va hujjat ID'si
+        """
+        return f"Image p{self.page_number} for {self.document_id}"

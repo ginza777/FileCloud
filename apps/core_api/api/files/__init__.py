@@ -12,7 +12,5 @@ __all__ = [
     'ProductDetailView',
     'SiteTokenListCreateView',
     'SiteTokenDetailView',
-    'ParseProgressListCreateView',
-    'ParseProgressDetailView',
     'files_urls'
 ]

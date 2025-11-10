@@ -20,8 +20,8 @@ from datetime import timedelta
 import csv
 import json
 
-from apps.files.models import Document, Product, DocumentError, ParseProgress
-from apps.bot.models import User as BotUser, Broadcast
+from apps.files.models import Document, Product, DocumentError
+from apps.bot.models import TelegramUser as BotUser, Broadcast
 
 
 class StatusFilter(SimpleListFilter):

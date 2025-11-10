@@ -9,6 +9,7 @@ MUHIM: 500 Server Error xatosini tuzatish uchun API so'rov mantig'i yangilandi.
 Endi ma'lumotlar ikki darajali (BASE_URL + SUB_CATEGORY) asosida olinadi.
 """
 
+
 import requests
 import time
 import logging
@@ -18,7 +19,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 # apps.files.models o'rniga model yo'lini to'g'irlang, agar kerak bo'lsa
-from apps.files.models import Document, Product, SiteToken, ParseProgress
+from apps.files.models import Document, Product, SiteToken
 from apps.files.tasks.document_processing import process_document_pipeline
 
 logger = logging.getLogger(__name__)

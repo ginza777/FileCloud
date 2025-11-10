@@ -18,7 +18,5 @@ urlpatterns = [
     path('tokens/', views.SiteTokenListCreateView.as_view(), name='token-list-create'),
     path('tokens/<int:pk>/', views.SiteTokenDetailView.as_view(), name='token-detail'),
     
-    # Parse Progress
-    path('parse-progress/', views.ParseProgressListCreateView.as_view(), name='parse-progress-list-create'),
-    path('parse-progress/<int:pk>/', views.ParseProgressDetailView.as_view(), name='parse-progress-detail'),
+    # Parse Progress o'chirildi - ParseProgress model o'chirilgan
 ]

@@ -6,7 +6,7 @@ Bu modul Telegram bot bilan bog'liq barcha Django modellarini o'z ichiga oladi.
 Har bir model foydalanuvchilar, kanallar, xabarlar va joylashuv ma'lumotlarini saqlaydi.
 
 Modellar:
-- User: Telegram foydalanuvchilari
+- TelegramUser: Telegram foydalanuvchilari
 - SubscribeChannel: Obuna kanallari
 - Location: Foydalanuvchi joylashuvlari
 - Broadcast: Mass xabarlar
@@ -32,7 +32,7 @@ class GetOrNoneManager(models.Manager):
     - Xatoliklar o'rniga None qaytarish uchun ishlatiladi
     
     Ishlatish:
-        user = User.objects.get_or_none(telegram_id=123456)
+        user = TelegramUser.objects.get_or_none(telegram_id=123456)
         if user:
             print(f"Foydalanuvchi topildi: {user.full_name}")
         else:
@@ -210,7 +210,7 @@ class SubscribeChannel(models.Model):
         return check_bot_is_admin_in_channel(self.channel_id, bot_token)
 
 
-class User(models.Model):
+class TelegramUser(models.Model):
     """
     Bot bilan o'zaro ishlaydigan Telegram foydalanuvchisini ifodalaydi.
     
@@ -307,8 +307,8 @@ class User(models.Model):
     )
 
     class Meta:
-        verbose_name = _("User")
-        verbose_name_plural = _("Users")
+        verbose_name = _("Telegram User")
+        verbose_name_plural = _("Telegram Users")
 
     def __str__(self):
         """
@@ -337,7 +337,7 @@ class User(models.Model):
             str: Admin panelidagi foydalanuvchi sahifasi URL'i
         """
         from django.urls import reverse
-        return reverse('admin:bot_user_change', args=[str(self.id)])
+        return reverse('admin:bot_telegramuser_change', args=[str(self.id)])
 
 
 class Location(models.Model):
@@ -356,7 +356,7 @@ class Location(models.Model):
     - created_at: Yaratilgan vaqt
     """
     user = models.ForeignKey(
-        User, 
+        TelegramUser, 
         on_delete=models.CASCADE, 
         related_name="locations",
         help_text="Joylashuv yuborgan foydalanuvchi"
@@ -488,7 +488,7 @@ class BroadcastRecipient(models.Model):
         help_text="Mass xabar"
     )
     user = models.ForeignKey(
-        'User', 
+        'TelegramUser', 
         on_delete=models.CASCADE, 
         related_name="broadcast_messages",
         help_text="Xabar oluvchi foydalanuvchi"

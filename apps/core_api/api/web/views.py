@@ -38,9 +38,14 @@ def login_view(request):
 
 def index_view(request):
     """Main page view with optimized caching"""
-    # Cache recent documents for 5 minutes
+    # Try to get from cache, but handle Redis errors gracefully
     cache_key = 'recent_documents_home'
-    recent_documents = cache.get(cache_key)
+    recent_documents = None
+    try:
+        recent_documents = cache.get(cache_key)
+    except Exception:
+        # If cache fails, just continue without cache
+        pass
     
     if recent_documents is None:
         recent_documents = list(Document.objects.filter(
@@ -48,7 +53,11 @@ def index_view(request):
         ).select_related('product').only(
             'id', 'created_at', 'product__id', 'product__title'
         ).order_by('-created_at')[:10])
-        cache.set(cache_key, recent_documents, 300)  # 5 minutes cache
+        try:
+            cache.set(cache_key, recent_documents, 300)  # 5 minutes cache
+        except Exception:
+            # If cache fails, just continue without cache
+            pass
 
     from django.conf import settings
     bot_username = getattr(settings, 'BOT_USERNAME', 'FileFinderBot')

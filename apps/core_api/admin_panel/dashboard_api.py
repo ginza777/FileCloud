@@ -17,7 +17,7 @@ import os
 import logging
 
 from apps.files.models import Document, Product, DocumentError
-from apps.bot.models import User as BotUser
+from apps.bot.models import TelegramUser as BotUser
 from django_celery_results.models import TaskResult
 from .admin_dashboard import get_cached_statistics, get_cached_chart_data, get_cached_recent_activities, get_cached_system_health
 

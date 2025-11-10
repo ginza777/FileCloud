@@ -1,5 +1,5 @@
 from django.contrib import admin
-from apps.files.models import ParseProgress, Document, Product, SiteToken, DocumentError, DocumentImage
+from apps.files.models import Document, Product, SiteToken, DocumentError, DocumentImage
 
 
 class ProductInline(admin.StackedInline):
@@ -22,21 +22,6 @@ class DocumentImageInline(admin.TabularInline):
     extra = 1
     fields = ('page_number', 'image', 'created_at')
     readonly_fields = ('created_at',)
-
-
-@admin.register(ParseProgress)
-class ParseProgressAdmin(admin.ModelAdmin):
-    """Admin for parsing progress tracking"""
-    list_display = ('id', 'last_page', 'total_pages_parsed', 'last_run_at', 'created_at')
-    ordering = ('-last_run_at',)
-    list_per_page = 50  # Limit items per page for better performance
-    readonly_fields = ('created_at',)
-    
-    def get_queryset(self, request):
-        """Optimize queryset for better performance"""
-        return super().get_queryset(request).only(
-            'id', 'last_page', 'total_pages_parsed', 'last_run_at', 'created_at'
-        )
 
 
 @admin.register(Document)

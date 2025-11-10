@@ -13,8 +13,8 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
 
-from apps.files.models import Document, Product, DocumentError, ParseProgress
-from apps.bot.models import User
+from apps.files.models import Document, Product, DocumentError
+from apps.bot.models import TelegramUser
 
 
 @staff_member_required
@@ -323,7 +323,7 @@ def get_recent_activities():
         pass
     
     # So'nggi foydalanuvchilar
-    recent_users = User.objects.order_by('-created_at')[:2]
+    recent_users = TelegramUser.objects.order_by('-created_at')[:2]
     for user in recent_users:
         activities.append({
             'title': f"Yangi foydalanuvchi: {user.full_name}",

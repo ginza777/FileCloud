@@ -24,7 +24,7 @@ from .keyboard import (
     restart_keyboard,
     send_location_keyboard
 )
-from .models import User, Location, Broadcast
+from .models import TelegramUser, Location, Broadcast
 from .utils import (
     generate_csv_from_users,
     get_user_statistics,
@@ -262,25 +262,25 @@ async def location_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, u
 # --- Asosiy Foydalanuvchi Funksiyalari ---
 
 @get_user
-async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: TelegramUser, language: str):
     """Help handler for bot commands."""
     await update.message.reply_text(translation.help_message[language])
 
 
 @get_user
-async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: TelegramUser, language: str):
     """About handler for bot information."""
     await update.message.reply_text(translation.about_message[language])
 
 
 @get_user
-async def share_bot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def share_bot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, user: TelegramUser, language: str):
     """Share bot handler."""
     await update.message.reply_text(translation.share_bot_text[language])
 
 
 @update_or_create_user
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: TelegramUser, language: str):
     """
     /start buyrug'i uchun. Foydalanuvchini yaratadi yoki oxirgi faolligini yangilaydi.
     Agar file_id parametri bilan kelgan bo'lsa, faylni yuboradi.
@@ -344,7 +344,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, 
 
 
 @get_user
-async def ask_language(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def ask_language(update: Update, context: ContextTypes.DEFAULT_TYPE, user: TelegramUser, language: str):
     """
     Tilni tanlash menyusini yuboradi.
     """
@@ -355,7 +355,7 @@ async def ask_language(update: Update, context: ContextTypes.DEFAULT_TYPE, user:
 
 
 @get_user
-async def language_choice_handle(update: Update, context: ContextTypes.DEFAULT_TYPE, user: User, language: str):
+async def language_choice_handle(update: Update, context: ContextTypes.DEFAULT_TYPE, user: TelegramUser, language: str):
     """
     Callback orqali til tanlovini qayta ishlaydi.
     """

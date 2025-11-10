@@ -318,10 +318,17 @@ CSRF_TRUSTED_ORIGINS = [
     "https://fayltop.cloud",
     "http://localhost:18000",
     "http://127.0.0.1:18000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 CSRF_COOKIE_SECURE = False  # Development uchun False, production da True bo'lishi kerak
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Session Configuration for Safari compatibility
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False  # Development uchun False
+SESSION_COOKIE_HTTPONLY = True
 
 # =============================================================================
 # DJANGO REST FRAMEWORK CONFIGURATION - API sozlamalari

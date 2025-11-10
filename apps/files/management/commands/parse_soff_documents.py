@@ -19,7 +19,7 @@ import requests
 from django.core.management.base import BaseCommand
 from django.db import transaction, IntegrityError
 # Modellar va utility funksiyalaringizni to'g'ri import qilganingizga ishonch hosil qiling
-from apps.files.models import Document, Product, SiteToken, ParseProgress
+from apps.files.models import Document, Product, SiteToken
 from apps.files.utils import get_valid_soff_token
 
 # ============================ CONFIGURATION ============================
@@ -147,18 +147,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Token: {token}")
 
-        # 2. Progress obyektini yaratish/yangilash
-        progress, created = ParseProgress.objects.get_or_create(
-            defaults={'last_page': 0, 'total_pages_parsed': 0}
-        )
-
-        if created:
-            self.stdout.write("Yangi progress obyekti yaratildi")
-        else:
-            # Agar start_page default qiymatda (1) bo'lsa, oxirgi to'xtagan joydan davom ettiramiz
-            if options['start_page'] == 1:
-                start_page = progress.last_page + 1
-            self.stdout.write(f"Mavjud progress: sahifa {progress.last_page}")
+        # 2. Progress obyektini o'chirib tashladik, endi start_page va end_page to'g'ri ishlaydi
 
         # 3. Sahifalarni pars qilish
         page = start_page
@@ -288,10 +277,7 @@ class Command(BaseCommand):
                         continue
 
 
-                # Progress yangilash
-                progress.last_page = page
-                progress.total_pages_parsed += 1
-                progress.save()
+                # Progress o'chirilgan, yangilash kerak emas
 
                 self.stdout.write(
                     self.style.SUCCESS(
@@ -336,6 +322,6 @@ class Command(BaseCommand):
                 f"\n{'=' * 20} PARSING YAKUNLANDI {'=' * 20}\n"
                 f"Jami yangi hujjatlar: {total_documents}\n"
                 f"Jami o'tkazib yuborilganlar (Mavjud/URL): {total_skipped_exists + total_skipped_url}\n"
-                f"Oxirgi muvaffaqiyatli sahifa: {progress.last_page}\n"
+                f"Oxirgi muvaffaqiyatli sahifa: {page - 1}\n"
             )
         )

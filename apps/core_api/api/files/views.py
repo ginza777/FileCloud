@@ -13,8 +13,6 @@ API Endpoint'lar:
 - ProductDetailView: Mahsulot ma'lumotlarini olish/yangilash/o'chirish
 - SiteTokenListCreateView: Sayt tokenlari ro'yxati
 - SiteTokenDetailView: Sayt token ma'lumotlari
-- ParseProgressListCreateView: Parse jarayoni ro'yxati
-- ParseProgressDetailView: Parse jarayoni ma'lumotlari
 
 Xususiyatlar:
 - Caching: 10 daqiqa cache
@@ -34,7 +32,7 @@ from django.views.decorators.vary import vary_on_cookie
 from apps.files.models import *
 from apps.core_api.serializers import (
     DocumentSerializer, ProductSerializer, SiteTokenSerializer, 
-    ParseProgressSerializer, DocumentStatsSerializer
+    DocumentStatsSerializer
 )
 
 __all__ = [
@@ -45,8 +43,6 @@ __all__ = [
     'ProductDetailView',
     'SiteTokenListCreateView',
     'SiteTokenDetailView',
-    'ParseProgressListCreateView',
-    'ParseProgressDetailView'
 ]
 
 
@@ -195,26 +191,7 @@ class SiteTokenDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 
-class ParseProgressListCreateView(generics.ListCreateAPIView):
-    """List all parse progress records or create a new one"""
-    queryset = ParseProgress.objects.all()
-    serializer_class = ParseProgressSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['last_run_at', 'created_at']
-    ordering = ['-last_run_at']
-
-    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
-    @method_decorator(vary_on_cookie)
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-
-class ParseProgressDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete a parse progress record"""
-    queryset = ParseProgress.objects.all()
-    serializer_class = ParseProgressSerializer
-    permission_classes = [permissions.IsAuthenticated]
+# ParseProgress view'lari o'chirildi - ParseProgress model o'chirilgan
 
 
 class DocumentStatsView(APIView):
