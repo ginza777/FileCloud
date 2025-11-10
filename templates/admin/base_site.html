@@ -286,29 +286,7 @@
     {{ block.super }}
     <script src="{% static 'admin/js/custom-admin.js' %}"></script>
     <script>
-        // Load admin statistics
-        document.addEventListener('DOMContentLoaded', function() {
-            loadAdminStats();
-        });
-        
-        function loadAdminStats() {
-            fetch('/admin/api/stats/')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('total-docs').textContent = data.stats.total_documents;
-                        document.getElementById('total-products').textContent = data.stats.total_products;
-                        document.getElementById('total-users').textContent = data.stats.total_users;
-                        document.getElementById('system-health').textContent = 'OK';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading stats:', error);
-                    document.getElementById('system-health').textContent = 'ERROR';
-                });
-        }
-        
-        // Auto refresh stats every 30 seconds
-        setInterval(loadAdminStats, 30000);
+        // Custom admin script is loaded from custom-admin.js
+        // No duplicate code here to avoid conflicts
     </script>
 {% endblock %}

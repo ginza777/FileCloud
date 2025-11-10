@@ -257,18 +257,19 @@ class SiteTokenAdmin(admin.ModelAdmin):
 @admin.register(DocumentImage)
 class DocumentImageAdmin(admin.ModelAdmin):
     """Admin for document image management with performance optimizations"""
-    list_display = ('document', 'page_number', 'created_at')
-    search_fields = ('document__id',)
-    list_filter = ('document',)
+    list_display = ('id', 'document', 'page_number', 'created_at')
+    search_fields = ('document__id', 'page_number')
+    list_filter = ('created_at',)  # Changed from 'document' to avoid performance issues with large document lists
     
     # Performance optimizations
     list_per_page = 50  # Limit items per page for better performance
     list_select_related = ('document',)  # Use select_related for foreign key optimization
     raw_id_fields = ('document',)  # Use raw_id_fields for large foreign key dropdowns
+    readonly_fields = ('created_at',)  # Make created_at readonly
     
     def get_queryset(self, request):
         """Optimize queryset for better performance"""
         queryset = super().get_queryset(request)
         return queryset.select_related('document').only(
-            'document_id', 'page_number', 'created_at'
+            'id', 'document_id', 'page_number', 'created_at'
         )

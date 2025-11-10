@@ -108,9 +108,6 @@ MIDDLEWARE = [
     # Static files serving middleware
     'whitenoise.middleware.WhiteNoiseMiddleware',
     
-    # Custom video cache middleware
-    'core.middleware.VideoCacheMiddleware',
-    
     # API monitoring middleware
     'core.middleware.APIMonitoringMiddleware',
     

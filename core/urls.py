@@ -43,12 +43,13 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('', index_view, name='index'),
-    path('admin/', admin.site.urls),
-    path('admin/dashboard/', admin_dashboard, name='admin_dashboard'),
+    # Admin API endpoints must come before admin.site.urls to avoid conflicts
     path('admin/api/stats/', dashboard_stats_api, name='dashboard_stats_api'),
     path('admin/api/charts/', dashboard_charts_api, name='dashboard_charts_api'),
     path('admin/api/activities/', dashboard_activities_api, name='dashboard_activities_api'),
     path('admin/api/health/', dashboard_health_api, name='dashboard_health_api'),
+    path('admin/dashboard/', admin_dashboard, name='admin_dashboard'),
+    path('admin/', admin.site.urls),
     path('api/', include('apps.core_api.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
