@@ -61,7 +61,7 @@ def get_application(token: str) -> Application:
             # --- Admin Buyruqlari ---
             CommandHandler("admin", admin_panel),
             CommandHandler("stats", stats),
-            CommandHandler("backup_db", backup_db),
+            # CommandHandler("backup_db", backup_db),
             CommandHandler("export_users", export_users),
             CommandHandler("ask_location", ask_location),  # /ask_location BUYRUG'I QO'SHILDI
 

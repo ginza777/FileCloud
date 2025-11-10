@@ -1,11 +1,8 @@
-"""
-Core API Admin Configuration
-=============================
-
-Bu modul core_api app uchun admin konfiguratsiyalarini import qiladi.
-"""
-
 from django.contrib import admin
+from apps.core_api.models import Feedback
 
-# Admin panel konfiguratsiyalarini import qilish
-from apps.core_api.admin_panel.admin import *  # noqa: F401,F403
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'message', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__username', 'message')

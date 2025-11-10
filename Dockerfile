@@ -32,8 +32,6 @@ RUN mkdir -p /app/media /app/media/downloads /app/staticfiles /app/logs /app/bac
 # Copy project files
 COPY . .
 
-# Make test runner script executable
-RUN chmod +x /app/run_tests.sh
 
 
 # Expose port

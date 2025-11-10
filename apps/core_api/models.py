@@ -1,14 +1,16 @@
 from django.db import models
-
+from django.contrib.auth.models import User
+from django.utils import timezone
 
 class Feedback(models.Model):
-    full_name = models.CharField(max_length=150)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedback', null=True, blank=True)
     message = models.TextField()
-    contact = models.CharField(max_length=150, blank=True, default='')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
+        verbose_name = 'Feedback'
+        verbose_name_plural = 'Feedback'
         ordering = ['-created_at']
 
-    def __str__(self) -> str:
-        return f"{self.full_name} • {self.created_at:%Y-%m-%d %H:%M}"
+    def __str__(self):
+        return f"Feedback from {self.user.username}"

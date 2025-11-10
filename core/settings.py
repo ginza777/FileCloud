@@ -101,6 +101,9 @@ INSTALLED_APPS = [
     'django_celery_beat',    # Celery periodic tasks
 ]
 
+# Admin site configuration
+ADMIN_SITE = 'core.admin_config.CustomAdminSite'
+
 MIDDLEWARE = [
     # Xavfsizlik middleware - HTTPS, XSS protection
     'django.middleware.security.SecurityMiddleware',
@@ -276,16 +279,18 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://redis:6379/0',
-        'TIMEOUT': 1800,  # 30 daqiqa (1800 seconds) - optimized for search
+        'LOCATION': os.getenv('REDIS_URL', 'redis://redis:6379/0'),
+        'TIMEOUT': 1800,  # 30 minutes
         'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 100,  # Increased connections
-                'retry_on_timeout': True,
-            },
-            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-            'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+            'db': '0',
+            'parser_class': 'redis.connection.DefaultParser',
+            'pool_class': 'redis.ConnectionPool',
+            'retry_on_timeout': True,
+            'socket_connect_timeout': 5,
+            'socket_timeout': 5,
+            'retry_on_error': [TimeoutError],
+            'max_connections': 100,
+            'health_check_interval': 30
         }
     }
 }

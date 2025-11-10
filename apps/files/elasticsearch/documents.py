@@ -2,6 +2,7 @@ from elasticsearch_dsl import Document, Text, Keyword, Boolean, Integer
 from elasticsearch_dsl.connections import connections
 from django.conf import settings
 from elasticsearch.exceptions import ConnectionError
+from elasticsearch import Elasticsearch
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,20 +10,29 @@ logger = logging.getLogger(__name__)
 def configure_elasticsearch():
     """Configure Elasticsearch connection with fallback options"""
     urls = [
-        settings.ES_URL,  # Try main URL first
+        settings.ES_URL if hasattr(settings, 'ES_URL') else None,  # Try main URL first
         'http://es01:9200',  # Try Docker service name
         'http://localhost:9200',  # Try localhost
     ]
 
-    for url in urls:
+    for url in [u for u in urls if u]:  # Filter out None values
         try:
-            connections.create_connection(
-                hosts=[url],
+            # Create Elasticsearch client with proper configuration
+            client = Elasticsearch(
+                [url],
+                retry_on_timeout=True,
+                max_retries=3,
                 timeout=20
             )
-            logger.info(f"Successfully connected to Elasticsearch at {url}")
-            return True
-        except ConnectionError as e:
+
+            # Test the connection
+            if client.ping():
+                # Register the client with elasticsearch_dsl
+                connections.add_connection('default', client)
+                logger.info(f"Successfully connected to Elasticsearch at {url}")
+                return True
+
+        except Exception as e:
             logger.warning(f"Failed to connect to Elasticsearch at {url}: {e}")
             continue
 

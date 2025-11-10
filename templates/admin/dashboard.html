@@ -567,40 +567,29 @@
 </button>
 
 <script>
-// Dashboard refresh function
-function refreshDashboard() {
-    const refreshBtn = document.querySelector('.refresh-btn');
-    const icon = refreshBtn.querySelector('i');
-    
-    // Add loading animation
-    icon.className = 'fas fa-spinner fa-spin';
-    
-    // Fetch updated data
-    Promise.all([
-        fetch('/admin/api/stats/'),
-        fetch('/admin/api/activities/'),
-        fetch('/admin/api/health/')
-    ])
-    .then(responses => Promise.all(responses.map(r => r.json())))
-    .then(([statsData, activitiesData, healthData]) => {
-        if (statsData.success) {
-            updateStats(statsData.stats);
+document.addEventListener('DOMContentLoaded', async function() {
+    // Fetch initial data
+    try {
+        const response = await fetch('/admin/api/stats/');
+        const data = await response.json();
+
+        if (data.success) {
+            // Update statistics
+            updateStats(data.stats);
+
+            // Initialize charts with data
+            initializeCharts(data.charts);
+
+            // Update activities
+            updateActivities(data.activities);
+
+            // Update health
+            updateHealth(data.system_health);
         }
-        if (activitiesData.success) {
-            updateActivities(activitiesData.activities);
-        }
-        if (healthData.success) {
-            updateHealth(healthData.health);
-        }
-    })
-    .catch(error => {
-        console.error('Error refreshing dashboard:', error);
-    })
-    .finally(() => {
-        // Remove loading animation
-        icon.className = 'fas fa-sync-alt';
-    });
-}
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+});
 
 // Update statistics
 function updateStats(stats) {
@@ -612,47 +601,17 @@ function updateStats(stats) {
     document.getElementById('total-users').textContent = stats.total_users;
 }
 
-// Update activities
-function updateActivities(activities) {
-    const container = document.getElementById('activities-container');
-    container.innerHTML = '';
-    
-    activities.forEach(activity => {
-        const activityElement = document.createElement('div');
-        activityElement.className = 'activity-item';
-        activityElement.innerHTML = `
-            <div class="activity-icon" style="background-color: ${activity.color};">
-                ${activity.icon}
-            </div>
-            <div class="activity-content">
-                <div class="activity-title">${activity.title}</div>
-                <div class="activity-time">${new Date(activity.time).toLocaleString()}</div>
-            </div>
-            <div class="activity-status status-${activity.status}">
-                ${activity.status}
-            </div>
-        `;
-        container.appendChild(activityElement);
-    });
-}
-
-// Update health
-function updateHealth(health) {
-    // Update health values if needed
-    console.log('Health updated:', health);
-}
-
 // Initialize Charts
-document.addEventListener('DOMContentLoaded', function() {
+function initializeCharts(chartData) {
     // Documents Chart
     const documentsCtx = document.getElementById('documentsChart').getContext('2d');
     new Chart(documentsCtx, {
         type: 'line',
         data: {
-            labels: ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'],
+            labels: chartData.daily_labels,
             datasets: [{
                 label: 'Hujjatlar',
-                data: [12, 19, 3, 5, 2, 3, 8],
+                data: chartData.daily_data,
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
                 borderColor: '#667eea',
                 borderWidth: 3,
@@ -696,10 +655,10 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: ['Tugatilgan', 'Kutilmoqda', 'Xatolik', 'Jarayonda'],
             datasets: [{
                 data: [
-                    {{ stats.completed_documents }},
-                    {{ stats.pending_documents }},
-                    {{ stats.failed_documents }},
-                    {{ stats.total_documents|add:stats.completed_documents|add:stats.pending_documents|add:stats.failed_documents }}
+                    chartData.completed_count,
+                    chartData.pending_count,
+                    chartData.failed_count,
+                    chartData.processing_count
                 ],
                 backgroundColor: [
                     '#2ed573',
@@ -724,9 +683,83 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-});
+}
+
+// Update activities
+function updateActivities(activities) {
+    const container = document.getElementById('activities-container');
+    container.innerHTML = '';
+
+    activities.forEach(activity => {
+        const activityElement = document.createElement('div');
+        activityElement.className = 'activity-item';
+        activityElement.innerHTML = `
+            <div class="activity-icon" style="background-color: ${activity.color};">
+                ${activity.icon}
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">${activity.title}</div>
+                <div class="activity-time">${activity.time}</div>
+            </div>
+            <div class="activity-status status-${activity.status}">
+                ${activity.status}
+            </div>
+        `;
+        container.appendChild(activityElement);
+    });
+}
+
+// Update health
+function updateHealth(health) {
+    if (!health) return;
+
+    // Update each health indicator
+    Object.entries(health).forEach(([key, value]) => {
+        const element = document.querySelector(`.health-value[data-key="${key}"]`);
+        if (element) {
+            element.textContent = value;
+
+            // Update status classes
+            element.classList.remove('warning', 'danger');
+            if (value === 'ERROR' || (typeof value === 'string' && value.includes('%') && parseFloat(value) > 80)) {
+                element.classList.add('danger');
+            } else if (typeof value === 'string' && value.includes('%') && parseFloat(value) > 60) {
+                element.classList.add('warning');
+            }
+        }
+    });
+}
+
+// Dashboard refresh function
+function refreshDashboard() {
+    const refreshBtn = document.querySelector('.refresh-btn');
+    const icon = refreshBtn.querySelector('i');
+
+    // Add loading animation
+    icon.className = 'fas fa-spinner fa-spin';
+
+    // Fetch updated data
+    fetch('/admin/api/stats/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateStats(data.stats);
+                initializeCharts(data.charts);
+                updateActivities(data.activities);
+                updateHealth(data.system_health);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing dashboard:', error);
+        })
+        .finally(() => {
+            // Remove loading animation
+            icon.className = 'fas fa-sync-alt';
+        });
+}
 
 // Auto refresh every 30 seconds
 setInterval(refreshDashboard, 30000);
 </script>
 {% endblock %}
+

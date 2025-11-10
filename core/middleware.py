@@ -6,6 +6,7 @@ import time
 import logging
 from django.utils.deprecation import MiddlewareMixin
 from django.core.cache import cache
+from redis.exceptions import RedisError
 
 logger = logging.getLogger(__name__)
 
@@ -45,31 +46,33 @@ class APIMonitoringMiddleware(MiddlewareMixin):
         return response
     
     def _update_api_stats(self, path, duration, status_code):
-        """Update API statistics in cache"""
+        """Update API statistics in cache with proper error handling"""
         try:
             stats_key = f"api_stats:{path}"
-            stats = cache.get(stats_key, {
+            stats = cache.get(stats_key) or {
                 'count': 0,
                 'total_time': 0,
                 'avg_time': 0,
-                'max_time': 0,
-                'min_time': float('inf'),
-                'error_count': 0
-            })
-            
+                'status_codes': {},
+                'slow_requests': 0
+            }
+
+            # Update stats
             stats['count'] += 1
             stats['total_time'] += duration
             stats['avg_time'] = stats['total_time'] / stats['count']
-            stats['max_time'] = max(stats['max_time'], duration)
-            stats['min_time'] = min(stats['min_time'], duration)
-            
-            if status_code >= 400:
-                stats['error_count'] += 1
-            
-            cache.set(stats_key, stats, 3600)  # Cache for 1 hour
-            
+            stats['status_codes'][str(status_code)] = stats['status_codes'].get(str(status_code), 0) + 1
+
+            if duration > 1.0:
+                stats['slow_requests'] += 1
+
+            # Cache for 1 hour
+            cache.set(stats_key, stats, timeout=3600)
+
+        except (RedisError, ConnectionError) as e:
+            logger.warning(f"Redis cache error in API stats: {str(e)}")
         except Exception as e:
-            logger.error(f"Error updating API stats: {e}")
+            logger.error(f"Unexpected error updating API stats: {str(e)}")
 
 
 class CacheHeadersMiddleware(MiddlewareMixin):

@@ -45,6 +45,7 @@ PAGE_SIZE = 12
 # --- Advanced Search Cache ---
 from functools import lru_cache
 from django.core.cache import cache
+from redis.exceptions import RedisError
 import hashlib
 import json
 
@@ -59,7 +60,7 @@ def get_deep_search_total_cache_key(query_text):
     return hashlib.sha256(cache_string.encode()).hexdigest()
 
 def get_cached_search_results(cache_key):
-    """Get cached search results with compression"""
+    """Get cached search results with proper error handling"""
     try:
         cached_data = cache.get(f"search:{cache_key}")
         if cached_data:
@@ -68,25 +69,35 @@ def get_cached_search_results(cache_key):
         else:
             logger.info(f"❌ CACHE MISS: No cached results for key {cache_key[:8]}...")
             return None
+    except (RedisError, ConnectionError) as e:
+        logger.warning(f"Redis cache get error for key {cache_key[:8]}: {str(e)}")
+        return None
     except Exception as e:
-        logger.warning(f"Cache get error: {e}")
+        logger.warning(f"Unexpected cache get error: {str(e)}")
         return None
 
 def set_cached_search_results(cache_key, results, timeout=900):  # 15 minutes cache
-    """Set cached search results with longer timeout"""
+    """Set cached search results with proper error handling"""
     try:
-        cache.set(f"search:{cache_key}", results, timeout)
-        logger.info(f"💾 CACHE SET: Stored results for key {cache_key[:8]}... (15 min)")
+        success = cache.set(f"search:{cache_key}", results, timeout)
+        if success:
+            logger.info(f"💾 CACHE SET: Stored results for key {cache_key[:8]}... (15 min)")
+        else:
+            logger.warning(f"Failed to set cache for key {cache_key[:8]}")
+    except (RedisError, ConnectionError) as e:
+        logger.warning(f"Redis cache set error for key {cache_key[:8]}: {str(e)}")
     except Exception as e:
-        logger.warning(f"Cache set error: {e}")
+        logger.warning(f"Unexpected cache set error: {str(e)}")
 
 def clear_search_cache():
-    """Clear all search cache"""
+    """Clear all search cache with proper error handling"""
     try:
         cache.clear()
         logger.info("🧹 CACHE CLEARED: All search cache cleared")
+    except (RedisError, ConnectionError) as e:
+        logger.warning(f"Redis cache clear error: {str(e)}")
     except Exception as e:
-        logger.warning(f"Cache clear error: {e}")
+        logger.warning(f"Unexpected cache clear error: {str(e)}")
 
 
 # --- Dashboard Functions ---
