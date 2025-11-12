@@ -51,15 +51,18 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - postgres
-      - es01
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
     networks:
       - filefinder_net
     deploy:
       resources:
         limits:
-          memory: 1.5G
+          memory: 2G
           cpus: '1.5'
         reservations:
           memory: 512M
@@ -168,8 +171,10 @@ services:
     environment:
       - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
     depends_on:
-      - celery
-      - es01
+      celery:
+        condition: service_started
+      es01:
+        condition: service_healthy
     networks:
       - filefinder_net
     restart: unless-stopped
