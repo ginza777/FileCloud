@@ -1,7 +1,6 @@
 # Media (foydalanuvchi yuklagan fayllar)
 /media/
 # statik manbalar (dev rejim)
-/static/
 /staticfiles/
 logs
 logs/django.log
