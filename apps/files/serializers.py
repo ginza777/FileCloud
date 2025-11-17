@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Document, Product, DocumentImage
 
+MAX_PREVIEW_IMAGES = 5
+
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -12,24 +14,48 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = ['id', 'parse_file_url', 'completed', 'product', 'images', 'created_at']
+        fields = [
+            'id',
+            'parse_file_url',
+            'completed',
+            'product',
+            'images',
+            'page_count',
+            'file_size',
+            'created_at'
+        ]
 
     def get_images(self, obj):
-        request = self.context.get('request')
-        images = obj.images.all()[:5]
-        urls = []
-        for di in images:
-            url = di.image.url
-            if request is not None:
-                url = request.build_absolute_uri(url)
-            urls.append({'page': di.page_number, 'url': url})
-        return urls
+        queryset = obj.images.order_by('page_number')[:MAX_PREVIEW_IMAGES]
+        serializer = DocumentImageSerializer(
+            queryset,
+            many=True,
+            context=self.context
+        )
+        return serializer.data
 
 
 class DocumentImageSerializer(serializers.ModelSerializer):
+    small_url = serializers.SerializerMethodField()
+    large_url = serializers.SerializerMethodField()
+
     class Meta:
         model = DocumentImage
-        fields = ['page_number', 'image']
+        fields = ['page_number', 'small_url', 'large_url']
+
+    def _absolute_url(self, request, image_field):
+        if not image_field:
+            return None
+        url = image_field.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_small_url(self, obj):
+        request = self.context.get('request')
+        return self._absolute_url(request, obj.image_small)
+
+    def get_large_url(self, obj):
+        request = self.context.get('request')
+        return self._absolute_url(request, obj.image_large)
 
 class SearchResultSerializer(serializers.Serializer):
     id = serializers.CharField()

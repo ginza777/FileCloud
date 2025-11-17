@@ -19,9 +19,17 @@ class DocumentErrorInline(admin.TabularInline):
 
 class DocumentImageInline(admin.TabularInline):
     model = DocumentImage
-    extra = 1
-    fields = ('page_number', 'image', 'created_at')
-    readonly_fields = ('created_at',)
+    extra = 0
+    show_change_link = True
+    fields = (
+        'page_number',
+        'image_small_preview',
+        'image_large_preview',
+        'image_small',
+        'image_large',
+        'created_at',
+    )
+    readonly_fields = ('image_small_preview', 'image_large_preview', 'created_at')
 
 
 @admin.register(Document)
@@ -242,7 +250,14 @@ class SiteTokenAdmin(admin.ModelAdmin):
 @admin.register(DocumentImage)
 class DocumentImageAdmin(admin.ModelAdmin):
     """Admin for document image management with performance optimizations"""
-    list_display = ('id', 'document', 'page_number', 'created_at')
+    list_display = (
+        'id',
+        'document',
+        'page_number',
+        'image_small_preview',
+        'image_large_preview',
+        'created_at',
+    )
     search_fields = ('document__id', 'page_number')
     list_filter = ('created_at',)  # Changed from 'document' to avoid performance issues with large document lists
     
@@ -250,11 +265,20 @@ class DocumentImageAdmin(admin.ModelAdmin):
     list_per_page = 50  # Limit items per page for better performance
     list_select_related = ('document',)  # Use select_related for foreign key optimization
     raw_id_fields = ('document',)  # Use raw_id_fields for large foreign key dropdowns
-    readonly_fields = ('created_at',)  # Make created_at readonly
+    readonly_fields = ('image_small_preview', 'image_large_preview', 'created_at')  # Make previews readonly
+    fields = (
+        'document',
+        'page_number',
+        'image_small_preview',
+        'image_large_preview',
+        'image_small',
+        'image_large',
+        'created_at',
+    )
     
     def get_queryset(self, request):
         """Optimize queryset for better performance"""
         queryset = super().get_queryset(request)
         return queryset.select_related('document').only(
-            'id', 'document_id', 'page_number', 'created_at'
+            'id', 'document_id', 'page_number', 'image_small', 'image_large', 'created_at'
         )

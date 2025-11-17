@@ -22,6 +22,32 @@
         .gradient-bg { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); }
         .ignite-glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
         .ignite-btn { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); color: white; }
+        .file-card { background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 5px 16px rgba(15,23,42,0.08); transition: transform .2s ease, box-shadow .2s ease; cursor: pointer; display: flex; flex-direction: column; gap: .75rem; }
+        .file-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(15,23,42,0.12); }
+        .preview-thumb { width: 100%; height: 10rem; border-radius: .75rem; overflow: hidden; background: #f1f5f9; }
+        .preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .preview-thumb.placeholder { display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: .85rem; font-weight: 500; }
+        .preview-scroll { scroll-snap-type: x mandatory; }
+        .preview-scroll::-webkit-scrollbar { height: 6px; }
+        .preview-scroll::-webkit-scrollbar-thumb { background: rgba(15,23,42,.2); border-radius: 999px; }
+        .preview-card { scroll-snap-align: start; flex: 0 0 220px; background: #fff; border-radius: 1rem; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 6px 14px rgba(15,23,42,0.06); display: flex; flex-direction: column; }
+        .preview-card-img { position: relative; width: 100%; height: 180px; overflow: hidden; }
+        .preview-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; filter: contrast(1.02); }
+        .preview-card-img .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.35rem;
+            font-weight: 600;
+            color: rgba(248, 250, 252, 0.8);
+            text-shadow: 0 2px 10px rgba(15,23,42,0.35);
+            mix-blend-mode: overlay;
+            pointer-events: none;
+        }
         
         /* Pagination Styles */
         .pagination-button {
@@ -53,6 +79,9 @@
         
         /* Mobile Search Form Optimizations */
         @media (max-width: 640px) {
+            .preview-thumb { height: 8rem; }
+            .preview-card { flex-basis: 180px; }
+            .preview-card-img { height: 150px; }
             #searchInput {
                 padding: 12px 16px;
                 font-size: 16px; /* Prevents zoom on iOS */
@@ -90,7 +119,7 @@
         <div class="container mx-auto px-4 py-3">
             <div class="flex justify-between items-center">
                 <a href="/" class="flex items-center gap-2 text-xl font-bold text-primary">
-                    <img src="{% static 'fayltop_transparent.svg' %}" alt="Faylhub Logo" class="w-9 h-9 sm:w-10 sm:h-10">
+                    <img src="{% static 'fayltop_transparent.svg' %}" alt="Faylhub Logo" class="w-14 h-14 sm:w-16 sm:h-16">
                     <span class="hidden sm:inline">Faylhub.uz</span>
                     <span class="sm:hidden">Faylhub</span>
                 </a>
@@ -206,6 +235,9 @@
                     <span class="text-sm text-gray-500">Ko'rishlar: <span id="previewViews">0</span></span>
                     <span class="text-sm text-gray-500">Yuklab olishlar: <span id="previewDownloads">0</span></span>
                 </div>
+                <div id="previewImages" class="mb-4 text-sm text-gray-400">
+                    Rasmlar yuklanmoqda...
+                </div>
                 <div class="flex flex-col sm:flex-row gap-4">
                     <a id="telegramBtn" href="#" class="flex items-center justify-center gap-2 w-full bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 px-4 rounded-xl transition-colors">
                         <i data-feather="message-circle" class="w-5 h-5"></i>
@@ -266,6 +298,91 @@
         let isDeepMode = false;
         const BOT_USERNAME = "{{ bot_username | safe }}".replace('@', '');
 
+        function formatFileSize(bytes) {
+            if (!bytes) return null;
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let size = bytes;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            return `${size % 1 === 0 ? size : size.toFixed(1)} ${units[unitIndex]}`;
+        }
+
+        function renderFileCard(file) {
+            const safeTitle = (file.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const coverImage = file.preview_image_small || file.preview_image_large;
+            const previewBlock = coverImage
+                ? `<div class="preview-thumb"><img src="${coverImage}" alt="${safeTitle}" loading="lazy" decoding="async"></div>`
+                : `<div class="preview-thumb placeholder">Rasm tayyorlanmoqda</div>`;
+            const meta = [];
+            if (file.page_count) meta.push(`${file.page_count} sahifa`);
+            if (file.file_size) {
+                const formatted = formatFileSize(file.file_size);
+                if (formatted) meta.push(formatted);
+            }
+            const metaText = meta.length ? `<p class="text-xs text-gray-500">${meta.join(' • ')}</p>` : '';
+
+            return `
+                <div data-product-id="${file.id}" class="file-card" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count || 0}, ${file.download_count || 0}, '${file.document_id}')">
+                    ${previewBlock}
+                    <h3 class="text-lg font-semibold line-clamp-2">${file.title || 'Nomlanmagan fayl'}</h3>
+                    ${metaText}
+                </div>
+            `;
+        }
+
+        async function loadDocumentImages(documentId) {
+            const previewImages = document.getElementById('previewImages');
+            if (!previewImages) return;
+            previewImages.innerHTML = '<div class="text-sm text-gray-500">Rasmlar yuklanmoqda...</div>';
+            try {
+                const response = await fetch(`/api/web/${documentId}/images/`);
+                if (!response.ok) throw new Error('Response status ' + response.status);
+                const data = await response.json();
+                if (!data.images || data.images.length === 0) {
+                    previewImages.innerHTML = '<p class="text-sm text-gray-500">Rasm mavjud emas.</p>';
+                    return;
+                }
+
+                const figures = data.images
+                    .slice()
+                    .sort((a, b) => (a.page_number || 0) - (b.page_number || 0))
+                    .map(img => {
+                    const src = img.small_url || img.large_url;
+                    const large = img.large_url || img.small_url || src;
+                    return `
+                        <figure class="preview-card">
+                            <div class="preview-card-img" onclick="window.open('${large}', '_blank')">
+                                <img src="${src}" alt="Sahifa ${img.page_number}" loading="lazy" decoding="async">
+                                <span class="watermark">Faylhub</span>
+                            </div>
+                            <figcaption class="px-3 py-2 text-xs font-medium text-gray-600 border-t border-gray-100 bg-white">#${img.page_number}-sahifa</figcaption>
+                        </figure>
+                    `;
+                }).join('');
+
+                const meta = [];
+                if (data.page_count) meta.push(`${data.page_count} sahifa`);
+                if (data.file_size) {
+                    const formatted = formatFileSize(data.file_size);
+                    if (formatted) meta.push(formatted);
+                }
+                const metaInfo = meta.length ? `<p class="text-xs text-gray-500 mt-2">${meta.join(' • ')}</p>` : '';
+
+                previewImages.innerHTML = `
+                    <div class="preview-scroll flex gap-4 overflow-x-auto pb-3">
+                        ${figures}
+                    </div>
+                    ${metaInfo}
+                `;
+            } catch (error) {
+                console.error('Rasmlar yuklashda xatolik:', error);
+                previewImages.innerHTML = '<p class="text-sm text-red-500">Rasmlar yuklab bo\'lmadi.</p>';
+            }
+        }
+
         async function loadTopFiles() {
             const loading = document.getElementById('loading');
             const topFiles = document.getElementById('topFiles');
@@ -277,16 +394,7 @@
                 if (!response.ok) throw new Error('Top files yuklanmadi');
                 const data = await response.json();
                 const files = data.results || data;
-                topFiles.innerHTML = files.map(file => {
-                    const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    return `
-                    <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
-                        <h3 class="text-lg font-semibold truncate">${file.title}</h3>
-                        <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
-                        <!-- View and download counts hidden on web page -->
-                    </div>
-                    `;
-                }).join('');
+                topFiles.innerHTML = files.map(file => renderFileCard(file)).join('');
                 
                 // Show top files section
                 topFilesSection.classList.remove('hidden');
@@ -433,16 +541,7 @@
             }
 
             console.log('Rendering results:', data.results.length, 'items');
-            searchResults.innerHTML = data.results.map(file => {
-                const safeTitle = file.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                return `
-                <div data-product-id="${file.id}" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count}, ${file.download_count}, '${file.document_id}')">
-                    <h3 class="text-lg font-semibold truncate">${file.title}</h3>
-                    <p class="text-sm text-gray-500 mt-2 line-clamp-2">${file.description || 'Tavsif yo\'q'}</p>
-                    <!-- View and download counts hidden on web page -->
-                </div>
-                `;
-            }).join('');
+            searchResults.innerHTML = data.results.map(file => renderFileCard(file)).join('');
 
             // Generate pagination with page numbers
             const currentPage = data.page;
@@ -524,11 +623,16 @@
             const viewsEl = document.getElementById('previewViews');
             const downloadsEl = document.getElementById('previewDownloads');
             const telegramBtn = document.getElementById('telegramBtn');
+            const previewImages = document.getElementById('previewImages');
 
             titleEl.textContent = title;
             viewsEl.textContent = viewCount;
             downloadsEl.textContent = downloadCount;
             telegramBtn.href = `https://t.me/${BOT_USERNAME}?start=${documentId}`;
+            if (previewImages) {
+                previewImages.innerHTML = '<div class="text-sm text-gray-400">Rasmlar yuklanmoqda...</div>';
+            }
+            loadDocumentImages(documentId);
 
             // Force show modal with multiple methods
             modal.classList.remove('hidden');

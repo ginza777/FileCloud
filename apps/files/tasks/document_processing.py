@@ -105,6 +105,50 @@ def block_product_for_access_denied(document, error_message):
         logger.error(f"[PRODUCT BLOCK FAILED] DocID: {document.id} | Error: {e}")
 
 
+def download_document_file(document, file_path, celery_attempt, logger_prefix="[PIPELINE|DOWNLOAD]"):
+    """
+    Helper to download the original document file with retry-aware logging.
+    """
+    logger.info(f"{logger_prefix} DocID: {document.id} | Manzil: {file_path}")
+    try:
+        document.download_status = 'processing'
+        document.save(update_fields=['download_status'])
+
+        session = make_retry_session()
+
+        if document.parse_file_url and 'arxiv.uz' in document.parse_file_url:
+            phpsessid = get_valid_arxiv_session()
+            if phpsessid:
+                session.cookies.set('PHPSESSID', phpsessid)
+                logger.info(
+                    f"{logger_prefix}_AUTH DocID: {document.id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
+            else:
+                raise Exception("Arxiv.uz PHPSESSID topilmadi yoki eskirgan, yuklab bo'lmaydi.")
+
+        with session.get(document.parse_file_url, stream=True, timeout=180) as response:
+            response.raise_for_status()
+            with open(file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        document.download_status = 'completed'
+        document.save(update_fields=['download_status'])
+        logger.info(f"{logger_prefix}_SUCCESS DocID: {document.id}")
+    except Exception as e:
+        logger.error(f"{logger_prefix}_FAIL DocID: {document.id} | Xato: {e}", exc_info=True)
+        document.download_status = 'failed'
+        document.save(update_fields=['download_status'])
+        log_document_error(document, 'download', e, celery_attempt)
+
+        error_str = str(e).lower()
+        if ('access denied' in error_str or '403' in error_str or
+                'readtimeout' in error_str or 'timeout' in error_str or
+                'connection' in error_str):
+            logger.warning(f"{logger_prefix}_BLOCK DocID: {document.id} | Product ni block qilish...")
+            block_product_for_access_denied(document, e)
+        raise
+
+
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=30, max_retries=5,
              name='apps.files.tasks.process_document_pipeline')
 def process_document_pipeline(self, document_id):
@@ -143,57 +187,13 @@ def process_document_pipeline(self, document_id):
         file_path = os.path.join(downloads_dir, file_name)
 
         # 1. DOWNLOAD
-        if doc.download_status == 'completed':  #
-            logger.info(f"[PIPELINE|DOWNLOAD_SKIP] DocID: {document_id} | Status allaqachon 'completed'.")  #
+        file_exists = file_path and os.path.exists(file_path)
+        if doc.download_status == 'completed' and file_exists:
+            logger.info(f"[PIPELINE|DOWNLOAD_SKIP] DocID: {document_id} | Status allaqachon 'completed'.")
         else:
-            logger.info(f"[PIPELINE|DOWNLOAD] DocID: {document_id} | Manzil: {file_path}")  #
-            try:
-                doc.download_status = 'processing'  #
-                doc.save(update_fields=['download_status'])  #
-
-                # --- YECHIM: AVTORIZATSIYA (AUTH) MANTIG'I ---
-
-                # Standart, qayta urinishli session yaratamiz
-                session = make_retry_session()  #
-
-                # Agar URL arxiv.uz'ga tegishli bo'lsa, cookie qo'shamiz
-                if 'arxiv.uz' in doc.parse_file_url:
-                    phpsessid = get_valid_arxiv_session()
-                    if phpsessid:
-                        session.cookies.set('PHPSESSID', phpsessid)
-                        logger.info(
-                            f"[PIPELINE|DOWNLOAD_AUTH] DocID: {document_id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
-                    else:
-                        # Agar token topilmasa yoki eskirgan bo'lsa, xatolik berib, vazifani to'xtatamiz
-                        raise Exception("Arxiv.uz PHPSESSID topilmadi yoki eskirgan, yuklab bo'lmaydi.")
-
-                # Tayyorlangan session bilan so'rovni yuborish
-                with session.get(doc.parse_file_url, stream=True, timeout=180) as r:  #
-                    r.raise_for_status()  # 403 xatosini shu yerda ushlaydi #
-                    with open(file_path, "wb") as f:  #
-                        for chunk in r.iter_content(chunk_size=8192):  #
-                            f.write(chunk)  #
-
-                # --- YECHIM TUGADI ---
-
-                doc.download_status = 'completed'  #
-                doc.save(update_fields=['download_status'])  #
-                logger.info(f"[PIPELINE|DOWNLOAD_SUCCESS] DocID: {document_id}")  #
-            except Exception as e:
-                logger.error(f"[PIPELINE|DOWNLOAD_FAIL] DocID: {document_id} | Xato: {e}", exc_info=True)  #
-                doc.download_status = 'failed'  #
-                doc.save(update_fields=['download_status'])  #
-                log_document_error(doc, 'download', e, self.request.retries + 1)  #
-
-                # Access Denied va timeout xatolari uchun product ni block qilish
-                error_str = str(e).lower()
-                if ('access denied' in error_str or '403' in error_str or
-                        'readtimeout' in error_str or 'timeout' in error_str or
-                        'connection' in error_str):
-                    logger.warning(f"[PIPELINE|BLOCKING_ERROR] DocID: {document_id} | Product ni block qilish...")
-                    block_product_for_access_denied(doc, e)
-
-                raise  #
+            prefix = "[PIPELINE|DOWNLOAD]" if doc.download_status != 'completed' else "[PIPELINE|DOWNLOAD_REFRESH]"
+            download_document_file(doc, file_path, self.request.retries + 1, prefix)
+            file_exists = os.path.exists(file_path)
 
         # 2. PARSE (TIKA)
         if doc.parse_status == 'completed':
@@ -202,7 +202,10 @@ def process_document_pipeline(self, document_id):
             logger.info(f"[PIPELINE|PARSE] DocID: {document_id}")
             try:
                 if not os.path.exists(file_path):
-                    raise FileNotFoundError(f"Parse qilish uchun fayl topilmadi: {file_path}")
+                    logger.warning(
+                        f"[PIPELINE|PARSE_RE-DOWNLOAD] DocID: {document_id} | Fayl topilmadi, qayta yuklab olinmoqda.")
+                    download_document_file(doc, file_path, self.request.retries + 1, "[PIPELINE|PARSE_RE-DOWNLOAD]")
+
                 doc.parse_status = 'processing'
                 doc.save(update_fields=['parse_status'])
                 parsed = tika_parser.from_file(file_path)
@@ -280,28 +283,7 @@ def process_document_pipeline(self, document_id):
             logger.info(f"[PIPELINE|TELEGRAM] DocID: {document_id}")
             try:
                 if not os.path.exists(file_path):
-                    logger.warning(
-                        f"[PIPELINE|TELEGRAM_RE-DOWNLOAD] DocID: {document_id} | Fayl yo'q, qayta yuklanmoqda.")
-
-                    # Standart, qayta urinishli session yaratamiz
-                    session = make_retry_session()
-
-                    # Agar URL arxiv.uz'ga tegishli bo'lsa, cookie qo'shamiz
-                    if 'arxiv.uz' in doc.parse_file_url:
-                        phpsessid = get_valid_arxiv_session()
-                        if phpsessid:
-                            session.cookies.set('PHPSESSID', phpsessid)
-                            logger.info(
-                                f"[PIPELINE|TELEGRAM_RE-DOWNLOAD_AUTH] DocID: {document_id} | Arxiv.uz uchun PHPSESSID qo'shildi.")
-                        else:
-                            raise Exception("Arxiv.uz PHPSESSID topilmadi yoki eskirgan, yuklab bo'lmaydi.")
-
-                    with session.get(doc.parse_file_url, stream=True, timeout=180) as r:
-                        r.raise_for_status()
-                        with open(file_path, "wb") as f:
-                            for chunk in r.iter_content(chunk_size=8192):
-                                f.write(chunk)
-                    logger.info(f"[PIPELINE|TELEGRAM_RE-DOWNLOAD_SUCCESS] DocID: {document_id}")
+                    download_document_file(doc, file_path, self.request.retries + 1, "[PIPELINE|TELEGRAM_RE-DOWNLOAD]")
 
                 file_size = os.path.getsize(file_path)
                 if file_size > TELEGRAM_MAX_FILE_SIZE_BYTES:

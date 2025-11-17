@@ -42,21 +42,24 @@ class Command(BaseCommand):
         limit = options.get('limit')
         document_id = options.get('document_id')
 
+        base_queryset = Document.objects.filter(
+            completed=True,
+            parse_file_url__isnull=False
+        ).distinct()
+
         if document_id:
-            # Aniq bitta hujjatni qayta ishlash
             try:
                 doc_id_uuid = uuid.UUID(document_id)
-                candidate_docs = Document.objects.filter(id=doc_id_uuid)
-                self.stdout.write(self.style.NOTICE(f"Faqat {document_id} ID li hujjat qidirilmoqda..."))
             except ValueError:
                 self.stdout.write(self.style.ERROR("Noto'g'ri UUID format."))
                 return
+
+            candidate_docs = base_queryset.filter(id=doc_id_uuid)
+            self.stdout.write(self.style.NOTICE(f"Faqat {document_id} ID li hujjat qidirilmoqda..."))
         else:
-            # Rasmlari yo'q va 'completed=True' bo'lgan hujjatlarni qidirish
-            candidate_docs = Document.objects.filter(
-                completed=True,
-                images__isnull=True  # Bog'liq 'DocumentImage' obyektlari yo'q
-            ).order_by('-created_at')  # Eng yangilaridan boshlash
+            candidate_docs = base_queryset.filter(
+                images__isnull=True
+            ).order_by('-created_at')
 
             if limit:
                 candidate_docs = candidate_docs[:limit]

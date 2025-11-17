@@ -13,10 +13,14 @@ Modellar:
 - SearchQuery: Qidiruv so'rovlari
 - DocumentImage: Hujjat rasmlari
 """
+import os
 import uuid
 from datetime import timedelta
+from urllib.parse import urlparse
+
 from django.db import models
 from django.utils import timezone
+from django.utils.html import format_html
 
 
 def upload_to(instance, filename):
@@ -185,6 +189,20 @@ class Document(models.Model):
         """
         return f"Document {self.id} ({self.parse_file_url or 'no file'})"
 
+    @property
+    def file_name(self):
+        """
+        Hujjat URL'idan fayl nomini ajratib qaytaradi.
+
+        Returns:
+            str: Fayl nomi yoki document ID asosida yaratilgan nom
+        """
+        if not self.parse_file_url:
+            return f"{self.id}.dat"
+        parsed = urlparse(self.parse_file_url)
+        name = os.path.basename(parsed.path)
+        return name or f"{self.id}.dat"
+
     def check_and_set_completed(self):
         """
         Agar barcha status maydonlari 'completed' bo'lsa, completed=True ga o'zgartiring va saqlang.
@@ -208,9 +226,21 @@ class DocumentImage(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='images')
     page_number = models.IntegerField(default=1, verbose_name="Sahifa raqami")
 
-    # Kichik va katta rasmlar uchun alohida
-    image_large = models.ImageField(upload_to='document_images/large/', verbose_name="Katta rasm (WebP)")
-    image_small = models.ImageField(upload_to='document_images/small/', verbose_name="Kichik rasm (WebP)")
+    # Katta rasm (preview uchun)
+    image_large = models.ImageField(
+        upload_to='document_images/large/',
+        verbose_name="Katta rasm (WebP)",
+        null=True,
+        blank=True
+    )
+
+    # Kichik rasm (thumbnail uchun)
+    image_small = models.ImageField(
+        upload_to='document_images/small/',
+        verbose_name="Kichik rasm (WebP)",
+        null=True,
+        blank=True
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -218,7 +248,26 @@ class DocumentImage(models.Model):
         verbose_name = "Hujjat Rasmi"
         verbose_name_plural = "Hujjat Rasmlari"
         ordering = ['page_number']
-        unique_together = ('document', 'page_number')  # Bir sahifa uchun faqat bitta yozuv
+        unique_together = ('document', 'page_number')
+
+    def image_small_preview(self):
+        if self.image_small:
+            return format_html(
+                '<img src="{}" style="max-width:120px;height:auto;border-radius:6px;" />',
+                self.image_small.url
+            )
+        return "—"
+
+    def image_large_preview(self):
+        if self.image_large:
+            return format_html(
+                '<img src="{}" style="max-width:160px;height:auto;border-radius:6px;" />',
+                self.image_large.url
+            )
+        return "—"
+
+    image_small_preview.short_description = "Kichik ko'rinish"
+    image_large_preview.short_description = "Katta ko'rinish"
 
 class Product(models.Model):
     """

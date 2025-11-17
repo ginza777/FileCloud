@@ -7,6 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def configure_elasticsearch():
     """Configure Elasticsearch connection with fallback options"""
     urls = [
@@ -39,7 +40,20 @@ def configure_elasticsearch():
     logger.error("Failed to connect to any Elasticsearch instance")
     return False
 
-# Initialize Elasticsearch connection
+
+def ensure_es_connection():
+    """
+    Wrap connections.get_connection to avoid raising KeyError when the default
+    connection is not configured yet.
+    """
+    try:
+        connections.get_connection()
+        return True
+    except Exception:
+        return configure_elasticsearch()
+
+
+# Initialize Elasticsearch connection at import-time (best-effort)
 configure_elasticsearch()
 
 class DocumentIndex(Document):
@@ -77,19 +91,17 @@ class DocumentIndex(Document):
         }
 
     def save(self, **kwargs):
-        if not connections.get_connection():
-            if not configure_elasticsearch():
-                logger.error("Cannot save document: No Elasticsearch connection")
-                return None
+        if not ensure_es_connection():
+            logger.error("Cannot save document: No Elasticsearch connection")
+            return None
         return super().save(**kwargs)
 
     @classmethod
     def init_index(cls):
         """Create the index and mapping if it doesn't exist."""
-        if not connections.get_connection():
-            if not configure_elasticsearch():
-                logger.error("Cannot initialize index: No Elasticsearch connection")
-                return False
+        if not ensure_es_connection():
+            logger.error("Cannot initialize index: No Elasticsearch connection")
+            return False
         try:
             cls._index.create(ignore=400)
             cls._index.refresh()
@@ -109,10 +121,9 @@ class DocumentIndex(Document):
             logger.warning(f"Document {document.id} blocked, skipping Elasticsearch indexing")
             return None
 
-        if not connections.get_connection():
-            if not configure_elasticsearch():
-                logger.error("Cannot index document: No Elasticsearch connection")
-                return None
+        if not ensure_es_connection():
+            logger.error("Cannot index document: No Elasticsearch connection")
+            return None
 
         try:
             doc = cls(
@@ -132,10 +143,9 @@ class DocumentIndex(Document):
     @classmethod
     def bulk_index_documents(cls, documents):
         """Bulk index multiple documents for better performance."""
-        if not connections.get_connection():
-            if not configure_elasticsearch():
-                logger.error("Cannot bulk index documents: No Elasticsearch connection")
-                return 0
+        if not ensure_es_connection():
+            logger.error("Cannot bulk index documents: No Elasticsearch connection")
+            return 0
 
         try:
             from elasticsearch.helpers import bulk
@@ -202,7 +212,7 @@ class DocumentIndex(Document):
 
         search = cls.search()
         search = search[0:1000]  # Reduced limit for better performance
-        search = search.timeout('3s')  # Reduced timeout for faster response
+        search = search.params(timeout='3s')  # Reduced timeout for faster response
 
         if completed is not None:
             search = search.filter('term', completed=completed)

@@ -17,7 +17,9 @@ from rest_framework import status
 from django.db.models import F, Q
 from apps.files.elasticsearch.documents import DocumentIndex
 from apps.files.models import Document, Product, DocumentImage
-from apps.files.serializers import DocumentSerializer, SearchResultSerializer, DocumentImageSerializer
+from apps.files.serializers import DocumentSerializer, DocumentImageSerializer
+
+MAX_PREVIEW_IMAGES = 5
 
 __all__ = [
     'login_view',
@@ -29,6 +31,35 @@ __all__ = [
     'increment_download_count',
     'document_images'
 ]
+
+
+def _build_preview_map(document_ids, request):
+    """
+    Returns {document_id: {'small': url, 'large': url}} for the first page image.
+    """
+    if not document_ids:
+        return {}
+
+    previews = {}
+    queryset = DocumentImage.objects.filter(
+        document_id__in=document_ids
+    ).order_by('document_id', 'page_number')
+
+    for image in queryset:
+        if image.document_id in previews:
+            continue
+        small = image.image_small.url if image.image_small else None
+        large = image.image_large.url if image.image_large else None
+        if request:
+            if small:
+                small = request.build_absolute_uri(small)
+            if large:
+                large = request.build_absolute_uri(large)
+        previews[image.document_id] = {
+            'small': small,
+            'large': large
+        }
+    return previews
 
 
 def login_view(request):
@@ -126,28 +157,40 @@ def search_documents(request):
                         p.id: p for p in Product.objects.filter(
                             id__in=product_ids
                         ).select_related('document').only(
-                            'id', 'title', 'view_count', 'download_count', 
-                            'file_size', 'created_at', 'document__id', 'document__telegram_file_id'
+                            'id', 'title', 'view_count', 'download_count',
+                            'file_size', 'created_at',
+                            'document__id', 'document__telegram_file_id',
+                            'document__page_count', 'document__file_size'
                         )
                     }
                 else:
                     products_dict = {}
                 
                 # Serialize the results from Elasticsearch
+                preview_map = _build_preview_map(
+                    [p.document.id for p in products_dict.values()],
+                    request
+                )
                 results_data = []
                 for hit in paginated_hits:
                     product = products_dict.get(hit.meta.id)
                     if product:
+                        preview = preview_map.get(product.document.id, {})
+                        doc_meta = product.document
+                        doc_size = doc_meta.file_size or product.file_size
                         results_data.append({
                             'id': product.id,
                             'title': product.title,
                             'view_count': product.view_count,
                             'download_count': product.download_count,
-                            'file_size': product.file_size,
+                            'file_size': doc_size,
+                            'page_count': doc_meta.page_count,
                             'created_at': product.created_at.isoformat(),
                             'document_id': str(product.document.id),
                             'telegram_file_id': product.document.telegram_file_id,
-                            'score': hit.meta.score
+                            'score': hit.meta.score,
+                            'preview_image_small': preview.get('small'),
+                            'preview_image_large': preview.get('large')
                         })
                 
                 # Calculate pagination info
@@ -196,21 +239,33 @@ def search_documents(request):
         # Calculate pagination with optimized query
         offset = (page - 1) * page_size
         products = products_query.only(
-            'id', 'title', 'view_count', 'download_count', 
-            'file_size', 'created_at', 'document__id', 'document__telegram_file_id'
+            'id', 'title', 'view_count', 'download_count',
+            'file_size', 'created_at',
+            'document__id', 'document__telegram_file_id',
+            'document__page_count', 'document__file_size'
         )[offset:offset + page_size]
         
+        preview_map = _build_preview_map(
+            [product.document.id for product in products],
+            request
+        )
         results_data = []
         for product in products:
+            preview = preview_map.get(product.document.id, {})
+            doc_meta = product.document
+            doc_size = doc_meta.file_size or product.file_size
             results_data.append({
                 'id': product.id,
                 'title': product.title,
                 'view_count': product.view_count,
                 'download_count': product.download_count,
-                'file_size': product.file_size,
+                'file_size': doc_size,
+                'page_count': doc_meta.page_count,
                 'created_at': product.created_at.isoformat(),
                 'document_id': str(product.document.id),
-                'telegram_file_id': product.document.telegram_file_id
+                'telegram_file_id': product.document.telegram_file_id,
+                'preview_image_small': preview.get('small'),
+                'preview_image_large': preview.get('large')
             })
         
         # Calculate pagination info
@@ -243,7 +298,7 @@ def recent_documents(request):
         completed=True
     ).select_related('product').order_by('-created_at')[:10]
 
-    serializer = DocumentSerializer(documents, many=True)
+    serializer = DocumentSerializer(documents, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -269,17 +324,27 @@ def top_downloads(request):
             document__completed=True
         ).select_related('document').order_by('-download_count')[offset:offset + page_size]
         
+        preview_map = _build_preview_map(
+            [product.document.id for product in products],
+            request
+        )
         results = []
         for product in products:
+            preview = preview_map.get(product.document.id, {})
+            doc_meta = product.document
+            doc_size = doc_meta.file_size or product.file_size
             results.append({
                 'id': product.id,
                 'title': product.title,
                 'view_count': product.view_count,
                 'download_count': product.download_count,
-                'file_size': product.file_size,
+                'file_size': doc_size,
+                'page_count': doc_meta.page_count,
                 'created_at': product.created_at.isoformat(),
                 'document_id': str(product.document.id),
-                'telegram_file_id': product.document.telegram_file_id
+                'telegram_file_id': product.document.telegram_file_id,
+                'preview_image_small': preview.get('small'),
+                'preview_image_large': preview.get('large')
             })
         
         # Calculate pagination info
@@ -331,14 +396,14 @@ def document_images(request, document_id):
         doc = Document.objects.get(id=document_id)
     except Document.DoesNotExist:
         return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
-    images = DocumentImage.objects.filter(document=doc).order_by('page_number')[:5]
-    data = []
-    for di in images:
-        url = di.image.url
-        if request is not None:
-            url = request.build_absolute_uri(url)
-        data.append({'page': di.page_number, 'url': url})
-    return Response({'images': data, 'count': len(data)})
+    images = DocumentImage.objects.filter(document=doc).order_by('page_number')[:MAX_PREVIEW_IMAGES]
+    serializer = DocumentImageSerializer(images, many=True, context={'request': request})
+    return Response({
+        'images': serializer.data,
+        'count': len(serializer.data),
+        'page_count': doc.page_count,
+        'file_size': doc.file_size
+    })
 
 
 @api_view(['POST'])

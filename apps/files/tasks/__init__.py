@@ -20,10 +20,7 @@ from .parsing_tasks import (
 # 4. Tozalash (cleanup_tasks.py dan)
 # Eslatma: Siz yuborgan fayllarga asoslanib, bu task'lar mavjud deb hisoblaymiz.
 from .cleanup_tasks import (
-    cleanup_old_files,
-    cancel_stuck_pipelines,
-    ensure_cleanup_schedule,
-    cleanup_temp_files_task,  # Buni ham qo'shdim, chunki u cleanup_tasks.py da bor
+    cleanup_temp_files_task,
 )
 
 # 5. Telegram (telegram_tasks.py dan)
@@ -45,10 +42,8 @@ __all__ = [
     'arxiv_uz_parse',
 
     # cleanup_tasks
-    'cleanup_old_files',
-    'cancel_stuck_pipelines',
-    'ensure_cleanup_schedule',
     'cleanup_temp_files_task',
+
 
     # telegram_tasks
     'wait_for_telegram_rate_limit',
