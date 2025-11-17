@@ -166,6 +166,9 @@ class Document(models.Model):
         help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi"
     )
 
+    page_count = models.IntegerField(null=True, blank=True, verbose_name="Sahifalar soni")
+    file_size = models.BigIntegerField(null=True, blank=True, verbose_name="Fayl hajmi (baytda)")
+
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
@@ -197,6 +200,25 @@ class Document(models.Model):
                 self.completed = True
                 self.save(update_fields=['completed'])
 
+
+class DocumentImage(models.Model):
+    """
+    Hujjatning generatsiya qilingan sahifa rasmlari
+    """
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='images')
+    page_number = models.IntegerField(default=1, verbose_name="Sahifa raqami")
+
+    # Kichik va katta rasmlar uchun alohida
+    image_large = models.ImageField(upload_to='document_images/large/', verbose_name="Katta rasm (WebP)")
+    image_small = models.ImageField(upload_to='document_images/small/', verbose_name="Kichik rasm (WebP)")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Hujjat Rasmi"
+        verbose_name_plural = "Hujjat Rasmlari"
+        ordering = ['page_number']
+        unique_together = ('document', 'page_number')  # Bir sahifa uchun faqat bitta yozuv
 
 class Product(models.Model):
     """
@@ -512,49 +534,3 @@ def document_image_upload_to(instance, filename):
     return f"file/{instance.document.id}/{filename}"
 
 
-class DocumentImage(models.Model):
-    """
-    Hujjat sahifalarining rasmlarini saqlash uchun model.
-    
-    Bu model:
-    - Hujjat sahifalarining rasmlarini saqlaydi
-    - Sahifa raqamini kuzatadi
-    - Hujjat bilan bog'laydi
-    - Rasm fayllarini boshqaradi
-    
-    Maydonlar:
-    - document: Bog'langan hujjat
-    - page_number: Sahifa raqami
-    - image: Rasm fayli
-    - created_at: Yaratilgan vaqt
-    """
-    document = models.ForeignKey(
-        Document,
-        on_delete=models.CASCADE,
-        related_name='images',
-        help_text="Rasm tegishli bo'lgan hujjat"
-    )
-    page_number = models.PositiveIntegerField(
-        help_text="Sahifa raqami"
-    )
-    image = models.ImageField(
-        upload_to='images/',
-        help_text="Hujjat sahifasining rasm fayli"
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="Rasm yaratilgan vaqt"
-    )
-
-    class Meta:
-        unique_together = ('document', 'page_number')
-        ordering = ['page_number']
-
-    def __str__(self):
-        """
-        Model obyektining string ko'rinishi.
-        
-        Returns:
-            str: Sahifa raqami va hujjat ID'si
-        """
-        return f"Image p{self.page_number} for {self.document_id}"
