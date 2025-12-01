@@ -1,0 +1,8 @@
+"""
+Files Admin Configuration
+==========================
+
+Bu fayl admin_panel paketidan admin konfiguratsiyalarini import qiladi.
+"""
+
+from apps.files.admin_panel.admin import *  # noqa: F401,F403

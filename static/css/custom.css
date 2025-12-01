@@ -1,8 +1,11 @@
-/* Custom CSS for FileFinder Production */
+/* Custom CSS for FileFinder Production - Logo ranglariga moslashtirilgan */
 :root {
-  --primary: #0ea5e9;
-  --secondary: #06b6d4;
-  --dark: #0f172a;
+  --primary: #F69600;
+  --secondary: #FFCD00;
+  --primary-dark: #F7931e;
+  --primary-light: #ff8c42;
+  --orange: #ff6b35;
+  --dark: #010100;
   --light: #f8fafc;
 }
 
@@ -206,6 +209,14 @@ body {
   background-color: var(--primary);
 }
 
+.bg-orange-600 {
+  background-color: #ea580c;
+}
+
+.bg-orange-400 {
+  background-color: #fb923c;
+}
+
 .bg-green-500 {
   background-color: #10b981;
 }
@@ -248,6 +259,14 @@ body {
 
 .text-sky-300 {
   color: #7dd3fc;
+}
+
+.text-orange-200 {
+  color: #fed7aa;
+}
+
+.text-orange-300 {
+  color: #fdba74;
 }
 
 .text-orange-300 {
@@ -353,6 +372,10 @@ body {
 /* Effects */
 .hover\:bg-sky-600:hover {
   background-color: #0284c7;
+}
+
+.hover\:bg-orange-600:hover {
+  background-color: #ea580c;
 }
 
 .hover\:bg-green-600:hover {
@@ -710,6 +733,103 @@ input:checked + .slider:before {
     padding: 10px 16px;
     font-size: 13px;
   }
+}
+
+/* Logo size - kattalashtirilgan */
+.site-logo {
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 64px !important;
+  max-height: 64px !important;
+  object-fit: contain;
+  transition: width 150ms ease, height 150ms ease;
+}
+
+@media (min-width: 640px) {
+  .site-logo {
+    width: 56px !important;
+    height: 56px !important;
+    max-width: 64px !important;
+    max-height: 64px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .site-logo {
+    width: 64px !important;
+    height: 64px !important;
+    max-width: 64px !important;
+    max-height: 64px !important;
+  }
+}
+
+/* Animatsiyali gradient background */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 0%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.animated-gradient {
+  background: linear-gradient(-45deg, #ff6b35, #f7931e, #ff8c42, #ff6b35, #ff6b35);
+  background-size: 400% 400%;
+  animation: gradientMove 20s ease infinite;
+  transition: background 0.5s ease;
+}
+
+.animated-gradient.deep-search {
+  background: linear-gradient(-45deg, #dc2626, #ef4444, #f87171, #dc2626, #b91c1c);
+  background-size: 400% 400%;
+  animation: gradientMove 20s ease infinite;
+}
+
+/* iOS glassmorphism effect */
+.ios-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* 3D button effects */
+.btn-3d {
+  transform-style: preserve-3d;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.btn-3d:active {
+  transform: translateY(2px) scale(0.98);
+}
+
+.btn-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* iOS style shadows */
+.ios-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.ios-shadow-lg {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* Utility classes */

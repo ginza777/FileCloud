@@ -1,4 +1,4 @@
-from elasticsearch_dsl import Document, Text, Keyword, Boolean, Integer
+from elasticsearch_dsl import Document, Text, Keyword, Boolean, Integer, Q as ESQ
 from elasticsearch_dsl.connections import connections
 from django.conf import settings
 from elasticsearch.exceptions import ConnectionError
@@ -231,16 +231,33 @@ class DocumentIndex(Document):
                     cutoff_frequency=0.01  # Skip rare terms for speed
                 )
             else:
-                # Regular search: Fast title and slug search
-                search = search.query('multi_match',
+                # Regular search: Fast title and slug search with improved fuzzy matching
+                # Use 'should' query to combine exact match and fuzzy match
+                
+                # Exact match query (higher priority)
+                exact_query = ESQ('multi_match',
                     query=query,
-                    fields=['title^4', 'slug^2'],  # Higher boost for title
-                    type='best_fields',  # Faster than cross_fields
+                    fields=['title^5', 'slug^3'],
+                    type='best_fields',
+                    operator='or'
+                )
+                
+                # Fuzzy match query (for typos and missing characters)
+                fuzzy_query = ESQ('multi_match',
+                    query=query,
+                    fields=['title^4', 'slug^2'],
+                    type='best_fields',
                     operator='or',
-                    fuzziness='AUTO',
-                    prefix_length=2,
-                    max_expansions=20,  # Increased for better results
-                    cutoff_frequency=0.01  # Skip rare terms for speed
+                    fuzziness=2,  # Allow up to 2 character differences
+                    prefix_length=1,  # Reduced from 2 to allow more fuzzy matches
+                    max_expansions=30,  # Increased for better fuzzy results
+                    cutoff_frequency=0.01
+                )
+                
+                # Combine exact and fuzzy queries
+                search = search.query('bool',
+                    should=[exact_query, fuzzy_query],
+                    minimum_should_match=1
                 )
 
         return search.execute()

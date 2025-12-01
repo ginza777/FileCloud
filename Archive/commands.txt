@@ -1,0 +1,185 @@
+
+# Barcha pending hujjatlarni qayta ishlash
+docker exec filefinder_web python manage.py process_documents
+
+# Limit bilan qayta ishlash
+docker exec filefinder_web python manage.py process_documents --limit 50
+
+# Muayyan hujjatni qayta ishlash
+docker exec filefinder_web python manage.py process_documents --document-id "uuid-here"
+
+#### `fix_document_status` - Hujjat holatini to'g'irlash
+```bash
+# Hujjat holatini to'g'irlash
+docker exec filefinder_web python manage.py fix_document_status
+
+# Dry-run rejimida tekshirish
+docker exec filefinder_web python manage.py fix_document_status --dry-run
+```
+
+#### `parse_arxiv_documents` - Arxiv.uz parse qilish
+```bash
+# Arxiv.uz dan hujjatlarni parse qilish
+docker exec filefinder_web python manage.py parse_arxiv_documents
+
+# Limit bilan parse qilish
+docker exec filefinder_web python manage.py parse_arxiv_documents --limit 100
+
+# Muayyan kategoriyani parse qilish
+docker exec filefinder_web python manage.py parse_arxiv_documents --category "referatlar"
+```
+
+#### `parse_soff_documents` - SOFF.uz parse qilish
+```bash
+# SOFF.uz dan hujjatlarni parse qilish
+docker exec filefinder_web python manage.py parse_soff_documents
+
+# Limit bilan parse qilish
+docker exec filefinder_web python manage.py parse_soff_documents --limit 50
+```
+
+#### `generate_document_images` - Rasmlar yaratish
+```bash
+# Barcha hujjatlar uchun rasmlar yaratish
+docker exec filefinder_web python manage.py generate_document_images
+
+# Limit bilan rasmlar yaratish
+docker exec filefinder_web python manage.py generate_document_images --limit 20
+
+# Muayyan hujjat uchun rasm yaratish
+docker exec filefinder_web python manage.py generate_document_images --document-id "uuid-here"
+```
+
+#### `reset_stuck_pipelines` - Tutilgan pipeline'lar
+```bash
+# Tutilgan pipeline'larni qayta ishga tushirish
+docker exec filefinder_web python manage.py reset_stuck_pipelines
+
+# Force rejimida
+docker exec filefinder_web python manage.py reset_stuck_pipelines --force
+```
+
+### 2. **Elasticsearch Commands**
+
+#### `manage_elasticsearch_index` - Indeks boshqaruvi
+```bash
+# Indeksni yaratish va hujjatlarni indekslash
+docker exec filefinder_web python manage.py manage_elasticsearch_index
+
+# Indeksni qayta yaratish
+docker exec filefinder_web python manage.py manage_elasticsearch_index --rebuild
+
+# Force rejimida qayta yaratish
+docker exec filefinder_web python manage.py manage_elasticsearch_index --rebuild --force
+
+# Batch hajmi bilan indekslash
+docker exec filefinder_web python manage.py manage_elasticsearch_index --batch-size 500
+
+# Parallel indekslash
+docker exec filefinder_web python manage.py manage_elasticsearch_index --parallel
+```
+
+#### `cleanup_blocked_elasticsearch` - Blocked productlarni tozalash
+```bash
+# Blocked productlarni Elasticsearch dan o'chirish
+docker exec filefinder_web python manage.py cleanup_blocked_elasticsearch
+
+# Dry-run rejimida tekshirish
+docker exec filefinder_web python manage.py cleanup_blocked_elasticsearch --dry-run
+```
+
+### 3. **Authentication Commands**
+
+#### `set_arxiv_session` - Arxiv.uz autentifikatsiya
+```bash
+# Avtomatik login qilib PHPSESSID o'rnatish
+docker exec filefinder_web python manage.py set_arxiv_session --auto-login
+
+# Manual PHPSESSID o'rnatish
+docker exec filefinder_web python manage.py set_arxiv_session --phpsessid "your_phpsessid_value"
+
+# Mavjud PHPSESSID ni tekshirish
+docker exec filefinder_web python manage.py set_arxiv_session --validate
+```
+
+### 4. **Test Commands**
+
+#### `test_tika_server` - Tika server test
+```bash
+# TXT fayl bilan test
+docker exec filefinder_web python manage.py test_tika_server
+
+# PDF fayl bilan test
+docker exec filefinder_web python manage.py test_tika_server --create-pdf
+
+# Custom Tika URL bilan test
+docker exec filefinder_web python manage.py test_tika_server --tika-url http://localhost:9998
+
+# Test fayllarni tozalash
+docker exec filefinder_web python manage.py test_tika_server --cleanup
+```
+
+#### `test_blocked_products` - Blocked product test
+```bash
+# Blocked productlarni ko'rish
+docker exec filefinder_web python manage.py test_blocked_products
+
+# Test blocked product yaratish
+docker exec filefinder_web python manage.py test_blocked_products --create-test
+
+# Test productlarni tozalash
+docker exec filefinder_web python manage.py test_blocked_products --cleanup
+```
+
+#### `test_admin_actions` - Admin action test
+```bash
+# Admin actionlar haqida ma'lumot
+docker exec filefinder_web python manage.py test_admin_actions
+
+# Test blocked productlar yaratish
+docker exec filefinder_web python manage.py test_admin_actions --create-test
+
+# Blocked productlarni ko'rish
+docker exec filefinder_web python manage.py test_admin_actions --show-blocked
+
+# Test productlarni tozalash
+docker exec filefinder_web python manage.py test_admin_actions --cleanup
+
+## 🔄 **TYPICAL WORKFLOW**
+
+### **Kunlik ishlar:**
+```bash
+# 1. Hujjatlarni qayta ishlash
+docker exec filefinder_web python manage.py process_documents --limit 100
+
+# 2. Holatni to'g'irlash
+docker exec filefinder_web python manage.py fix_document_status
+
+# 3. Tika serverni tekshirish
+docker exec filefinder_web python manage.py test_tika_server
+```
+
+### **Haftalik ishlar:**
+```bash
+# 1. Elasticsearch indeksini yangilash
+docker exec filefinder_web python manage.py manage_elasticsearch_index --rebuild
+
+# 2. Blocked productlarni tozalash
+docker exec filefinder_web python manage.py cleanup_blocked_elasticsearch
+
+# 3. Arxiv.uz dan yangi hujjatlar
+docker exec filefinder_web python manage.py parse_arxiv_documents --limit 500
+```
+
+### **Muammo hal qilish:**
+```bash
+# 1. Tutilgan pipeline'larni qayta ishga tushirish
+docker exec filefinder_web python manage.py reset_stuck_pipelines
+
+# 2. Arxiv.uz autentifikatsiyasini yangilash
+docker exec filefinder_web python manage.py set_arxiv_session --auto-login
+
+# 3. Tika serverni test qilish
+docker exec filefinder_web python manage.py test_tika_server --create-pdf
+```
+

@@ -7,6 +7,13 @@ class ProductInline(admin.StackedInline):
     extra = 0
     can_delete = False
     show_change_link = True
+    verbose_name = "Product"
+    verbose_name_plural = "Products"
+    fields = (
+        'title', 'slug', 'view_count', 'download_count', 'file_size',
+        'blocked', 'blocked_reason', 'blocked_at', 'created_at', 'updated_at'
+    )
+    readonly_fields = ('created_at', 'updated_at', 'blocked_at')
 
 
 class DocumentErrorInline(admin.TabularInline):
@@ -21,6 +28,8 @@ class DocumentImageInline(admin.TabularInline):
     model = DocumentImage
     extra = 0
     show_change_link = True
+    verbose_name = "Rasm"
+    verbose_name_plural = "Rasmlar"
     fields = (
         'page_number',
         'image_small_preview',
@@ -43,6 +52,22 @@ class DocumentAdmin(admin.ModelAdmin):
     )
     ordering = ('-created_at',)
     inlines = [ProductInline, DocumentErrorInline, DocumentImageInline]
+    
+    # Tab ko'rinishi uchun fieldsets
+    fieldsets = (
+        ('Asosiy ma\'lumotlar', {
+            'fields': ('parse_file_url', 'telegram_file_id', 'completed', 'pipeline_running')
+        }),
+        ('Statuslar', {
+            'fields': ('download_status', 'parse_status', 'index_status', 'telegram_status', 'delete_status')
+        }),
+        ('Vaqt', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('created_at', 'updated_at')
     search_fields = (
         'id', 'parse_file_url', 'telegram_file_id',
     )

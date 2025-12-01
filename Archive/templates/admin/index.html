@@ -1,0 +1,1252 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}FaylHub Dashboard{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* Full Screen Dashboard Container */
+        .dashboard-wrapper {
+            padding: 10px;
+            background: #f8f9fa;
+            min-height: calc(100vh - 60px);
+            margin: -10px;
+        }
+        
+        /* Responsive Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: white;
+            color: #495057;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+            border-left: 3px solid #6f42c1;
+            height: fit-content;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        
+        .stat-card.success {
+            border-left-color: #28a745;
+        }
+        
+        .stat-card.warning {
+            border-left-color: #ffc107;
+        }
+        
+        .stat-card.danger {
+            border-left-color: #dc3545;
+        }
+        
+        .stat-card.info {
+            border-left-color: #17a2b8;
+        }
+        
+        .stat-icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+        
+        .stat-title {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 3px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+            color: #495057;
+        }
+        
+        .stat-subtitle {
+            font-size: 0.65rem;
+            color: #6c757d;
+        }
+        
+        /* Compact Progress Section */
+        .progress-section {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .progress-item {
+            margin-bottom: 8px;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.8rem;
+        }
+        
+        .progress-bar-outer {
+            height: 16px;
+            background: #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar-inner {
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 0.7rem;
+            transition: width 1s ease;
+        }
+        
+        .progress-bar-inner.primary {
+            background: #6f42c1;
+        }
+        
+        .progress-bar-inner.success {
+            background: #28a745;
+        }
+        
+        .progress-bar-inner.info {
+            background: #17a2b8;
+        }
+        
+        .progress-bar-inner.warning {
+            background: #ffc107;
+        }
+        
+        .progress-bar-inner.danger {
+            background: #dc3545;
+        }
+        
+        /* Responsive Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        
+        .chart-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 160px;
+        }
+        
+        /* Responsive Health Grid */
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .health-card {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+        }
+        
+        .health-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.12);
+        }
+        
+        .health-icon {
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+        
+        .health-label {
+            font-size: 0.65rem;
+            color: #6c757d;
+            margin-bottom: 3px;
+        }
+        
+        .health-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .health-value.ok {
+            color: #28a745;
+        }
+        
+        .health-value.error {
+            color: #dc3545;
+        }
+        
+        /* Responsive Activities */
+        .activities-section {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-left: 2px solid #e9ecef;
+            margin-bottom: 6px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        
+        .activity-item:hover {
+            background: #f8f9fa;
+            border-left-color: #6f42c1;
+            transform: translateX(2px);
+        }
+        
+        .activity-icon {
+            font-size: 1rem;
+            margin-right: 8px;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 1px;
+            font-size: 0.8rem;
+        }
+        
+        .activity-time {
+            font-size: 0.65rem;
+            color: #6c757d;
+        }
+        
+        /* Responsive Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .action-card {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+            border-color: #6f42c1;
+            text-decoration: none;
+        }
+        
+        .action-icon {
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+            display: block;
+        }
+        
+        .action-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 1px;
+            font-size: 0.75rem;
+        }
+        
+        .action-desc {
+            font-size: 0.6rem;
+            color: #6c757d;
+        }
+        
+        /* Compact Page Header */
+        .page-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .page-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #495057;
+            margin-bottom: 3px;
+        }
+        
+        .page-subtitle {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        
+        /* Ultra Responsive Design - Premium Quality */
+        
+        /* Large Desktop (1400px+) */
+        @media (min-width: 1400px) {
+            .dashboard-wrapper {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(8, 1fr);
+                gap: 12px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(8, 1fr);
+                gap: 10px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 12px;
+            }
+        }
+        
+        /* Desktop (1200px - 1399px) */
+        @media (min-width: 1200px) and (max-width: 1399px) {
+            .stats-grid {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 10px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 8px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(6, 1fr);
+                gap: 10px;
+            }
+        }
+        
+        /* Large Tablet (992px - 1199px) */
+        @media (min-width: 992px) and (max-width: 1199px) {
+            .dashboard-wrapper {
+                padding: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .chart-container {
+                height: 200px;
+            }
+        }
+        
+        /* Tablet (768px - 991px) */
+        @media (min-width: 768px) and (max-width: 991px) {
+            .dashboard-wrapper {
+                padding: 12px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .chart-container {
+                height: 180px;
+            }
+            
+            .page-title {
+                font-size: 1.3rem;
+            }
+            
+            .page-subtitle {
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Mobile Large (576px - 767px) */
+        @media (min-width: 576px) and (max-width: 767px) {
+            .dashboard-wrapper {
+                padding: 10px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            
+            .chart-container {
+                height: 160px;
+            }
+            
+            .page-title {
+                font-size: 1.2rem;
+            }
+            
+            .page-subtitle {
+                font-size: 0.7rem;
+            }
+            
+            .stat-card {
+                padding: 10px;
+            }
+            
+            .stat-value {
+                font-size: 1.3rem;
+            }
+            
+            .action-card {
+                padding: 8px;
+            }
+            
+            .action-title {
+                font-size: 0.7rem;
+            }
+            
+            .action-desc {
+                font-size: 0.55rem;
+            }
+        }
+        
+        /* Mobile Medium (480px - 575px) */
+        @media (min-width: 480px) and (max-width: 575px) {
+            .dashboard-wrapper {
+                padding: 8px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 5px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 5px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            
+            .chart-container {
+                height: 140px;
+            }
+            
+            .page-title {
+                font-size: 1.1rem;
+            }
+            
+            .page-subtitle {
+                font-size: 0.65rem;
+            }
+            
+            .stat-card {
+                padding: 8px;
+            }
+            
+            .stat-icon {
+                font-size: 1.2rem;
+            }
+            
+            .stat-title {
+                font-size: 0.6rem;
+            }
+            
+            .stat-value {
+                font-size: 1.1rem;
+            }
+            
+            .stat-subtitle {
+                font-size: 0.6rem;
+            }
+            
+            .action-card {
+                padding: 6px;
+            }
+            
+            .action-icon {
+                font-size: 1rem;
+            }
+            
+            .action-title {
+                font-size: 0.65rem;
+            }
+            
+            .action-desc {
+                font-size: 0.5rem;
+            }
+            
+            .health-card {
+                padding: 6px;
+            }
+            
+            .health-icon {
+                font-size: 1rem;
+            }
+            
+            .health-label {
+                font-size: 0.6rem;
+            }
+            
+            .health-value {
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Mobile Small (320px - 479px) */
+        @media (max-width: 479px) {
+            .dashboard-wrapper {
+                padding: 5px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+            
+            .chart-container {
+                height: 120px;
+            }
+            
+            .page-header {
+                margin-bottom: 10px;
+                padding-bottom: 8px;
+            }
+            
+            .page-title {
+                font-size: 1rem;
+                margin-bottom: 2px;
+            }
+            
+            .page-subtitle {
+                font-size: 0.6rem;
+            }
+            
+            .section-title {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+            
+            .stat-card {
+                padding: 6px;
+                margin-bottom: 4px;
+            }
+            
+            .stat-icon {
+                font-size: 1rem;
+                margin-bottom: 2px;
+            }
+            
+            .stat-title {
+                font-size: 0.55rem;
+                margin-bottom: 2px;
+            }
+            
+            .stat-value {
+                font-size: 1rem;
+                margin-bottom: 1px;
+            }
+            
+            .stat-subtitle {
+                font-size: 0.55rem;
+            }
+            
+            .action-card {
+                padding: 5px;
+            }
+            
+            .action-icon {
+                font-size: 0.9rem;
+                margin-bottom: 2px;
+            }
+            
+            .action-title {
+                font-size: 0.6rem;
+                margin-bottom: 1px;
+            }
+            
+            .action-desc {
+                font-size: 0.45rem;
+            }
+            
+            .health-card {
+                padding: 4px;
+            }
+            
+            .health-icon {
+                font-size: 0.9rem;
+                margin-bottom: 2px;
+            }
+            
+            .health-label {
+                font-size: 0.55rem;
+                margin-bottom: 2px;
+            }
+            
+            .health-value {
+                font-size: 0.7rem;
+            }
+            
+            .chart-card {
+                padding: 8px;
+            }
+            
+            .chart-title {
+                font-size: 0.8rem;
+                margin-bottom: 6px;
+            }
+            
+            .activities-section {
+                padding: 8px;
+            }
+            
+            .activity-item {
+                padding: 6px;
+                margin-bottom: 4px;
+            }
+            
+            .activity-icon {
+                font-size: 0.9rem;
+                margin-right: 6px;
+            }
+            
+            .activity-title {
+                font-size: 0.7rem;
+                margin-bottom: 1px;
+            }
+            
+            .activity-time {
+                font-size: 0.6rem;
+            }
+        }
+        
+        /* Ultra Small Mobile (max-width: 320px) */
+        @media (max-width: 320px) {
+            .dashboard-wrapper {
+                padding: 3px;
+            }
+            
+            .page-title {
+                font-size: 0.9rem;
+            }
+            
+            .page-subtitle {
+                font-size: 0.55rem;
+            }
+            
+            .stat-card {
+                padding: 4px;
+            }
+            
+            .stat-icon {
+                font-size: 0.9rem;
+            }
+            
+            .stat-title {
+                font-size: 0.5rem;
+            }
+            
+            .stat-value {
+                font-size: 0.9rem;
+            }
+            
+            .stat-subtitle {
+                font-size: 0.5rem;
+            }
+            
+            .action-card {
+                padding: 4px;
+            }
+            
+            .action-icon {
+                font-size: 0.8rem;
+            }
+            
+            .action-title {
+                font-size: 0.55rem;
+            }
+            
+            .action-desc {
+                font-size: 0.4rem;
+            }
+            
+            .health-card {
+                padding: 3px;
+            }
+            
+            .health-icon {
+                font-size: 0.8rem;
+            }
+            
+            .health-label {
+                font-size: 0.5rem;
+            }
+            
+            .health-value {
+                font-size: 0.65rem;
+            }
+            
+            .chart-container {
+                height: 100px;
+            }
+        }
+        
+        /* Landscape Orientation */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .dashboard-wrapper {
+                padding: 5px;
+            }
+            
+            .page-header {
+                margin-bottom: 5px;
+                padding-bottom: 5px;
+            }
+            
+            .page-title {
+                font-size: 1rem;
+            }
+            
+            .page-subtitle {
+                font-size: 0.6rem;
+            }
+            
+            .chart-container {
+                height: 80px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 4px;
+            }
+            
+            .health-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 4px;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+            }
+        }
+        
+        /* High DPI Displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .stat-icon,
+            .action-icon,
+            .health-icon,
+            .activity-icon {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+        }
+        
+        /* Touch Device Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .action-card,
+            .stat-card,
+            .health-card {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .action-card:hover,
+            .stat-card:hover,
+            .health-card:hover {
+                transform: none;
+            }
+            
+            .action-card:active,
+            .stat-card:active,
+            .health-card:active {
+                transform: scale(0.95);
+                transition: transform 0.1s ease;
+            }
+        }
+        
+        /* Print Styles */
+        @media print {
+            .dashboard-wrapper {
+                padding: 0;
+                background: white;
+            }
+            
+            .page-header {
+                border-bottom: 2px solid #000;
+            }
+            
+            .stat-card,
+            .health-card,
+            .action-card,
+            .chart-card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+            
+            .chart-container {
+                display: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Compact Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">📊 FaylHub Dashboard</h1>
+        <p class="page-subtitle">Loyiha statistikasi va monitoring - Real-time ma'lumotlar</p>
+    </div>
+    
+    <!-- Quick Actions - Top Row -->
+    <h2 class="section-title">⚡ Tez Harakatlar</h2>
+    <div class="quick-actions">
+        <a href="/admin/files/document/" class="action-card">
+            <span class="action-icon">📄</span>
+            <div class="action-title">Hujjatlar</div>
+            <div class="action-desc">Barcha hujjatlar</div>
+        </a>
+        
+        <a href="/admin/files/product/" class="action-card">
+            <span class="action-icon">📦</span>
+            <div class="action-title">Mahsulotlar</div>
+            <div class="action-desc">Parse qilingan</div>
+        </a>
+        
+        <a href="/admin/bot/user/" class="action-card">
+            <span class="action-icon">👥</span>
+            <div class="action-title">Foydalanuvchilar</div>
+            <div class="action-desc">Bot users</div>
+        </a>
+        
+        <a href="/admin/files/documenterror/" class="action-card">
+            <span class="action-icon">⚠️</span>
+            <div class="action-title">Xatoliklar</div>
+            <div class="action-desc">Error logs</div>
+        </a>
+        
+        <a href="/admin/files/parseprogress/" class="action-card">
+            <span class="action-icon">⚙️</span>
+            <div class="action-title">Parse Progress</div>
+            <div class="action-desc">Parse holati</div>
+        </a>
+        
+        <a href="/admin/django_celery_results/taskresult/" class="action-card">
+            <span class="action-icon">📋</span>
+            <div class="action-title">Celery Tasks</div>
+            <div class="action-desc">Background tasks</div>
+        </a>
+    </div>
+    
+    <!-- Main Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📄</div>
+            <div class="stat-title">Jami Hujjatlar</div>
+            <div class="stat-value">{{ total_documents|default:0 }}</div>
+            <div class="stat-subtitle">Barcha hujjatlar</div>
+        </div>
+        
+        <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-title">Tugatilgan</div>
+            <div class="stat-value">{{ completed_documents|default:0 }}</div>
+            <div class="stat-subtitle">{{ completed_percent|default:0 }}% tugallangan</div>
+        </div>
+        
+        <div class="stat-card warning">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-title">Jarayonda</div>
+            <div class="stat-value">{{ pending_documents|default:0 }}</div>
+            <div class="stat-subtitle">Kutilmoqda</div>
+        </div>
+        
+        <div class="stat-card danger">
+            <div class="stat-icon">❌</div>
+            <div class="stat-title">Xatoliklar</div>
+            <div class="stat-value">{{ failed_documents|default:0 }}</div>
+            <div class="stat-subtitle">{{ stats.total_errors|default:0 }} ta error</div>
+        </div>
+        
+        <div class="stat-card info">
+            <div class="stat-icon">📦</div>
+            <div class="stat-title">Mahsulotlar</div>
+            <div class="stat-value">{{ total_products|default:0 }}</div>
+            <div class="stat-subtitle">Parse qilingan</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-title">Foydalanuvchilar</div>
+            <div class="stat-value">{{ total_users|default:0 }}</div>
+            <div class="stat-subtitle">Bot users</div>
+        </div>
+        
+        <div class="stat-card success">
+            <div class="stat-icon">📤</div>
+            <div class="stat-title">Telegram</div>
+            <div class="stat-value">{{ stats.telegram_sent|default:0 }}</div>
+            <div class="stat-subtitle">Yuborilgan</div>
+        </div>
+        
+        <div class="stat-card info">
+            <div class="stat-icon">🔍</div>
+            <div class="stat-title">Indekslangan</div>
+            <div class="stat-value">{{ stats.indexed_documents|default:0 }}</div>
+            <div class="stat-subtitle">Elasticsearch</div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <h2 class="section-title">📊 Statistika va Grafiklar</h2>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-title">📅 Kunlik Faoliyat (7 kun)</div>
+            <div class="chart-container">
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="chart-title">🥧 Holat Taqsimoti</div>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Health -->
+    <h2 class="section-title">💚 Tizim Sog'ligi</h2>
+    <div class="health-grid">
+        <div class="health-card">
+            <div class="health-icon">🗄️</div>
+            <div class="health-label">Database</div>
+            <div class="health-value {{ system_health.database_status|lower }}">
+                {{ system_health.database_status }}
+            </div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">⚡</div>
+            <div class="health-label">Celery</div>
+            <div class="health-value {{ system_health.celery_status|lower }}">
+                {{ system_health.celery_status }}
+            </div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">🔍</div>
+            <div class="health-label">Elasticsearch</div>
+            <div class="health-value {{ system_health.elasticsearch_status|lower }}">
+                {{ system_health.elasticsearch_status }}
+            </div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">🚀</div>
+            <div class="health-label">Redis</div>
+            <div class="health-value {{ system_health.redis_status|lower }}">
+                {{ system_health.redis_status }}
+            </div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">💾</div>
+            <div class="health-label">Disk Usage</div>
+            <div class="health-value">{{ system_health.disk_usage }}</div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">🧠</div>
+            <div class="health-label">Memory</div>
+            <div class="health-value">{{ system_health.memory_usage }}</div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">⚙️</div>
+            <div class="health-label">CPU</div>
+            <div class="health-value">{{ system_health.cpu_usage }}</div>
+        </div>
+        
+        <div class="health-card">
+            <div class="health-icon">🔄</div>
+            <div class="health-label">Pipeline Running</div>
+            <div class="health-value">{{ stats.pipeline_running|default:0 }}</div>
+        </div>
+    </div>
+    
+    <!-- Recent Activities -->
+    <h2 class="section-title">🕒 So'nggi Faoliyatlar</h2>
+    <div class="activities-section">
+        {% for activity in recent_activities %}
+        <div class="activity-item">
+            <span class="activity-icon">{{ activity.icon }}</span>
+            <div class="activity-content">
+                <div class="activity-title">{{ activity.title }}</div>
+                <div class="activity-time">{{ activity.time }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <p style="text-align: center; color: #6c757d; padding: 30px;">Hozircha faoliyat yo'q</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+// Daily Activity Chart
+const dailyCtx = document.getElementById('dailyChart');
+if (dailyCtx) {
+    new Chart(dailyCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: ['09/30', '10/01', '10/02', '10/03', '10/04', '10/05', '10/06'],
+            datasets: [{
+                label: 'Yangi Mahsulotlar',
+                data: [0, 0, 0, 0, 0, 0, 0],
+                borderColor: '#6f42c1',
+                backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#6f42c1',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Status Distribution Chart
+const statusCtx = document.getElementById('statusChart');
+if (statusCtx) {
+    new Chart(statusCtx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Tugatilgan', 'Jarayonda', 'Xatolik', 'Kutilmoqda'],
+            datasets: [{
+                data: [38, 0, 0, 0],
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#dc3545',
+                    '#ffc107'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 13,
+                            weight: 'bold'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

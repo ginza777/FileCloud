@@ -46,6 +46,7 @@ def parse_file_size(file_size_str):
 
 def extract_file_url(poster_url):
     """Poster URL'dan asosiy fayl URL'ini ajratib oladi."""
+    print(poster_url)
     if not poster_url:
         return None
     match = re.search(r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', poster_url)

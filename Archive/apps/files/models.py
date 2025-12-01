@@ -1,0 +1,585 @@
+"""
+Files App Models
+================
+
+Bu modul fayllar bilan bog'liq barcha Django modellarini o'z ichiga oladi.
+Hujjatlar, mahsulotlar, xatoliklar va indekslash jarayonlarini boshqaradi.
+
+Modellar:
+- Document: Hujjat ma'lumotlari
+- Product: Mahsulot ma'lumotlari
+- SiteToken: Sayt tokenlari
+- DocumentError: Hujjat xatoliklari
+- SearchQuery: Qidiruv so'rovlari
+- DocumentImage: Hujjat rasmlari
+"""
+import os
+import uuid
+from datetime import timedelta
+from urllib.parse import urlparse
+
+from django.db import models
+from django.utils import timezone
+from django.utils.html import format_html
+
+
+def upload_to(instance, filename):
+    """
+    Fayllar uchun yuklash yo'lini yaratadi.
+    
+    Args:
+        instance: Model obyekti (Document yoki DocumentImage)
+        filename (str): Fayl nomi
+    
+    Returns:
+        str: Fayl saqlanish yo'li (documents/{instance.id}/{filename})
+    
+    Misol:
+        upload_to(document, "file.pdf") -> "documents/uuid-123/file.pdf"
+    """
+    return f'documents/{instance.id}/{filename}'
+
+
+# ParseProgress model o'chirildi - endi start_page va end_page to'g'ri ishlaydi
+
+
+class Document(models.Model):
+    """
+    Hujjat ma'lumotlarini saqlash uchun asosiy model.
+    
+    Bu model:
+    - Hujjat faylini saqlaydi
+    - Parse jarayonini kuzatadi
+    - Telegram yuborish holatini boshqaradi
+    - Indekslash jarayonini kuzatadi
+    - Pipeline holatini boshqaradi
+    
+    Maydonlar:
+    - parse_file_url: Hujjat fayl havolasi
+    - download_status: Yuklab olish holati
+    - parse_status: Parse qilish holati
+    - index_status: Indekslash holati
+    - telegram_status: Telegram holati
+    - delete_status: O'chirish holati
+    - completed: Barchasi tugatildimi
+    - telegram_file_id: Telegram fayl ID'si
+    - pipeline_running: Pipeline ishlayotganmi
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Kutilmoqda'),
+        ('processing', 'Jarayonda'),
+        ('completed', 'Tugatildi'),
+        ('failed', 'Xatolik'),
+        ('skipped', 'O`tkazib yuborildi'),
+    ]
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        db_index=True,
+        help_text="Hujjatning noyub identifikatori"
+    )
+
+    parse_file_url = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="File URL",
+        help_text="Hujjat faylining to'g'ridan-to'g'ri havolasi"
+    )
+
+    # Status fields - Jarayon holatlari
+    download_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Yuklab olish holati",
+        db_index=True,
+        help_text="Hujjat yuklab olish jarayoni holati"
+    )
+    parse_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Parse qilish holati",
+        db_index=True,
+        help_text="Hujjat parse qilish jarayoni holati"
+    )
+    index_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Indekslash holati",
+        db_index=True,
+        help_text="Hujjat indekslash jarayoni holati"
+    )
+    telegram_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="Telegram holati",
+        db_index=True,
+        help_text="Telegram'ga yuborish jarayoni holati"
+    )
+    delete_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name="O'chirish holati",
+        db_index=True,
+        help_text="Hujjat o'chirish jarayoni holati"
+    )
+
+    completed = models.BooleanField(
+        default=False,
+        verbose_name="Barchasi tugatildimi?",
+        db_index=True,
+        help_text="Hujjat barcha jarayonlardan o'tganmi"
+    )
+
+    telegram_file_id = models.CharField(
+        blank=True,
+        null=True,
+        verbose_name="Telegram File ID",
+        help_text="Telegram kanaliga yuborilgandan keyin fayl ID'si",
+        db_index=True,
+        max_length=500
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Created At",
+        db_index=True,
+        help_text="Hujjat yaratilgan vaqt"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Updated At",
+        db_index=True,
+        help_text="Hujjat oxirgi yangilangan vaqt"
+    )
+    json_data = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="JSON Data",
+        help_text="Hujjat bilan bog'liq qo'shimcha JSON ma'lumotlar"
+    )
+    pipeline_running = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Pipeline hozir ushbu hujjat ustida ishlayotganini bildiradi"
+    )
+
+    page_count = models.IntegerField(null=True, blank=True, verbose_name="Sahifalar soni")
+    file_size = models.BigIntegerField(null=True, blank=True, verbose_name="Fayl hajmi (baytda)")
+
+    class Meta:
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
+        ordering = ['-created_at']
+
+
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Hujjat ID va fayl havolasi
+        """
+        return f"Document {self.id} ({self.parse_file_url or 'no file'})"
+
+    @property
+    def file_name(self):
+        """
+        Hujjat URL'idan fayl nomini ajratib qaytaradi.
+
+        Returns:
+            str: Fayl nomi yoki document ID asosida yaratilgan nom
+        """
+        if not self.parse_file_url:
+            return f"{self.id}.dat"
+        parsed = urlparse(self.parse_file_url)
+        name = os.path.basename(parsed.path)
+        return name or f"{self.id}.dat"
+
+    def check_and_set_completed(self):
+        """
+        Agar barcha status maydonlari 'completed' bo'lsa, completed=True ga o'zgartiring va saqlang.
+        """
+        if (
+                self.download_status == 'completed' and
+                self.parse_status == 'completed' and
+                self.index_status == 'completed' and
+                self.telegram_status == 'completed' and
+                self.delete_status == 'completed'
+        ):
+            if not self.completed:
+                self.completed = True
+                self.save(update_fields=['completed'])
+
+
+class DocumentImage(models.Model):
+    """
+    Hujjatning generatsiya qilingan sahifa rasmlari
+    """
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='images')
+    page_number = models.IntegerField(default=1, verbose_name="Sahifa raqami")
+
+    # Katta rasm (preview uchun)
+    image_large = models.ImageField(
+        upload_to='document_images/large/',
+        verbose_name="Katta rasm (WebP)",
+        null=True,
+        blank=True
+    )
+
+    # Kichik rasm (thumbnail uchun)
+    image_small = models.ImageField(
+        upload_to='document_images/small/',
+        verbose_name="Kichik rasm (WebP)",
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Hujjat Rasmi"
+        verbose_name_plural = "Hujjat Rasmlari"
+        ordering = ['page_number']
+        unique_together = ('document', 'page_number')
+
+    def image_small_preview(self):
+        if self.image_small:
+            return format_html(
+                '<img src="{}" style="max-width:120px;height:auto;border-radius:6px;" />',
+                self.image_small.url
+            )
+        return "—"
+
+    def image_large_preview(self):
+        if self.image_large:
+            return format_html(
+                '<img src="{}" style="max-width:160px;height:auto;border-radius:6px;" />',
+                self.image_large.url
+            )
+        return "—"
+
+    image_small_preview.short_description = "Kichik ko'rinish"
+    image_large_preview.short_description = "Katta ko'rinish"
+
+class Product(models.Model):
+    """
+    Raqamli mahsulotlar uchun model.
+    
+    Bu model:
+    - Hujjatdan parse qilingan ma'lumotlarni saqlaydi
+    - Mahsulot statistikalarini kuzatadi
+    - Hujjat bilan bir-biriga bog'laydi
+    - Ko'rish va yuklab olish sonlarini hisoblaydi
+    
+    Maydonlar:
+    - id: Mahsulot ID'si
+    - title: Mahsulot sarlavhasi
+    - parsed_content: Parse qilingan kontent
+    - slug: URL slug
+    - document: Bog'langan hujjat
+    - view_count: Ko'rishlar soni
+    - download_count: Yuklab olishlar soni
+    - file_size: Fayl hajmi
+    """
+    id = models.AutoField(
+        primary_key=True,
+        verbose_name="Product ID",
+        help_text="Mahsulotning noyub identifikatori"
+    )
+    title = models.TextField(
+        verbose_name="Title",
+        db_index=True,
+        help_text="Mahsulot sarlavhasi"
+    )
+    parsed_content = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Parsed Content",
+        help_text="Hujjatdan parse qilingan matn kontenti"
+    )
+    slug = models.TextField(
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name="Slug",
+        db_index=True,
+        help_text="URL uchun slug (masalan: 'matematika-darsligi')"
+    )
+    document = models.OneToOneField(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='product',
+        verbose_name="Document",
+        help_text="Bog'langan hujjat"
+    )
+    view_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="View Count",
+        db_index=True,
+        help_text="Mahsulotni ko'rishlar soni"
+    )
+    download_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Download Count",
+        db_index=True,
+        help_text="Mahsulotni yuklab olishlar soni"
+    )
+    file_size = models.PositiveBigIntegerField(
+        default=0,
+        verbose_name="File Size (bytes)",
+        help_text="Fayl hajmi baytlarda"
+    )
+    blocked = models.BooleanField(
+        default=False,
+        verbose_name="Blocked",
+        db_index=True,
+        help_text="Mahsulot bloklangan (Access Denied xatolari uchun)"
+    )
+    blocked_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Blocked Reason",
+        help_text="Bloklanish sababi"
+    )
+    blocked_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="Blocked At",
+        help_text="Bloklangan vaqt"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Created At",
+        db_index=True,
+        help_text="Mahsulot yaratilgan vaqt"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Updated At",
+        help_text="Mahsulot oxirgi yangilangan vaqt"
+    )
+
+    class Meta:
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Mahsulot sarlavhasi
+        """
+        return self.title
+
+
+class SiteToken(models.Model):
+    """
+    Tashqi saytlar bilan autentifikatsiya uchun tokenlar.
+    
+    Bu model:
+    - SOFF.UZ va Arxiv.uz saytlari uchun tokenlarni saqlaydi
+    - Autentifikatsiya ma'lumotlarini boshqaradi
+    - Token yangilanishini kuzatadi
+    
+    Maydonlar:
+    - name: Sayt nomi (soff, arxiv)
+    - token: Asosiy token
+    - auth_token: Autentifikatsiya token'i
+    """
+
+    NAME_CHOICES = [
+        ('soff', 'soff'),
+        ('arxiv', 'arxiv'),
+    ]
+
+    name = models.CharField(
+        choices=NAME_CHOICES,
+        unique=True,
+        max_length=100,
+        help_text="Sayt nomi (soff yoki arxiv)"
+    )
+    token = models.CharField(
+        unique=True,
+        max_length=300,
+        help_text="Asosiy autentifikatsiya token'i"
+    )
+    auth_token = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Qo'shimcha autentifikatsiya token'i"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Token yaratilgan vaqt"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Token oxirgi yangilangan vaqt"
+    )
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Sayt nomi
+        """
+        return self.name
+
+
+class DocumentError(models.Model):
+    """
+    Hujjat qayta ishlash jarayonida yuz bergan xatoliklarni saqlash uchun model.
+    
+    Bu model:
+    - Har xil turdagi xatoliklarni kuzatadi
+    - Celery urinishlarini hisoblaydi
+    - Xatoliklar tarixini saqlaydi
+    - Debug va monitoring uchun ishlatiladi
+    
+    Maydonlar:
+    - document: Bog'langan hujjat
+    - error_type: Xatolik turi
+    - error_message: Xatolik xabari
+    - celery_attempt: Celery urinish raqami
+    """
+
+    ERROR_TYPE_CHOICES = [
+        ('download', 'Yuklab olish xatoligi'),
+        ('telegram_send', 'Telegramga yuborish xatoligi'),
+        ('telegram_download', 'Telegramdan yuklab olish xatoligi'),
+        ('parse', 'Parse qilish xatoligi'),
+        ('tika_timeout', 'Tika server timeout xatoligi'),
+        ('tika_connection', 'Tika server ulanish xatoligi'),
+        ('tika_parse', 'Tika parse xatoligi'),
+        ('index', 'Indekslash xatoligi'),
+        ('other', 'Boshqa xatolik'),
+    ]
+
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='errors',
+        verbose_name="Document",
+        db_index=True,
+        help_text="Xatolik yuz bergan hujjat"
+    )
+    error_type = models.CharField(
+        max_length=20,
+        choices=ERROR_TYPE_CHOICES,
+        verbose_name="Xatolik turi",
+        db_index=True,
+        help_text="Xatolikning turi"
+    )
+    error_message = models.TextField(
+        verbose_name="Xatolik xabari",
+        help_text="Xatolikning batafsil tavsifi"
+    )
+    celery_attempt = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Celery urinish raqami",
+        help_text="Bu xatolik qaysi urinishda yuz bergani"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Yaratilgan vaqt",
+        db_index=True,
+        help_text="Xatolik yuz bergan vaqt"
+    )
+
+    class Meta:
+        verbose_name = "Document Error"
+        verbose_name_plural = "Document Errors"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Xatolik turi, hujjat ID va urinish raqami
+        """
+        return f"{self.get_error_type_display()} - {self.document.id} (urinish: {self.celery_attempt})"
+
+
+class SearchQuery(models.Model):
+    """
+    Foydalanuvchilar tomonidan amalga oshirilgan qidiruv so'rovlarini saqlash uchun model.
+    
+    Bu model:
+    - Qidiruv so'rovlarini kuzatadi
+    - Natijalar topilganligini belgilaydi
+    - Chuqur qidiruv holatini saqlaydi
+    - Foydalanuvchi faoliyatini tahlil qiladi
+    
+    Maydonlar:
+    - user: Qidiruv qilgan foydalanuvchi
+    - query_text: Qidiruv matni
+    - found_results: Natijalar topildimi
+    - is_deep_search: Chuqur qidiruvmi
+    """
+    user = models.ForeignKey(
+        'bot.TelegramUser',
+        on_delete=models.CASCADE,
+        related_name='search_queries',
+        db_index=True,
+        help_text="Qidiruv qilgan foydalanuvchi"
+    )
+    query_text = models.CharField(
+        max_length=500,
+        db_index=True,
+        help_text="Qidiruv so'rovi matni"
+    )
+    found_results = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Qidiruv natijalari topildimi"
+    )
+    is_deep_search = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Chuqur qidiruv rejimi ishlatildimi"
+                    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Qidiruv amalga oshirilgan vaqt"
+    )
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Qidiruv matni va foydalanuvchi
+        """
+        return f"'{self.query_text}' by {self.user}"
+
+
+def document_image_upload_to(instance, filename):
+    """
+    Hujjat rasmlari uchun yuklash yo'lini yaratadi.
+    
+    Args:
+        instance: DocumentImage obyekti
+        filename (str): Rasm fayl nomi
+    
+    Returns:
+        str: Rasm saqlanish yo'li (file/{document_id}/{filename})
+    
+    Misol:
+        document_image_upload_to(image, "page1.jpg") -> "file/uuid-123/page1.jpg"
+    """
+    return f"file/{instance.document.id}/{filename}"
+
+

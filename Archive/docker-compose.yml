@@ -1,0 +1,277 @@
+services:
+  # 1. Django Web ilovasi (Uvicorn orqali)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filefinder_web
+    command: >
+      sh -c "
+        # 1. DB'ni kutish (Mavjud)
+        python manage.py wait_for_db && 
+
+        # 2. Redis'ni kutish (YANGI)
+        echo 'Redisni kutilmoqda...'
+        while ! redis-cli -h redis -p 6379 ping; do 
+          echo '...'; 
+          sleep 1; 
+        done
+        echo 'Redis tayyor.' &&
+
+        # 3. Redis keshini tozalash (YANGI)
+        echo 'Redis keshini tozalash (FLUSHALL)...'
+        redis-cli -h redis -p 6379 FLUSHALL &&
+
+        # 4. Celery navbatini tozalash (YANGI)
+        echo 'Celery navbatini tozalash (purge)...'
+        celery -A core purge -f &&
+        
+        # 5. Migratsiyalar (Mavjud)
+        python manage.py makemigrations --noinput &&
+        python manage.py migrate &&
+        
+        # 6. Media papkalar (Mavjud)
+        mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
+        
+        # 7. Mavjud 'clean' skripti (Mavjud)
+        python manage.py clean --cancel-tasks --force &&
+        
+        # 8. Ilovani ishga tushirish (Mavjud)
+        uvicorn core.asgi:application --host 0.0.0.0 --workers 2 --timeout-keep-alive 60 --access-log
+      "
+    volumes:
+      - .:/app
+      - ./media:/app/media
+    env_file:
+      - .env
+    ports:
+      - "${WEB_EXTERNAL_PORT}:${WEB_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      es01:
+        condition: service_healthy
+      runtime_cleaner:
+        condition: service_completed_successfully
+    networks:
+      - filefinder_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    restart: unless-stopped
+
+  # 2. Celery Worker (Asosiy fon vazifalarini bajaruvchi)
+  celery:
+    build: .
+    container_name: filefinder_celery
+    command: >
+      sh -c "mkdir -p /app/media/downloads /app/media/docpic_files /app/media/images &&
+             celery -A core worker --loglevel=info --concurrency=2 --max-tasks-per-child=1000"
+    volumes:
+      - .:/app
+      - ./media:/app/media
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
+      runtime_cleaner:
+        condition: service_completed_successfully
+    networks:
+      - filefinder_net
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    restart: unless-stopped
+
+  # 3. Celery Beat (Vaqti-vaqti bilan ishlaydigan vazifalar rejalashtiruvchisi)
+  celery_beat:
+    build: .
+    container_name: filefinder_celery_beat
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py reset_periodic_tasks &&
+             rm -f /app/celerybeat-schedule &&  
+             celery -A core beat --loglevel=info --schedule=/app/celerybeat-schedule"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_started # Oddiy startni kutadi
+      postgres:
+        condition: service_healthy # Sog'lom bo'lishini kutadi (chunki healthcheck mavjud)
+      celery:
+        condition: service_started # Ishchining startini kutadi
+      web:
+        condition: service_started # Web ilovasining startini kutadi
+      es01:
+        condition: service_healthy # MUHIM: Elasticsearch sog'lom bo'lishini kutadi
+      runtime_cleaner:
+        condition: service_completed_successfully
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 4. PostgreSQL Ma'lumotlar Bazasi
+  postgres:
+    image: postgres:15-alpine
+    container_name: filefinder_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # MALUMOTLAR SHU YERDA SAQLANADI
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:${POSTGRES_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U sherzamon -d filefinder_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 5. Redis (Kesh va Celery uchun broker)
+  redis:
+    image: redis:7-alpine
+    container_name: filefinder_redis
+    ports:
+      - "${REDIS_EXTERNAL_PORT}:${REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+    env_file:
+      - .env
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 6. Elasticsearch (Qidiruv tizimi)
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.2
+    container_name: filefinder_elastic
+    env_file:
+      - .env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data # MALUMOTLAR SHU YERDA SAQLANADI
+    ports:
+      - "${ES_EXTERNAL_PORT}:${ES_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 7. Apache Tika (Fayllardan matn ajratib olish uchun)
+  tika:
+    image: apache/tika:latest
+    container_name: filefinder_tika
+    ports:
+      - "${TIKA_EXTERNAL_PORT}:${TIKA_PORT}"
+    env_file:
+      - .env
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  # 8. Flower (Celery uchun monitoring interfeysi)
+  flower:
+    build: .
+    container_name: filefinder_flower
+    command: celery -A core flower
+    ports:
+      - "${FLOWER_EXTERNAL_PORT}:${FLOWER_PORT}"
+    env_file:
+      - .env
+    environment:
+      - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
+    depends_on:
+      celery:
+        condition: service_started
+      es01:
+        condition: service_healthy
+      runtime_cleaner:
+        condition: service_completed_successfully
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+  runtime_cleaner:
+    build: .
+    container_name: filefinder_runtime_cleaner
+    command: >
+      sh -c "
+        echo \"🔄 Ma'lumotlar bazasi va Redis tayyor bo'lishini kutyapman...\" &&
+        python manage.py wait_for_db &&
+        echo \"🧹 Redisni tozalash (FLUSHALL)...\" &&
+        redis-cli -h redis -p 6379 FLUSHALL &&
+        echo \"🧹 Celery navbatini tozalash (purge)...\" &&
+        celery -A core purge -f || true &&
+        echo \"🧹 Celery Beat trackerini tozalash...\" &&
+        python manage.py reset_periodic_tasks &&
+        echo \"🧹 Celery beat schedule faylini o'chirish...\" &&
+        rm -f /app/celerybeat-schedule &&
+        echo \"✅ Runtime tozalash yakunlandi.\"
+      "
+    volumes:
+      - .:/app
+      - ./media:/app/media
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - filefinder_net
+    restart: "no"
+
+  # 9. Grafana (Monitoring uchun dashboard)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: filefinder_grafana
+    env_file:
+      - .env
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_EXTERNAL_PORT}:${GRAFANA_PORT}"
+    networks:
+      - filefinder_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  grafana_data:
+  # static_volume: # O'CHIRILDI
+
+networks:
+  filefinder_net:
+    driver: bridge

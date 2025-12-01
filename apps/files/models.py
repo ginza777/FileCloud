@@ -566,6 +566,61 @@ class SearchQuery(models.Model):
         return f"'{self.query_text}' by {self.user}"
 
 
+class WebSearchQuery(models.Model):
+    """
+    Web interfeys orqali amalga oshirilgan qidiruv so'rovlarini saqlash uchun model (usersiz).
+    
+    Bu model:
+    - Web qidiruv so'rovlarini kuzatadi
+    - Natijalar topilganligini belgilaydi
+    - Chuqur qidiruv holatini saqlaydi
+    - Qidiruv statistikasini tahlil qiladi
+    """
+    query_text = models.CharField(
+        max_length=500,
+        db_index=True,
+        help_text="Qidiruv so'rovi matni"
+    )
+    found_results = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Qidiruv natijalari topildimi"
+    )
+    is_deep_search = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Chuqur qidiruv rejimi ishlatildimi"
+    )
+    result_count = models.IntegerField(
+        default=0,
+        db_index=True,
+        help_text="Topilgan natijalar soni"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Qidiruv amalga oshirilgan vaqt"
+    )
+
+    class Meta:
+        verbose_name = "Web Qidiruv So'rovi"
+        verbose_name_plural = "Web Qidiruv So'rovlari"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['query_text', 'created_at']),
+            models.Index(fields=['is_deep_search', 'found_results']),
+        ]
+
+    def __str__(self):
+        """
+        Model obyektining string ko'rinishi.
+        
+        Returns:
+            str: Qidiruv matni va vaqt
+        """
+        return f"'{self.query_text}' - {self.result_count} natija ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+
 def document_image_upload_to(instance, filename):
     """
     Hujjat rasmlari uchun yuklash yo'lini yaratadi.

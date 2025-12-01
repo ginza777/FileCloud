@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaylHub - Kirish</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'icon.png' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0ea5e9',
+                        secondary: '#06b6d4',
+                        dark: '#0f172a',
+                        light: '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); }
+    </style>
+</head>
+<body class="bg-light min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full mx-4">
+        <!-- Logo and Title -->
+        <div class="text-center mb-8">
+            <div class="flex justify-center mb-4">
+                <img src="{% static 'fayltop_transparent.svg' %}" alt="FaylHub Logo" class="w-16 h-16">
+            </div>
+            <h1 class="text-3xl font-bold text-dark mb-2">FaylHub</h1>
+            <p class="text-gray-600">O'zbek fayl qidiruvi platformasiga xush kelibsiz</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <h2 class="text-2xl font-semibold text-center text-dark mb-6">Hisobingizga kiring</h2>
+            
+            <!-- Telegram Login Button -->
+            <a href="https://t.me/fayltop_bot?start=auth" 
+               class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition flex items-center justify-center mb-4">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.568 8.16l-1.61 7.59c-.12.54-.43.68-.87.42l-2.4-1.77-1.16.11c-.13.01-.24-.05-.3-.16l-.84-1.08-2.4 1.77c-.44.26-.75.12-.87-.42L6.43 8.16c-.12-.54.12-.75.75-.42l2.4 1.77 1.16-.11c.13-.01.24.05.3.16l.84 1.08 2.4-1.77c.63-.33.87-.12.75.42z"/>
+                </svg>
+                Telegram orqali kirish
+            </a>
+
+            <!-- Register Button -->
+            <a href="https://t.me/fayltop_bot?start=register" 
+               class="w-full bg-secondary text-white py-3 px-4 rounded-lg hover:bg-teal-600 transition flex items-center justify-center mb-6">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                Ro'yxatdan o'tish
+            </a>
+
+            <!-- Features -->
+            <div class="space-y-3 text-sm text-gray-600">
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Tezkor fayl qidirish
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Xavfsiz yuklab olish
+                </div>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Bepul foydalanish
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6 text-gray-500 text-sm">
+            <p>&copy; 2025 FaylHub. Barcha huquqlar himoyalangan.</p>
+            <p class="mt-1">
+                <a href="{% url 'index' %}" class="text-primary hover:underline">Asosiy sahifa</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

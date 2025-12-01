@@ -16,8 +16,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import F, Q
 from apps.files.elasticsearch.documents import DocumentIndex
-from apps.files.models import Document, Product, DocumentImage
+from apps.files.models import Document, Product, DocumentImage, WebSearchQuery
 from apps.files.serializers import DocumentSerializer, DocumentImageSerializer
+import threading
 
 MAX_PREVIEW_IMAGES = 5
 
@@ -109,21 +110,43 @@ def index_view(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@cache_page(300)  # 5 minutes cache
 def search_documents(request):
     """API endpoint for searching documents with pagination"""
-    query = request.GET.get('q', '')
+    query = request.GET.get('q', '').strip()
     is_deep_search = request.GET.get('deep', 'false').lower() == 'true'
     
     # Get pagination parameters
     page = int(request.GET.get('page', 1))
     page_size = int(request.GET.get('page_size', 12))
     
+    # For deep search, support batch pagination (10 pages at a time)
+    # batch_start_page: which batch to fetch (1 = pages 1-10, 2 = pages 11-20, etc.)
+    batch_start_page = int(request.GET.get('batch_start_page', 0))
+    BATCH_SIZE = 10  # Number of pages per batch
+    BATCH_RESULTS_COUNT = BATCH_SIZE * page_size  # Total results per batch (120)
+    
     if not query:
         return Response(
             {'error': 'Query parameter is required'},
             status=status.HTTP_400_BAD_REQUEST
         )
+    
+    # Check cache first for faster response
+    cache_key = f"search:{query}:{is_deep_search}:{page}:{batch_start_page}"
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        # Save search query in background (non-blocking)
+        if page == 1:  # Only save on first page
+            threading.Thread(
+                target=lambda: WebSearchQuery.objects.create(
+                    query_text=query,
+                    is_deep_search=is_deep_search,
+                    found_results=cached_result.get('total', 0) > 0,
+                    result_count=cached_result.get('total', 0)
+                ),
+                daemon=True
+            ).start()
+        return Response(cached_result)
 
     try:
         # Try Elasticsearch first
@@ -136,18 +159,27 @@ def search_documents(request):
             )
 
             if search_results and hasattr(search_results, 'hits'):
-                # Get total count efficiently
-                total_count = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
-                
-                # Calculate pagination with optimized offset
-                offset = (page - 1) * page_size
-                
-                # For large offsets, use direct Elasticsearch pagination
-                if offset > 1000:  # For pages > 83 (1000/12)
-                    # Use Elasticsearch scroll API for deep pagination
-                    paginated_hits = search_results.hits[offset:offset + page_size]
+                # For deep search, get total count first (this is fast - just metadata)
+                if is_deep_search:
+                    # Get total count immediately (this is fast - doesn't fetch all documents)
+                    total_count = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else 0
+                    
+                    # For first page of deep search, return first 12 results immediately
+                    if batch_start_page == 0:
+                        # Return first page immediately - don't wait for full batch
+                        paginated_hits = search_results.hits[0:page_size]
+                    elif batch_start_page > 0:
+                        # For subsequent batches, fetch 10 pages worth of data
+                        batch_offset = (batch_start_page - 1) * BATCH_RESULTS_COUNT
+                        paginated_hits = search_results.hits[batch_offset:batch_offset + BATCH_RESULTS_COUNT]
+                    else:
+                        # Fallback
+                        offset = (page - 1) * page_size
+                        paginated_hits = search_results.hits[offset:offset + page_size]
                 else:
-                    # Use regular pagination for first 1000 results
+                    # Regular search - get total count and paginate normally
+                    total_count = search_results.hits.total.value if hasattr(search_results.hits.total, 'value') else len(search_results.hits)
+                    offset = (page - 1) * page_size
                     paginated_hits = search_results.hits[offset:offset + page_size]
                 
                 # Optimized database query - bulk fetch with select_related
@@ -195,55 +227,164 @@ def search_documents(request):
                 
                 # Calculate pagination info
                 total_pages = (total_count + page_size - 1) // page_size
-                        
-                return Response({
-                    'results': results_data,
-                    'total': total_count,
-                    'page': page,
-                    'page_size': page_size,
-                    'total_pages': total_pages,
-                    'has_next': page < total_pages,
-                    'has_previous': page > 1,
-                    'next_page': page + 1 if page < total_pages else None,
-                    'previous_page': page - 1 if page > 1 else None,
-                    'search_type': 'deep' if is_deep_search else 'regular'
-                })
+                
+                # Prepare response data
+                if is_deep_search and batch_start_page > 0:
+                    batch_start = (batch_start_page - 1) * BATCH_SIZE + 1
+                    batch_end = min(batch_start + BATCH_SIZE - 1, total_pages)
+                    response_data = {
+                        'results': results_data,
+                        'total': total_count,
+                        'page': page,
+                        'page_size': page_size,
+                        'total_pages': total_pages,
+                        'has_next': page < total_pages,
+                        'has_previous': page > 1,
+                        'next_page': page + 1 if page < total_pages else None,
+                        'previous_page': page - 1 if page > 1 else None,
+                        'search_type': 'deep',
+                        'batch_start_page': batch_start_page,
+                        'batch_start': batch_start,
+                        'batch_end': batch_end,
+                        'is_batch': True
+                    }
+                else:
+                    response_data = {
+                        'results': results_data,
+                        'total': total_count,
+                        'page': page,
+                        'page_size': page_size,
+                        'total_pages': total_pages,
+                        'has_next': page < total_pages,
+                        'has_previous': page > 1,
+                        'next_page': page + 1 if page < total_pages else None,
+                        'previous_page': page - 1 if page > 1 else None,
+                        'search_type': 'deep' if is_deep_search else 'regular',
+                        'is_batch': False
+                    }
+                
+                # Cache the result for 5 minutes
+                cache.set(cache_key, response_data, 300)
+                
+                # Save search query in background (non-blocking) - only for first page
+                if page == 1:
+                    threading.Thread(
+                        target=lambda: WebSearchQuery.objects.create(
+                            query_text=query,
+                            is_deep_search=is_deep_search,
+                            found_results=total_count > 0,
+                            result_count=total_count
+                        ),
+                        daemon=True
+                    ).start()
+                
+                return Response(response_data)
         except Exception as es_error:
             print(f"Elasticsearch error: {es_error}")
             
         # Fallback to database search if Elasticsearch fails
+        # Helper function to create fuzzy search patterns
+        def create_fuzzy_patterns(search_query):
+            """Create fuzzy search patterns for database fallback"""
+            patterns = [search_query]  # Exact match first
+            
+            # Split query into words
+            words = search_query.split()
+            if len(words) > 1:
+                # For multi-word queries, try each word separately
+                for word in words:
+                    if len(word) > 3:  # Only for words longer than 3 characters
+                        patterns.append(word)
+            
+            # Create regex patterns for fuzzy matching (allow 1-2 missing characters)
+            # Example: "INKLYUZIV" -> "INKL[YZ]?IV" or "INKL.*IV"
+            fuzzy_patterns = []
+            for pattern in patterns:
+                if len(pattern) > 4:
+                    # Try to match with missing characters
+                    # Convert pattern to allow optional characters
+                    fuzzy_pattern = pattern
+                    fuzzy_patterns.append(fuzzy_pattern)
+            
+            return patterns + fuzzy_patterns
+        
         if is_deep_search:
             # Deep search: search in both title and parsed_content
+            search_patterns = create_fuzzy_patterns(query)
+            title_q = Q()
+            content_q = Q()
+            
+            for pattern in search_patterns:
+                title_q |= Q(title__icontains=pattern)
+                content_q |= Q(parsed_content__icontains=pattern)
+            
             products_query = Product.objects.filter(
                 document__completed=True
             ).exclude(
                 blocked=True
             ).filter(
-                Q(title__icontains=query) | 
-                Q(parsed_content__icontains=query)
+                title_q | content_q
             ).select_related('document')
         else:
-            # Regular search: search in title and slug
+            # Regular search: search in title and slug with fuzzy matching
+            search_patterns = create_fuzzy_patterns(query)
+            title_q = Q()
+            slug_q = Q()
+            
+            # Exact match (higher priority)
+            title_q |= Q(title__icontains=query)
+            slug_q |= Q(slug__icontains=query)
+            
+            # Fuzzy matches - try variations
+            for pattern in search_patterns[1:]:  # Skip first (exact match)
+                if len(pattern) > 2:  # Only for meaningful patterns
+                    title_q |= Q(title__icontains=pattern)
+                    slug_q |= Q(slug__icontains=pattern)
+            
+            # Also try with missing characters using regex-like patterns
+            # For "INKLZIV" also search for "INKLYUZIV" and similar
+            query_words = query.split()
+            for word in query_words:
+                if len(word) > 4:
+                    # Try variations: remove 1-2 characters
+                    for i in range(len(word)):
+                        if i < len(word) - 1:
+                            variant = word[:i] + word[i+1:]  # Remove one character
+                            if len(variant) > 3:
+                                title_q |= Q(title__icontains=variant)
+                                slug_q |= Q(slug__icontains=variant)
+            
             products_query = Product.objects.filter(
                 document__completed=True
             ).exclude(
                 blocked=True
             ).filter(
-                Q(title__icontains=query) | 
-                Q(slug__icontains=query)
-            ).select_related('document')
+                title_q | slug_q
+            ).select_related('document').distinct()
         
         # Get total count
         total_count = products_query.count()
         
-        # Calculate pagination with optimized query
-        offset = (page - 1) * page_size
-        products = products_query.only(
-            'id', 'title', 'view_count', 'download_count',
-            'file_size', 'created_at',
-            'document__id', 'document__telegram_file_id',
-            'document__page_count', 'document__file_size'
-        )[offset:offset + page_size]
+        # For deep search with batch pagination, fetch 10 pages worth of data
+        if is_deep_search and batch_start_page > 0:
+            # Calculate batch offset: batch 1 = pages 1-10, batch 2 = pages 11-20, etc.
+            batch_offset = (batch_start_page - 1) * BATCH_RESULTS_COUNT
+            # Fetch 10 pages worth of results (120 files)
+            products = products_query.only(
+                'id', 'title', 'view_count', 'download_count',
+                'file_size', 'created_at',
+                'document__id', 'document__telegram_file_id',
+                'document__page_count', 'document__file_size'
+            )[batch_offset:batch_offset + BATCH_RESULTS_COUNT]
+        else:
+            # Regular pagination: single page
+            offset = (page - 1) * page_size
+            products = products_query.only(
+                'id', 'title', 'view_count', 'download_count',
+                'file_size', 'created_at',
+                'document__id', 'document__telegram_file_id',
+                'document__page_count', 'document__file_size'
+            )[offset:offset + page_size]
         
         preview_map = _build_preview_map(
             [product.document.id for product in products],
@@ -270,19 +411,58 @@ def search_documents(request):
         
         # Calculate pagination info
         total_pages = (total_count + page_size - 1) // page_size
-            
-        return Response({
-            'results': results_data,
-            'total': total_count,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': total_pages,
-            'has_next': page < total_pages,
-            'has_previous': page > 1,
-            'next_page': page + 1 if page < total_pages else None,
-            'previous_page': page - 1 if page > 1 else None,
-            'search_type': 'deep' if is_deep_search else 'regular'
-        })
+        
+        # Prepare response data
+        if is_deep_search and batch_start_page > 0:
+            batch_start = (batch_start_page - 1) * BATCH_SIZE + 1
+            batch_end = min(batch_start + BATCH_SIZE - 1, total_pages)
+            response_data = {
+                'results': results_data,
+                'total': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_previous': page > 1,
+                'next_page': page + 1 if page < total_pages else None,
+                'previous_page': page - 1 if page > 1 else None,
+                'search_type': 'deep',
+                'batch_start_page': batch_start_page,
+                'batch_start': batch_start,
+                'batch_end': batch_end,
+                'is_batch': True
+            }
+        else:
+            response_data = {
+                'results': results_data,
+                'total': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_previous': page > 1,
+                'next_page': page + 1 if page < total_pages else None,
+                'previous_page': page - 1 if page > 1 else None,
+                'search_type': 'deep' if is_deep_search else 'regular',
+                'is_batch': False
+            }
+        
+        # Cache the result for 5 minutes
+        cache.set(cache_key, response_data, 300)
+        
+        # Save search query in background (non-blocking) - only for first page
+        if page == 1:
+            threading.Thread(
+                target=lambda: WebSearchQuery.objects.create(
+                    query_text=query,
+                    is_deep_search=is_deep_search,
+                    found_results=total_count > 0,
+                    result_count=total_count
+                ),
+                daemon=True
+            ).start()
+        
+        return Response(response_data)
     except Exception as e:
         return Response(
             {'error': str(e)},

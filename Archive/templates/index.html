@@ -1,0 +1,876 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaylHubAi fayl qidiruv</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'icon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeInUp { animation: fadeInUp 0.7s ease-out forwards; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; }
+        .ios-modal { opacity: 0; backdrop-filter: blur(0px); transition: opacity 420ms ease, backdrop-filter 420ms ease; }
+        .ios-modal.open { opacity: 1; backdrop-filter: blur(8px); }
+        .ios-sheet { transform: translateY(24px) scale(0.98); opacity: 0; transition: transform 520ms cubic-bezier(.22,.61,.36,1), opacity 380ms ease; }
+        .ios-modal.open .ios-sheet { transform: translateY(0) scale(1); opacity: 1; }
+        .gradient-bg { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); }
+        .ignite-glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .ignite-btn { background-image: linear-gradient(to right, #0ea5e9, #06b6d4); color: white; }
+        .file-card { background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 5px 16px rgba(15,23,42,0.08); transition: transform .2s ease, box-shadow .2s ease; cursor: pointer; display: flex; flex-direction: column; gap: .75rem; }
+        .file-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(15,23,42,0.12); }
+        .preview-thumb { width: 100%; height: 10rem; border-radius: .75rem; overflow: hidden; background: #f1f5f9; }
+        .preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .preview-thumb.placeholder { display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: .85rem; font-weight: 500; }
+        .preview-scroll { scroll-snap-type: x mandatory; }
+        .preview-scroll::-webkit-scrollbar { height: 6px; }
+        .preview-scroll::-webkit-scrollbar-thumb { background: rgba(15,23,42,.2); border-radius: 999px; }
+        .preview-card { scroll-snap-align: start; flex: 0 0 220px; background: #fff; border-radius: 1rem; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 6px 14px rgba(15,23,42,0.06); display: flex; flex-direction: column; }
+        .preview-card-img { position: relative; width: 100%; height: 180px; overflow: hidden; }
+        .preview-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; filter: contrast(1.02); }
+        .preview-card-img .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.35rem;
+            font-weight: 600;
+            color: rgba(248, 250, 252, 0.8);
+            text-shadow: 0 2px 10px rgba(15,23,42,0.35);
+            mix-blend-mode: overlay;
+            pointer-events: none;
+        }
+        
+        /* Pagination Styles */
+        .pagination-button {
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .pagination-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pagination-button.active {
+            background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .pagination-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        
+        /* Mobile Search Form Optimizations */
+        @media (max-width: 640px) {
+            .preview-thumb { height: 8rem; }
+            .preview-card { flex-basis: 180px; }
+            .preview-card-img { height: 150px; }
+            #searchInput {
+                padding: 12px 16px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            #searchBtn {
+                padding: 12px 20px;
+                font-size: 14px;
+                min-height: 44px; /* Touch target */
+            }
+            
+            /* Mobile Pagination */
+            .pagination-button {
+                min-width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #searchInput {
+                padding: 10px 14px;
+                font-size: 15px;
+            }
+            #searchBtn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-sm">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <a href="/" class="flex items-center gap-2 text-xl font-bold text-primary">
+                    <img src="{% static 'fayltop_transparent.svg' %}" alt="Faylhub Logo" class="w-14 h-14 sm:w-16 sm:h-16">
+                    <span class="hidden sm:inline">Faylhub.uz</span>
+                    <span class="sm:hidden">Faylhub</span>
+                </a>
+                <a href="https://t.me/{{ bot_username }}" target="_blank" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition flex items-center gap-2 text-sm font-medium">
+                    <i data-feather="message-circle" class="w-4 h-4"></i>
+                    <span class="hidden xs:inline">FaylHub Bot</span>
+                    <span class="xs:hidden">Bot</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="relative text-white py-20 md:py-28 overflow-hidden bg-sky-500">
+            <div class="absolute inset-0 z-0">
+                <video 
+                    class="w-full h-full object-cover" 
+                    autoplay 
+                    muted 
+                    loop 
+                    playsinline 
+                    poster="{% static 'image_main.png' %}"
+                    preload="metadata"
+                    loading="lazy"
+                    data-src="{% static 'video_main.mp4' %}"
+                    cache-control="max-age=31536000"
+                    cache="force-cache">
+                    <source data-src="{% static 'video_main.mp4' %}" type="video/mp4">
+                    <!-- Fallback image -->
+                    <img src="{% static 'image_main.png' %}" alt="FayHubAi" class="w-full h-full object-cover">
+                </video>
+                <div class="absolute inset-0 bg-black/50"></div>
+            </div>
+            <div class="container mx-auto px-4 text-center relative z-10">
+                <h1 class="text-4xl md:text-6xl font-extrabold mb-4 animate-fadeInUp" style="animation-delay: 0.1s;">FaylHubAi fayl qidiruv</h1>
+                <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto text-white/90 animate-fadeInUp" style="animation-delay: 0.2s;">Sifatli va tayyor ishlardan foydalaning, vaqt va kuchingizni tejang.</p>
+
+                <div class="max-w-3xl mx-auto animate-fadeInUp" style="animation-delay: 0.3s;">
+                    <form id="searchForm" class="flex flex-col sm:flex-row gap-2" onsubmit="performSearch(event)">
+                        <input id="searchInput" type="text" placeholder="Qaysi turdagi fayl qidirmoqdasiz?" class="flex-1 bg-white/90 text-dark rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm placeholder-gray-400">
+                        <button id="searchBtn" type="submit" class="bg-primary hover:bg-sky-600 text-white font-medium py-3 px-6 rounded-xl transition-colors">Qidirish</button>
+                    </form>
+                    <div class="switch-container">
+                        <span class="switch-label">Oddiy qidiruv</span>
+                        <label class="switch">
+                            <input id="deepToggle" type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="switch-label">Chuqur qidiruv</span>
+                    </div>
+                    
+                    <!-- Deep Search Loading Progress -->
+                    <div id="deepSearchProgress" class="hidden mt-3">
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <span class="text-sm text-white/90 font-semibold">🔍 Chuqurlashtirilgan qidiruv</span>
+                                    <div id="deepSearchCount" class="text-xs text-orange-300 mt-1">Topilgan fayllar: <span class="font-bold">0</span></div>
+                                </div>
+                                <span id="deepSearchPercent" class="text-lg font-bold text-orange-300">0%</span>
+                            </div>
+                            <div class="w-full bg-white/20 rounded-full h-3 mb-2">
+                                <div id="deepSearchBar" class="bg-gradient-to-r from-orange-400 to-orange-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <div id="deepSearchStatus" class="text-sm text-white/80 font-medium">Qidiruv boshlanmoqda...</div>
+                            <div id="deepSearchDetails" class="text-xs text-white/60 mt-1">Elasticsearch orqali qidirilmoqda...</div>
+                        </div>
+                    </div>
+                    
+                    <p id="searchInfo" class="text-sm text-white/80 mt-2"><span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search Results Section (moved to top) -->
+        <section id="searchResultsSection" class="container mx-auto px-4 py-12 hidden">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold">Qidiruv natijalari</h2>
+                <div id="searchResultsCount" class="text-lg font-semibold text-primary">
+                    <!-- Results count will be populated by JavaScript -->
+                </div>
+            </div>
+            <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Search results will be populated by JavaScript -->
+            </div>
+            <div id="pagination" class="flex justify-center gap-4 mt-8"></div>
+        </section>
+
+        <!-- Top Files Section (moved below search results) -->
+        <section id="topFilesSection" class="container mx-auto px-4 py-12">
+            <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">Eng ommabop fayllar</h2>
+            <div id="topFiles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Top files will be populated by JavaScript -->
+            </div>
+            <div id="loading" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="shimmer h-48 rounded-xl"></div>
+                <div class="shimmer h-48 rounded-xl"></div>
+                <div class="shimmer h-48 rounded-xl"></div>
+            </div>
+        </section>
+    </main>
+
+
+    <!-- File Preview Modal -->
+    <div id="filePreviewModal" class="ios-modal fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center hidden">
+        <div class="ios-sheet bg-white sm:rounded-2xl w-full sm:max-w-lg p-6 sm:p-8 relative">
+            <button onclick="closeFilePreview()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <i data-feather="x" class="w-6 h-6"></i>
+            </button>
+            <div id="previewContent">
+                <h2 id="previewTitle" class="text-xl font-bold mb-4"></h2>
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="text-sm text-gray-500">Ko'rishlar: <span id="previewViews">0</span></span>
+                    <span class="text-sm text-gray-500">Yuklab olishlar: <span id="previewDownloads">0</span></span>
+                </div>
+                <div id="previewImages" class="mb-4 text-sm text-gray-400">
+                    Rasmlar yuklanmoqda...
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a id="telegramBtn" href="#" class="flex items-center justify-center gap-2 w-full bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 px-4 rounded-xl transition-colors">
+                        <i data-feather="message-circle" class="w-5 h-5"></i>
+                        Telegram orqali yuklash
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="ios-modal fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center hidden">
+        <div class="ios-sheet bg-white sm:rounded-2xl w-full sm:max-w-lg p-6 sm:p-8 relative">
+            <button onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <i data-feather="x" class="w-6 h-6"></i>
+            </button>
+            <h2 class="text-xl font-bold mb-4">Fikr-mulohaza</h2>
+            <form id="feedbackForm" class="flex flex-col gap-4">
+                <input id="fbContact" type="text" placeholder="Ismingiz yoki kontakt" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                <textarea id="fbMessage" placeholder="Fikringizni yozing" rows="4" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                <button type="submit" class="ignite-btn font-medium py-3 px-4 rounded-xl">Yuborish</button>
+                <p id="fbResult" class="text-sm text-center"></p>
+            </form>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Faylhub.uz</h3>
+                    <p class="text-sm text-gray-300">Tez va oson fayl qidirish xizmati. Sifatli hujjatlarni toping va ulashing.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Havolalar</h3>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li><a href="https://t.me/{{ bot_username }}" target="_blank" class="hover:text-primary">Telegram Bot</a></li>
+                        <li><a href="#" onclick="openFeedbackModal()" class="hover:text-primary">Fikr-mulohaza</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Kontakt</h3>
+                    <p class="text-sm text-gray-300">Telegram: <a href="https://t.me/{{ bot_username }}" target="_blank" class="hover:text-primary">{{ bot_username }}</a></p>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-gray-700 text-center text-sm text-gray-400">
+                &copy; 2025 FaylHub.uz. Barcha huquqlar himoyalangan.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        feather.replace();
+        // Search cache for pagination
+        let searchCache = {};
+        let currentSearchQuery = '';
+        let currentSearchMode = false;
+        let isDeepMode = false;
+        const BOT_USERNAME = "{{ bot_username | safe }}".replace('@', '');
+
+        function formatFileSize(bytes) {
+            if (!bytes) return null;
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let size = bytes;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            return `${size % 1 === 0 ? size : size.toFixed(1)} ${units[unitIndex]}`;
+        }
+
+        function renderFileCard(file) {
+            const safeTitle = (file.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const coverImage = file.preview_image_small || file.preview_image_large;
+            const previewBlock = coverImage
+                ? `<div class="preview-thumb"><img src="${coverImage}" alt="${safeTitle}" loading="lazy" decoding="async"></div>`
+                : `<div class="preview-thumb placeholder">Rasm tayyorlanmoqda</div>`;
+            const meta = [];
+            if (file.page_count) meta.push(`${file.page_count} sahifa`);
+            if (file.file_size) {
+                const formatted = formatFileSize(file.file_size);
+                if (formatted) meta.push(formatted);
+            }
+            const metaText = meta.length ? `<p class="text-xs text-gray-500">${meta.join(' • ')}</p>` : '';
+
+            return `
+                <div data-product-id="${file.id}" class="file-card" onclick="openFilePreview('${file.id}', '${safeTitle}', ${file.view_count || 0}, ${file.download_count || 0}, '${file.document_id}')">
+                    ${previewBlock}
+                    <h3 class="text-lg font-semibold line-clamp-2">${file.title || 'Nomlanmagan fayl'}</h3>
+                    ${metaText}
+                </div>
+            `;
+        }
+
+        async function loadDocumentImages(documentId) {
+            const previewImages = document.getElementById('previewImages');
+            if (!previewImages) return;
+            previewImages.innerHTML = '<div class="text-sm text-gray-500">Rasmlar yuklanmoqda...</div>';
+            try {
+                const response = await fetch(`/api/web/${documentId}/images/`);
+                if (!response.ok) throw new Error('Response status ' + response.status);
+                const data = await response.json();
+                if (!data.images || data.images.length === 0) {
+                    previewImages.innerHTML = '<p class="text-sm text-gray-500">Rasm mavjud emas.</p>';
+                    return;
+                }
+
+                const figures = data.images
+                    .slice()
+                    .sort((a, b) => (a.page_number || 0) - (b.page_number || 0))
+                    .map(img => {
+                    const src = img.small_url || img.large_url;
+                    const large = img.large_url || img.small_url || src;
+                    return `
+                        <figure class="preview-card">
+                            <div class="preview-card-img" onclick="window.open('${large}', '_blank')">
+                                <img src="${src}" alt="Sahifa ${img.page_number}" loading="lazy" decoding="async">
+                                <span class="watermark">Faylhub</span>
+                            </div>
+                            <figcaption class="px-3 py-2 text-xs font-medium text-gray-600 border-t border-gray-100 bg-white">#${img.page_number}-sahifa</figcaption>
+                        </figure>
+                    `;
+                }).join('');
+
+                const meta = [];
+                if (data.page_count) meta.push(`${data.page_count} sahifa`);
+                if (data.file_size) {
+                    const formatted = formatFileSize(data.file_size);
+                    if (formatted) meta.push(formatted);
+                }
+                const metaInfo = meta.length ? `<p class="text-xs text-gray-500 mt-2">${meta.join(' • ')}</p>` : '';
+
+                previewImages.innerHTML = `
+                    <div class="preview-scroll flex gap-4 overflow-x-auto pb-3">
+                        ${figures}
+                    </div>
+                    ${metaInfo}
+                `;
+            } catch (error) {
+                console.error('Rasmlar yuklashda xatolik:', error);
+                previewImages.innerHTML = '<p class="text-sm text-red-500">Rasmlar yuklab bo\'lmadi.</p>';
+            }
+        }
+
+        async function loadTopFiles() {
+            const loading = document.getElementById('loading');
+            const topFiles = document.getElementById('topFiles');
+            const topFilesSection = document.getElementById('topFilesSection');
+            
+            loading.classList.remove('hidden');
+            try {
+                const response = await fetch('/api/web/top-downloads/');
+                if (!response.ok) throw new Error('Top files yuklanmadi');
+                const data = await response.json();
+                const files = data.results || data;
+                topFiles.innerHTML = files.map(file => renderFileCard(file)).join('');
+                
+                // Show top files section
+                topFilesSection.classList.remove('hidden');
+            } catch (error) {
+                topFiles.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function updateDeepSearchProgress(percentage, text, details = '', foundCount = 0) {
+            const progressBar = document.getElementById('deepSearchBar');
+            const progressPercent = document.getElementById('deepSearchPercent');
+            const progressStatus = document.getElementById('deepSearchStatus');
+            const progressDetails = document.getElementById('deepSearchDetails');
+            const progressCount = document.getElementById('deepSearchCount');
+            
+            if (progressBar) {
+                progressBar.style.width = `${percentage}%`;
+            }
+            if (progressPercent) {
+                progressPercent.textContent = `${percentage}%`;
+            }
+            if (progressStatus) {
+                progressStatus.textContent = text;
+            }
+            if (progressDetails && details) {
+                progressDetails.textContent = details;
+            }
+            if (progressCount && foundCount > 0) {
+                progressCount.innerHTML = `Topilgan fayllar: <span class="font-bold text-orange-200">${foundCount}</span>`;
+            }
+        }
+
+        async function performSearch(event, page = 1) {
+            console.log('performSearch called:', { event, page, currentSearchQuery });
+            
+            if (event) event.preventDefault();
+            
+            let query;
+            if (event === null) {
+                // Pagination request - use current search query
+                query = currentSearchQuery;
+                console.log('Pagination request - using stored query:', query);
+            } else {
+                // New search request - get query from input
+                query = document.getElementById('searchInput').value.trim();
+                currentSearchQuery = query; // Store for pagination
+                console.log('New search request - query:', query);
+            }
+            
+            if (!query) {
+                console.log('No query found, returning');
+                return;
+            }
+
+            // Simple per-page API calls - no caching
+            console.log(`Making API call for page ${page}`);
+
+            const searchResults = document.getElementById('searchResults');
+            const pagination = document.getElementById('pagination');
+            const loading = document.getElementById('loading');
+            const searchResultsSection = document.getElementById('searchResultsSection');
+            const topFilesSection = document.getElementById('topFilesSection');
+            const searchResultsCount = document.getElementById('searchResultsCount');
+            const deepSearchProgress = document.getElementById('deepSearchProgress');
+            
+            // Show search results section, hide top files section
+            searchResultsSection.classList.remove('hidden');
+            topFilesSection.classList.add('hidden');
+            
+            // Show appropriate loading indicator
+            if (isDeepMode) {
+                // Show deep search progress bar
+                deepSearchProgress.classList.remove('hidden');
+                updateDeepSearchProgress(0, 'Qidiruv boshlanmoqda...', 'Elasticsearch orqali qidirilmoqda...', 0);
+            } else {
+                // Show regular loading
+                loading.classList.remove('hidden');
+            }
+            
+            searchResults.innerHTML = '';
+            pagination.innerHTML = '';
+
+            try {
+                console.log('Starting API call...');
+                
+                // Simulate progress for deep search
+                if (isDeepMode) {
+                    updateDeepSearchProgress(20, 'Elasticsearch orqali qidirilmoqda...', 'Fayl nomi va ichki matn qidirilmoqda...', 0);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    updateDeepSearchProgress(40, 'Fayl ichidan qidirilmoqda...', 'Parsed content tahlil qilinmoqda...', 0);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    updateDeepSearchProgress(60, 'Natijalar tayyorlanmoqda...', 'Topilgan fayllar saralanmoqda...', 0);
+                }
+                
+                const response = await fetch(`/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
+                console.log('API call made:', `/api/web/search/?q=${encodeURIComponent(query)}&page=${page}&deep=${isDeepMode}`);
+                
+                if (!response.ok) throw new Error(`Qidiruv xatosi: ${response.status}`);
+                const data = await response.json();
+                console.log('API response:', data);
+
+                if (isDeepMode) {
+                    updateDeepSearchProgress(80, 'Natijalar ko\'rsatilmoqda...', `Topilgan: ${data.total} ta fayl`, data.total);
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    updateDeepSearchProgress(100, 'Tayyor!', `Qidiruv yakunlandi: ${data.total} ta fayl topildi`, data.total);
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+
+                // Simple per-page approach - no caching needed
+                currentSearchQuery = query;
+                currentSearchMode = isDeepMode;
+
+                // Display results
+                displaySearchResults(data, page);
+
+            } catch (error) {
+                console.error('API call error:', error);
+                searchResults.innerHTML = '<p class="text-center text-red-500">Xatolik yuz berdi. Qaytadan urinib ko\'ring.</p>';
+                // Show top files section on error
+                topFilesSection.classList.remove('hidden');
+            } finally {
+                // Hide all loading indicators
+                loading.classList.add('hidden');
+                deepSearchProgress.classList.add('hidden');
+            }
+        }
+
+        function displaySearchResults(data, page) {
+            console.log('displaySearchResults called:', { data, page, resultsLength: data.results?.length });
+            
+            const searchResults = document.getElementById('searchResults');
+            const pagination = document.getElementById('pagination');
+            const searchResultsCount = document.getElementById('searchResultsCount');
+
+            // Update results count
+            searchResultsCount.textContent = `${data.total} ta natija`;
+
+            if (data.results.length === 0) {
+                console.log('No results found, showing empty message');
+                searchResults.innerHTML = '<p class="text-center text-gray-500">Hech narsa topilmadi.</p>';
+                return;
+            }
+
+            console.log('Rendering results:', data.results.length, 'items');
+            searchResults.innerHTML = data.results.map(file => renderFileCard(file)).join('');
+
+            // Generate pagination with page numbers
+            const currentPage = data.page;
+            const totalPages = data.total_pages;
+            const maxVisiblePages = 5;
+            
+            console.log('Generating pagination:', { currentPage, totalPages, hasPrevious: data.has_previous, hasNext: data.has_next });
+            
+            let paginationHTML = '<div class="flex items-center justify-center gap-2 flex-wrap">';
+            
+            // Previous button
+            if (data.has_previous) {
+                paginationHTML += `<button onclick="console.log('Previous button clicked'); performSearch(null, ${currentPage - 1})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                    <i data-feather="chevron-left" class="w-4 h-4"></i>
+                    Orqaga
+                </button>`;
+            }
+            
+            // Page numbers
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            // Adjust start page if we're near the end
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // First page and ellipsis
+            if (startPage > 1) {
+                paginationHTML += `<button onclick="performSearch(null, 1)" class="pagination-button px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<span class="px-2 text-gray-500">...</span>`;
+                }
+            }
+            
+            // Page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    paginationHTML += `<button class="pagination-button active px-3 py-2 bg-primary text-white rounded-lg font-semibold">${i}</button>`;
+                } else {
+                    paginationHTML += `<button onclick="console.log('Page button clicked:', ${i}); performSearch(null, ${i})" class="pagination-button px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">${i}</button>`;
+                }
+            }
+            
+            // Last page and ellipsis
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHTML += `<span class="px-2 text-gray-500">...</span>`;
+                }
+                paginationHTML += `<button onclick="performSearch(null, ${totalPages})" class="pagination-button px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">${totalPages}</button>`;
+            }
+            
+            // Next button
+            if (data.has_next) {
+                paginationHTML += `<button onclick="console.log('Next button clicked'); performSearch(null, ${currentPage + 1})" class="pagination-button px-3 py-2 bg-primary hover:bg-sky-600 text-white rounded-lg transition-colors flex items-center gap-1">
+                    Keyingi
+                    <i data-feather="chevron-right" class="w-4 h-4"></i>
+                </button>`;
+            }
+            
+            paginationHTML += '</div>';
+            
+            // Add page info
+            paginationHTML += `<div class="text-center mt-4 text-sm text-gray-600">
+                Sahifa ${currentPage} / ${totalPages} (${data.total} ta natija)
+            </div>`;
+            
+            console.log('Setting pagination HTML:', paginationHTML.length, 'characters');
+            pagination.innerHTML = paginationHTML;
+            console.log('Pagination rendered successfully');
+            
+            // Re-initialize feather icons for new buttons
+            feather.replace();
+        }
+
+        function openFilePreview(productId, title, viewCount, downloadCount, documentId) {
+            const modal = document.getElementById('filePreviewModal');
+            const titleEl = document.getElementById('previewTitle');
+            const viewsEl = document.getElementById('previewViews');
+            const downloadsEl = document.getElementById('previewDownloads');
+            const telegramBtn = document.getElementById('telegramBtn');
+            const previewImages = document.getElementById('previewImages');
+
+            titleEl.textContent = title;
+            viewsEl.textContent = viewCount;
+            downloadsEl.textContent = downloadCount;
+            telegramBtn.href = `https://t.me/${BOT_USERNAME}?start=${documentId}`;
+            if (previewImages) {
+                previewImages.innerHTML = '<div class="text-sm text-gray-400">Rasmlar yuklanmoqda...</div>';
+            }
+            loadDocumentImages(documentId);
+
+            // Force show modal with multiple methods
+            modal.classList.remove('hidden');
+            modal.classList.add('open');
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+            
+            // Store current counts for proper increment
+            viewsEl.setAttribute('data-current-count', viewCount);
+            downloadsEl.setAttribute('data-current-count', downloadCount);
+            
+            incrementViewCount(productId);
+        }
+
+        function closeFilePreview() {
+            const modal = document.getElementById('filePreviewModal');
+            modal.classList.remove('open');
+            modal.classList.add('hidden');
+        }
+
+        function openFeedbackModal() {
+            const modal = document.getElementById('feedbackModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('open');
+        }
+
+        function closeFeedbackModal() {
+            const modal = document.getElementById('feedbackModal');
+            modal.classList.remove('open');
+            modal.classList.add('hidden');
+        }
+
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultEl = document.getElementById('fbResult');
+            try {
+                const response = await fetch('/api/web/feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        contact: document.getElementById('fbContact').value,
+                        message: document.getElementById('fbMessage').value,
+                    })
+                });
+                if (!response.ok) throw new Error('Server xatosi');
+                resultEl.textContent = 'Rahmat! Fikringiz qabul qilindi.';
+                resultEl.className = 'text-sm text-green-600 text-center';
+                e.target.reset();
+                setTimeout(closeFeedbackModal, 2000);
+            } catch (error) {
+                resultEl.textContent = 'Xatolik yuz berdi. Qaytadan urinib ko\'ring.';
+                resultEl.className = 'text-sm text-red-600 text-center';
+            }
+        });
+
+        document.getElementById('deepToggle').addEventListener('change', (e) => {
+            isDeepMode = e.target.checked;
+            const searchInfo = document.getElementById('searchInfo');
+            const searchInput = document.getElementById('searchInput');
+            searchInfo.innerHTML = isDeepMode
+                ? '<span class="font-semibold text-orange-300">Chuqurlashtirilgan Qidiruv:</span> Fayl ichidan ham qidirish'
+                : '<span class="font-semibold text-sky-300">Oddiy Qidiruv:</span> Faqat fayl nomi bilan qidirish';
+            
+            // Deep search toggle - force new search with current query
+            if (searchInput.value.trim()) { 
+                console.log('Deep search toggle - performing new search');
+                currentSearchQuery = searchInput.value.trim(); // Update current query
+                performSearch(null, 1); 
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeFilePreview();
+                closeFeedbackModal();
+            }
+        });
+        document.getElementById('filePreviewModal').addEventListener('click', (e) => e.target === e.currentTarget && closeFilePreview());
+
+        async function incrementViewCount(productId) {
+            try {
+                const response = await fetch(`/api/web/${productId}/view/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('Ko\'rishlar soni oshirildi');
+                    updateViewCountInUI(productId);
+                }
+            } catch (error) {
+                console.error('Ko\'rishlar sonini oshirishda xatolik:', error);
+            }
+        }
+
+        async function incrementDownloadCount(productId) {
+            try {
+                const response = await fetch(`/api/web/${productId}/download/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('Yuklab olishlar soni oshirildi');
+                    updateDownloadCountInUI(productId);
+                }
+            } catch (error) {
+                console.error('Yuklab olishlar sonini oshirishda xatolik:', error);
+            }
+        }
+
+        function updateViewCountInUI(productId) {
+            const viewsElement = document.getElementById('previewViews');
+            if (viewsElement) {
+                // Use stored count or current text content
+                const storedCount = viewsElement.getAttribute('data-current-count');
+                const currentViews = storedCount ? parseInt(storedCount) : (parseInt(viewsElement.textContent) || 0);
+                const newCount = currentViews + 1;
+                viewsElement.textContent = newCount;
+                viewsElement.setAttribute('data-current-count', newCount);
+            }
+
+            const fileCard = document.querySelector(`[data-product-id="${productId}"]`);
+            if (fileCard) {
+                const viewsSpan = fileCard.querySelector('.views-count');
+                if (viewsSpan) {
+                    const currentViews = parseInt(viewsSpan.textContent) || 0;
+                    viewsSpan.textContent = currentViews + 1;
+                }
+            }
+        }
+
+        function updateDownloadCountInUI(productId) {
+            const downloadsElement = document.getElementById('previewDownloads');
+            if (downloadsElement) {
+                // Use stored count or current text content
+                const storedCount = downloadsElement.getAttribute('data-current-count');
+                const currentDownloads = storedCount ? parseInt(storedCount) : (parseInt(downloadsElement.textContent) || 0);
+                const newCount = currentDownloads + 1;
+                downloadsElement.textContent = newCount;
+                downloadsElement.setAttribute('data-current-count', newCount);
+            }
+
+            const fileCard = document.querySelector(`[data-product-id="${productId}"]`);
+            if (fileCard) {
+                const downloadsSpan = fileCard.querySelector('.downloads-count');
+                if (downloadsSpan) {
+                    const currentDownloads = parseInt(downloadsSpan.textContent) || 0;
+                    downloadsSpan.textContent = currentDownloads + 1;
+                }
+            }
+        }
+
+        function getCsrfToken() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            return token ? token.value : '';
+        }
+
+        // Video optimization and lazy loading
+        function optimizeVideo() {
+            const video = document.querySelector('video');
+            if (!video) return;
+
+            // Check if already initialized to prevent multiple event listeners
+            if (video.hasAttribute('data-initialized')) return;
+            video.setAttribute('data-initialized', 'true');
+
+            // Intersection Observer for lazy loading
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Load video when it comes into view
+                        const videoElement = entry.target;
+                        const dataSrc = videoElement.dataset.src;
+                        if (dataSrc && !videoElement.src) {
+                            // Set cache control for permanent caching
+                            videoElement.setAttribute('cache-control', 'max-age=31536000');
+                            videoElement.setAttribute('cache', 'force-cache');
+                            videoElement.src = dataSrc;
+                            videoElement.load();
+                            
+                            // Add error handling (only once)
+                            if (!videoElement.hasAttribute('data-error-handler')) {
+                                videoElement.setAttribute('data-error-handler', 'true');
+                                videoElement.addEventListener('error', () => {
+                                    console.log('Video yuklanmadi, fallback image ko\'rsatiladi');
+                                    videoElement.style.display = 'none';
+                                    const fallbackImg = videoElement.querySelector('img');
+                                    if (fallbackImg) {
+                                        fallbackImg.style.display = 'block';
+                                    }
+                                });
+                            }
+                            
+                            // Add loading success handler (only once)
+                            if (!videoElement.hasAttribute('data-success-handler')) {
+                                videoElement.setAttribute('data-success-handler', 'true');
+                                videoElement.addEventListener('canplay', () => {
+                                    console.log('Video muvaffaqiyatli yuklandi');
+                                });
+                            }
+                        }
+                        observer.unobserve(videoElement);
+                    }
+                });
+            }, {
+                rootMargin: '50px' // Start loading 50px before video comes into view
+            });
+
+            observer.observe(video);
+
+            // Preload optimization (only once)
+            if (!video.hasAttribute('data-load-handlers')) {
+                video.setAttribute('data-load-handlers', 'true');
+                video.addEventListener('loadstart', () => {
+                    console.log('Video yuklash boshladi');
+                });
+
+                video.addEventListener('canplaythrough', () => {
+                    console.log('Video to\'liq yuklandi');
+                });
+            }
+        }
+
+        // Initialize video optimization when DOM is ready
+        document.addEventListener('DOMContentLoaded', optimizeVideo);
+
+        loadTopFiles();
+    </script>
+</body>
+</html>
